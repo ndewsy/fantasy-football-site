@@ -2,23 +2,6 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
 
-// Waits for onAuthStateChange to fire with the initial session rather than
-// reading the local cache immediately, which can be empty right after a redirect.
-function waitForSession(supabase, timeoutMs = 8000) {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      sub.unsubscribe();
-      reject(new Error('Timed out waiting for auth session'));
-    }, timeoutMs);
-
-    const { data: { subscription: sub } } = supabase.auth.onAuthStateChange((_event, session) => {
-      clearTimeout(timer);
-      sub.unsubscribe();
-      resolve(session);
-    });
-  });
-}
-
 export default function SuccessPage() {
   const [status, setStatus] = useState("saving");
 
@@ -34,18 +17,10 @@ export default function SuccessPage() {
       }
 
       const supabase = createClient();
-
-      let session;
-      try {
-        session = await waitForSession(supabase);
-      } catch (err) {
-        console.error('[success] Timed out waiting for auth session:', err.message);
-        setStatus("no-user");
-        return;
-      }
+      const { data: { session } } = await supabase.auth.getSession();
 
       if (!session?.access_token) {
-        console.error('[success] No auth session after waiting');
+        console.error('[success] No auth session found');
         setStatus("no-user");
         return;
       }
