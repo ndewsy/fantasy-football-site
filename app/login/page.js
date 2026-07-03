@@ -31,7 +31,7 @@ export default function LoginPage() {
     <main className="min-h-screen flex items-center justify-center px-6">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <a href="/" className="text-2xl font-bold text-blue-600">🏈 DynastyEdge</a>
+          <a href="/" className="text-2xl font-bold text-blue-600" style={{fontFamily: "'Fredoka One', cursive"}}>Fantasy Collective</a>
           <h2 className="text-3xl font-bold mt-4 text-[#0F172A]">{isSignup ? "Create Account" : "Welcome Back"}</h2>
           <p className="text-gray-500 mt-2">{isSignup ? "Sign up to get started" : "Sign in to your account"}</p>
         </div>

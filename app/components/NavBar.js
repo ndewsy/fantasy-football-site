@@ -37,12 +37,12 @@ export default function NavBar({ activePath = "/" }) {
     ...(isDashboardUser ? [{ href: "/dashboard", label: "Creator Dashboard" }] : []),
   ];
 
-  const activeClass = "text-blue-600 font-medium";
-  const inactiveClass = "text-gray-600 hover:text-gray-900";
+  const activeClass = "text-white font-medium";
+  const inactiveClass = "text-white hover:text-blue-100";
 
   return (
-    <nav ref={navRef} className="relative bg-white/70 backdrop-blur-xl border-b border-white/80 shadow-sm sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
-      <a href="/" className="text-xl font-bold text-blue-600 shrink-0">🏈 DynastyEdge</a>
+    <nav ref={navRef} className="relative sticky top-0 z-50 px-6 py-4 flex items-center justify-between" style={{backgroundImage: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 2px, transparent 2px, transparent 10px), linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #1e40af 100%)', boxShadow: '0 2px 20px rgba(37, 99, 235, 0.4)'}}>
+      <a href="/" className="text-xl font-bold text-white shrink-0" style={{fontFamily: "'Fredoka One', cursive"}}>Fantasy Collective</a>
 
       {/* Desktop nav */}
       <div className="hidden md:flex gap-4 items-center">
@@ -52,14 +52,14 @@ export default function NavBar({ activePath = "/" }) {
           </a>
         ))}
         {user
-          ? <a href="/account" className={`${activePath === "/account" ? activeClass : "text-blue-600"} font-medium hover:text-blue-700 transition-colors`}>My Account</a>
-          : <a href="/login" className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors">Login</a>
+          ? <a href="/account" className={`${activePath === "/account" ? "text-white font-medium" : "text-white"} hover:text-blue-100 transition-colors`}>My Account</a>
+          : <a href="/login" className="bg-white text-blue-600 hover:bg-blue-50 font-semibold px-4 py-2 rounded-lg transition-colors">Login</a>
         }
       </div>
 
       {/* Mobile hamburger button */}
       <button
-        className="md:hidden flex items-center justify-center w-11 h-11 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+        className="md:hidden flex items-center justify-center w-11 h-11 rounded-lg text-white hover:bg-blue-500 transition-colors"
         onClick={() => setMenuOpen(prev => !prev)}
         aria-label="Toggle menu"
       >
@@ -79,19 +79,19 @@ export default function NavBar({ activePath = "/" }) {
 
       {/* Mobile dropdown menu */}
       {menuOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 bg-white/95 backdrop-blur-xl border-b border-gray-200 shadow-lg px-6 py-3 flex flex-col">
+        <div className="md:hidden absolute top-full left-0 right-0 bg-blue-700 border-b border-blue-500 shadow-lg px-6 py-3 flex flex-col">
           {links.map(({ href, label }) => (
             <a
               key={href}
               href={href}
-              className={`py-3 text-base font-medium border-b border-gray-100 last:border-0 transition-colors ${activePath === href ? "text-blue-600" : "text-gray-700 hover:text-gray-900"}`}
+              className={`py-3 text-base font-medium border-b border-blue-600 last:border-0 transition-colors ${activePath === href ? "text-white" : "text-blue-100 hover:text-white"}`}
             >
               {label}
             </a>
           ))}
           {user
-            ? <a href="/account" className={`py-3 text-base font-medium transition-colors ${activePath === "/account" ? "text-blue-600" : "text-gray-700 hover:text-gray-900"}`}>My Account</a>
-            : <a href="/login" className="mt-3 mb-1 bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white font-bold px-4 py-3 rounded-xl text-center">Login</a>
+            ? <a href="/account" className={`py-3 text-base font-medium transition-colors ${activePath === "/account" ? "text-white" : "text-blue-100 hover:text-white"}`}>My Account</a>
+            : <a href="/login" className="mt-3 mb-1 bg-white text-blue-600 font-bold px-4 py-3 rounded-xl text-center hover:bg-blue-50">Login</a>
           }
         </div>
       )}

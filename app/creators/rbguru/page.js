@@ -39,13 +39,13 @@ export default function RBGuruPage() {
 
   return (
     <main className="min-h-screen text-[#0F172A]">
-      <nav className="bg-white/70 backdrop-blur-xl border-b border-white/80 shadow-sm sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
-        <a href="/" className="text-xl font-bold text-blue-600">🏈 DynastyEdge</a>
+      <nav className="sticky top-0 z-50 px-6 py-4 flex items-center justify-between" style={{backgroundImage: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 2px, transparent 2px, transparent 10px), linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #1e40af 100%)', boxShadow: '0 2px 20px rgba(37, 99, 235, 0.4)'}}>
+        <a href="/" className="text-xl font-bold text-white" style={{fontFamily: "'Fredoka One', cursive"}}>Fantasy Collective</a>
         <div className="flex gap-4">
-          <a href="/" className="text-gray-600 hover:text-gray-900">Rankings</a>
-          <a href="/creators" className="text-gray-600 hover:text-gray-900">Creators</a>
-          {isDashboardUser && <a href="/dashboard" className="text-gray-600 hover:text-gray-900">Creator Dashboard</a>}
-          {user ? <a href="/account" className="text-blue-600 font-medium hover:text-blue-700 transition-colors">My Account</a> : <a href="/login" className="bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">Login</a>}
+          <a href="/" className="text-white hover:text-blue-100">Rankings</a>
+          <a href="/creators" className="text-white hover:text-blue-100">Creators</a>
+          {isDashboardUser && <a href="/dashboard" className="text-white hover:text-blue-100">Creator Dashboard</a>}
+          {user ? <a href="/account" className="text-white font-medium hover:text-blue-100 transition-colors">My Account</a> : <a href="/login" className="bg-white text-blue-600 font-semibold px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors">Login</a>}
         </div>
       </nav>
 
