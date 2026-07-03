@@ -4,8 +4,8 @@ import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
 
 const creators = [
-  { id: "dynastydave", name: "RookieRager", specialty: "Dynasty SF", color: "bg-green-600", avatar: "RR" },
-  { id: "redraftking", name: "FantasyFootballHuddle", specialty: "Redraft 1QB", color: "bg-blue-600", avatar: "FFH" },
+  { id: "rookierager", name: "RookieRager", specialty: "Dynasty SF", color: "bg-green-600", avatar: "RR" },
+  { id: "ffhuddle", name: "FantasyFootballHuddle", specialty: "Redraft 1QB", color: "bg-blue-600", avatar: "FFH" },
 ];
 
 export default function SubscribePage() {
