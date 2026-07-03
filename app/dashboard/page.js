@@ -122,15 +122,19 @@ export default function DashboardPage() {
       setProfileHandle(prof.handle || "");
       setProfileAnnouncement(prof.announcement || "");
 
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
       if (prof.role === "admin") {
         setTab("admin");
-        const [{ data: allProfiles }, { data: allPosts }, { data: adminSubs }, { data: allPayouts }, { data: allFeedback }] = await Promise.all([
+        const [{ data: allProfiles }, { data: allPosts }, subsRes, { data: allPayouts }, { data: allFeedback }] = await Promise.all([
           supabase.from("profiles").select("*").order("role"),
           supabase.from("posts").select("*").order("created_at", { ascending: false }),
-          supabase.from("subscriptions").select("*").eq("status", "active"),
+          fetch('/api/subscriptions', { headers: { Authorization: `Bearer ${token}` } }),
           supabase.from("payouts").select("*").order("created_at", { ascending: false }),
           supabase.from("feedback").select("*").order("created_at", { ascending: false }),
         ]);
+        const { subscriptions: adminSubs } = subsRes.ok ? await subsRes.json() : { subscriptions: [] };
         setAdminProfiles(allProfiles || []);
         setAdminPosts(allPosts || []);
         setAdminSubCount((adminSubs || []).length);
@@ -140,8 +144,6 @@ export default function DashboardPage() {
       }
 
       if (prof.is_creator) {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
 
         const [rankingsRes, { data: poolData }] = await Promise.all([
           fetch(`/api/rankings?creator_id=${encodeURIComponent(prof.creator_id)}`, {
@@ -204,10 +206,11 @@ export default function DashboardPage() {
 
         setPosts(savedPosts || []);
 
-        const [{ data: creatorSubsData }, { data: myPayouts }] = await Promise.all([
-          supabase.from("subscriptions").select("included_creator, add_on_creators").eq("status", "active"),
+        const [creatorSubsRes, { data: myPayouts }] = await Promise.all([
+          fetch('/api/subscriptions', { headers: { Authorization: `Bearer ${token}` } }),
           supabase.from("payouts").select("*").eq("creator_id", prof.creator_id).order("created_at", { ascending: false }),
         ]);
+        const { subscriptions: creatorSubsData } = creatorSubsRes.ok ? await creatorSubsRes.json() : { subscriptions: [] };
         setCreatorSubs(creatorSubsData || []);
         setCreatorPayouts(myPayouts || []);
       }

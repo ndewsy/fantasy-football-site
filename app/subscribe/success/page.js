@@ -2,45 +2,74 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
 
+// Waits for onAuthStateChange to fire with the initial session rather than
+// reading the local cache immediately, which can be empty right after a redirect.
+function waitForSession(supabase, timeoutMs = 8000) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      sub.unsubscribe();
+      reject(new Error('Timed out waiting for auth session'));
+    }, timeoutMs);
+
+    const { data: { subscription: sub } } = supabase.auth.onAuthStateChange((_event, session) => {
+      clearTimeout(timer);
+      sub.unsubscribe();
+      resolve(session);
+    });
+  });
+}
+
 export default function SuccessPage() {
   const [status, setStatus] = useState("saving");
 
   useEffect(() => {
-    async function saveSubscription() {
-      const supabase = createClient();
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+    async function verifyAndActivate() {
+      const params = new URLSearchParams(window.location.search);
+      const session_id = params.get('session_id');
 
-      if (userError) {
-        console.error("Auth error on success page:", userError);
-      }
-
-      if (!user) {
-        console.error("No user found on success page — session may not be loaded yet.");
-        setStatus("no-user");
-        return;
-      }
-
-      const included = localStorage.getItem('included_creator') || '';
-      const addOns = JSON.parse(localStorage.getItem('add_on_creators') || '[]');
-
-      const { error: upsertError } = await supabase.from('subscriptions').upsert({
-        user_id: user.id,
-        status: 'active',
-        included_creator: included,
-        add_on_creators: addOns,
-      }, { onConflict: 'user_id' });
-
-      if (upsertError) {
-        console.error("Failed to save subscription:", upsertError);
+      if (!session_id) {
+        console.error('[success] No session_id in URL');
         setStatus("error");
         return;
       }
 
-      localStorage.removeItem('included_creator');
-      localStorage.removeItem('add_on_creators');
-      setStatus("saved");
+      const supabase = createClient();
+
+      let session;
+      try {
+        session = await waitForSession(supabase);
+      } catch (err) {
+        console.error('[success] Timed out waiting for auth session:', err.message);
+        setStatus("no-user");
+        return;
+      }
+
+      if (!session?.access_token) {
+        console.error('[success] No auth session after waiting');
+        setStatus("no-user");
+        return;
+      }
+
+      const res = await fetch('/api/verify-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ session_id }),
+      });
+
+      if (res.ok) {
+        localStorage.removeItem('included_creator');
+        localStorage.removeItem('add_on_creators');
+        setStatus("saved");
+      } else {
+        const body = await res.json().catch(() => ({}));
+        console.error('[success] verify-checkout failed:', body);
+        setStatus("error");
+      }
     }
-    saveSubscription();
+    verifyAndActivate();
   }, []);
 
   return (

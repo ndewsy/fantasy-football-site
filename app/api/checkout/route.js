@@ -36,7 +36,7 @@ export async function POST(request) {
       included_creator: includedCreator,
       add_ons: addOns.join(','),
     },
-    success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/subscribe/success`,
+    success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/subscribe/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/subscribe`,
   });
 
