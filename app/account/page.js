@@ -193,7 +193,7 @@ export default function AccountPage() {
         </div>
 
         {/* Quick links */}
-        <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-6">
+        <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-6 mb-6">
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Quick Links</h2>
           <div className="flex flex-col gap-3">
             <a href="/" className="flex items-center justify-between text-gray-600 hover:text-gray-900 transition-colors text-sm">
@@ -215,6 +215,18 @@ export default function AccountPage() {
             )}
           </div>
         </div>
+
+        {/* Log out */}
+        <button
+          onClick={async () => {
+            const supabase = createClient();
+            await supabase.auth.signOut();
+            router.push("/");
+          }}
+          className="w-full bg-white/70 backdrop-blur-md hover:bg-white/90 border border-white/80 shadow-lg text-gray-500 hover:text-gray-700 font-medium py-3 rounded-xl transition-colors text-sm"
+        >
+          Log Out
+        </button>
       </div>
     </main>
   );
