@@ -223,7 +223,7 @@ export default function AccountPage() {
             await supabase.auth.signOut();
             router.push("/");
           }}
-          className="w-full bg-white/70 backdrop-blur-md hover:bg-white/90 border border-white/80 shadow-lg text-gray-500 hover:text-gray-700 font-medium py-3 rounded-xl transition-colors text-sm"
+          className="w-full bg-white/70 backdrop-blur-md hover:bg-red-50/80 border border-white/80 hover:border-red-200 shadow-lg text-red-500 hover:text-red-600 font-medium py-3 rounded-xl transition-colors text-sm"
         >
           Log Out
         </button>
