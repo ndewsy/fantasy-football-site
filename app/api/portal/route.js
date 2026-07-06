@@ -18,14 +18,23 @@ export async function POST(request) {
     .eq("user_id", user.id)
     .maybeSingle();
 
+  console.log("[/api/portal] subscription row:", sub);
+
   if (!sub?.stripe_customer_id) {
-    return new Response("No subscription found", { status: 404 });
+    console.warn("[/api/portal] No stripe_customer_id for user:", user.id);
+    return Response.json({ error: "No Stripe customer ID found for this account. Contact support." }, { status: 404 });
   }
 
-  const session = await stripe.billingPortal.sessions.create({
-    customer: sub.stripe_customer_id,
-    return_url: `${process.env.NEXT_PUBLIC_SITE_URL}/account`,
-  });
+  let session;
+  try {
+    session = await stripe.billingPortal.sessions.create({
+      customer: sub.stripe_customer_id,
+      return_url: `${process.env.NEXT_PUBLIC_SITE_URL}/account`,
+    });
+  } catch (err) {
+    console.error("[/api/portal] Stripe error:", err.message, err);
+    return Response.json({ error: err.message }, { status: 500 });
+  }
 
   return Response.json({ url: session.url });
 }

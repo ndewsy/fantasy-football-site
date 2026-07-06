@@ -78,12 +78,14 @@ export async function POST(request) {
       ? stripeSession.metadata.add_ons.split(',').filter(Boolean)
       : [];
 
-    console.log('[/api/verify-checkout] Upserting subscription:', { user_id: user.id, includedCreator, addOns });
+    const stripeCustomerId = stripeSession.customer || null;
+    console.log('[/api/verify-checkout] Upserting subscription:', { user_id: user.id, includedCreator, addOns, stripeCustomerId });
 
     const { error } = await supabase.from('subscriptions').upsert(
       {
         user_id: user.id,
         status: 'active',
+        stripe_customer_id: stripeCustomerId,
         included_creator: includedCreator,
         add_on_creators: addOns,
       },

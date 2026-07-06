@@ -49,7 +49,10 @@ export default function AccountPage() {
         method: "POST",
         headers: { Authorization: `Bearer ${session?.access_token}` },
       });
-      if (!res.ok) throw new Error("Could not create portal session");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Could not create portal session");
+      }
       const { url } = await res.json();
       window.location.href = url;
     } catch (err) {

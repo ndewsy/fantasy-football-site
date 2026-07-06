@@ -28,7 +28,9 @@ export async function POST(request) {
         status: 'active',
         stripe_customer_id: session.customer,
         included_creator: session.metadata?.included_creator || null,
-        add_on_creators: session.metadata?.add_ons || null,
+        add_on_creators: session.metadata?.add_ons
+          ? session.metadata.add_ons.split(',').filter(Boolean)
+          : [],
       });
     }
   }
