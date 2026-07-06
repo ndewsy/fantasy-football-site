@@ -81,6 +81,13 @@ export default function Home() {
   const [tiersCache, setTiersCache] = useState({});
   const [updatedAtCache, setUpdatedAtCache] = useState({});
   const rankingsRef = useRef(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  useEffect(() => {
+    function onScroll() { setShowScrollTop(window.scrollY > 400); }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     async function loadPool() {
@@ -817,6 +824,18 @@ export default function Home() {
             </div>
           </div>
         </div>
+      )}
+      {/* Scroll to top */}
+      {showScrollTop && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          className="fixed bottom-6 right-6 z-50 w-11 h-11 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-md border border-white/80 shadow-lg text-gray-500 hover:text-gray-900 hover:bg-white transition-all"
+          aria-label="Scroll to top"
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 12 9 6 15 12" />
+          </svg>
+        </button>
       )}
     </main>
   );
