@@ -20,11 +20,11 @@ export async function POST(request) {
   }
 
   const lineItems = [
-    { price: 'price_1TnUqOA9tQi8Nnw79us4pRYj', quantity: 1 },
+    { price: 'price_1TrMBuA2rwv8VsfE9AOhxBis', quantity: 1 },
   ];
 
   for (let i = 0; i < addOns.length; i++) {
-    lineItems.push({ price: 'price_1TnUr7A9tQi8Nnw7TSZjH6sj', quantity: 1 });
+    lineItems.push({ price: 'price_1TrMBvA2rwv8VsfEI4KxfDsq', quantity: 1 });
   }
 
   const session = await stripe.checkout.sessions.create({
