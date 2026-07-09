@@ -13,6 +13,7 @@ export default function SubscribePage() {
   const router = useRouter();
   const [authLoaded, setAuthLoaded] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isAdminOrCreator, setIsAdminOrCreator] = useState(false);
   const [includedCreator, setIncludedCreator] = useState("");
   const [addOns, setAddOns] = useState([]);
 
@@ -24,13 +25,12 @@ export default function SubscribePage() {
         router.replace("/login?redirect=/subscribe");
         return;
       }
-      const { data: sub } = await supabase
-        .from("subscriptions")
-        .select("status")
-        .eq("user_id", user.id)
-        .eq("status", "active")
-        .maybeSingle();
+      const [{ data: sub }, { data: prof }] = await Promise.all([
+        supabase.from("subscriptions").select("status").eq("user_id", user.id).eq("status", "active").maybeSingle(),
+        supabase.from("profiles").select("role, is_creator").eq("id", user.id).maybeSingle(),
+      ]);
       setIsSubscribed(!!sub);
+      setIsAdminOrCreator(!!(prof && (prof.role === "admin" || prof.is_creator)));
       setAuthLoaded(true);
     }
     checkAccess();
@@ -70,6 +70,22 @@ export default function SubscribePage() {
       <main className="min-h-screen text-[#0F172A]">
         <NavBar activePath="/subscribe" />
         <div className="min-h-[60vh] flex items-center justify-center text-gray-400">Loading...</div>
+      </main>
+    );
+  }
+
+  if (isAdminOrCreator) {
+    return (
+      <main className="min-h-screen text-[#0F172A]">
+        <NavBar activePath="/subscribe" />
+        <div className="max-w-md mx-auto px-6 py-24 text-center">
+          <div className="text-5xl mb-6">⭐</div>
+          <h1 className="text-3xl font-bold mb-3">You already have full access</h1>
+          <p className="text-gray-500 mb-8">Your account has complimentary access to all rankings and creator communities — no subscription needed.</p>
+          <a href="/" className="inline-block bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold px-8 py-3 rounded-xl transition-all">
+            Go to Rankings
+          </a>
+        </div>
       </main>
     );
   }

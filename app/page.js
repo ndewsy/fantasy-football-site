@@ -257,7 +257,7 @@ export default function Home() {
     rankingsRef.current?.scrollIntoView({ behavior: "smooth" });
   }
 
-  const unlocked = authLoaded && !!user && isSubscribed;
+  const unlocked = authLoaded && !!user && (isSubscribed || isDashboardUser);
 
   let filteredPlayers = displayPlayers;
   if (filteredPlayers && search.trim()) {
@@ -302,7 +302,7 @@ export default function Home() {
       <NavBar activePath="/" />
 
       {/* Landing page — non-subscribers only */}
-      {!isSubscribed && (
+      {!isSubscribed && !isDashboardUser && (
         <div>
           {/* Hero */}
           <div className="text-center py-24 px-6">
@@ -443,7 +443,7 @@ export default function Home() {
       )}
 
       {/* Subscriber header — shown instead of the full landing */}
-      {authLoaded && isSubscribed && (
+      {authLoaded && (isSubscribed || isDashboardUser) && (
         <div className="max-w-5xl mx-auto px-6 pt-10 pb-2">
           <h2 className="text-3xl font-bold text-[#0F172A]">Rankings</h2>
           <p className="text-gray-500 mt-1">Expert consensus rankings across all formats.</p>

@@ -10,6 +10,7 @@ export default function RedraftKingPage() {
   const [creatorProfile, setCreatorProfile] = useState(null);
   const [rankingsUpdatedAt, setRankingsUpdatedAt] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isDashboardUser, setIsDashboardUser] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -17,25 +18,29 @@ export default function RedraftKingPage() {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
 
-      const [subResult, postsResult, profileResult, rankingsResult] = await Promise.all([
+      const [subResult, postsResult, profileResult, rankingsResult, ownProfileResult] = await Promise.all([
         user
           ? supabase.from("subscriptions").select("*").eq("user_id", user.id).maybeSingle()
           : Promise.resolve({ data: null }),
         supabase.from("posts").select("*").eq("creator_id", "redraftking").order("created_at", { ascending: false }),
         supabase.from("profiles").select("display_name, handle, bio, announcement").eq("creator_id", "redraftking").eq("is_creator", true).maybeSingle(),
         supabase.from("rankings").select("updated_at").eq("creator_id", "ffhuddle").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+        user
+          ? supabase.from("profiles").select("role, is_creator").eq("id", user.id).maybeSingle()
+          : Promise.resolve({ data: null }),
       ]);
 
       setSubscription(subResult.data);
       setPosts(postsResult.data || []);
       setCreatorProfile(profileResult.data || null);
       setRankingsUpdatedAt(rankingsResult.data?.updated_at || null);
+      setIsDashboardUser(!!(ownProfileResult.data && (ownProfileResult.data.role === "admin" || ownProfileResult.data.is_creator)));
       setLoading(false);
     }
     load();
   }, []);
 
-  const isSubscribed = !!subscription;
+  const isSubscribed = !!subscription || isDashboardUser;
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading...</div>;
 

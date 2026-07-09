@@ -33,7 +33,7 @@ export default function WRTargetsPage() {
     load();
   }, []);
 
-  const isSubscribed = !!subscription;
+  const isSubscribed = !!subscription || isDashboardUser;
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading...</div>;
 
