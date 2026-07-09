@@ -26,6 +26,7 @@ export default function AccountPage() {
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
@@ -47,20 +48,35 @@ export default function AccountPage() {
   }, [router]);
 
   async function handleChangePassword() {
+    if (!currentPassword) {
+      setPasswordIsError(true);
+      setPasswordMessage("Please enter your current password.");
+      return;
+    }
     if (newPassword !== confirmPassword) {
       setPasswordIsError(true);
-      setPasswordMessage("Passwords don't match.");
+      setPasswordMessage("New passwords don't match.");
       return;
     }
     if (newPassword.length < 6) {
       setPasswordIsError(true);
-      setPasswordMessage("Password must be at least 6 characters.");
+      setPasswordMessage("New password must be at least 6 characters.");
       return;
     }
     setPasswordLoading(true);
     setPasswordMessage("");
     setPasswordIsError(false);
     const supabase = createClient();
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: currentPassword,
+    });
+    if (signInError) {
+      setPasswordIsError(true);
+      setPasswordMessage("Current password is incorrect.");
+      setPasswordLoading(false);
+      return;
+    }
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) {
       setPasswordIsError(true);
@@ -68,6 +84,7 @@ export default function AccountPage() {
     } else {
       setPasswordIsError(false);
       setPasswordMessage("Password updated successfully.");
+      setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
       setTimeout(() => {
@@ -265,6 +282,7 @@ export default function AccountPage() {
               onClick={() => {
                 setShowChangePassword(!showChangePassword);
                 setPasswordMessage("");
+                setCurrentPassword("");
                 setNewPassword("");
                 setConfirmPassword("");
               }}
@@ -277,6 +295,17 @@ export default function AccountPage() {
           {showChangePassword && (
             <div className="mt-4 flex flex-col gap-3">
               <div>
+                <label className="block text-sm text-gray-500 mb-1.5">Current password</label>
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-[#0F172A] text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  placeholder="••••••••"
+                  autoFocus
+                />
+              </div>
+              <div className="border-t border-gray-100 pt-3">
                 <label className="block text-sm text-gray-500 mb-1.5">New password</label>
                 <input
                   type="password"
@@ -284,7 +313,6 @@ export default function AccountPage() {
                   onChange={(e) => setNewPassword(e.target.value)}
                   className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-[#0F172A] text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   placeholder="••••••••"
-                  autoFocus
                 />
               </div>
               <div>
