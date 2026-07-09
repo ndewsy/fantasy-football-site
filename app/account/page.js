@@ -25,6 +25,7 @@ export default function AccountPage() {
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [isAdminOrCreator, setIsAdminOrCreator] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -40,8 +41,12 @@ export default function AccountPage() {
       if (!user) { router.replace("/login"); return; }
       setUser(user);
 
-      const { data: sub } = await supabase.from("subscriptions").select("*").eq("user_id", user.id).eq("status", "active").maybeSingle();
+      const [{ data: sub }, { data: prof }] = await Promise.all([
+        supabase.from("subscriptions").select("*").eq("user_id", user.id).eq("status", "active").maybeSingle(),
+        supabase.from("profiles").select("role, is_creator").eq("id", user.id).maybeSingle(),
+      ]);
       setSubscription(sub || null);
+      setIsAdminOrCreator(!!(prof && (prof.role === "admin" || prof.is_creator)));
       setLoading(false);
     }
     load();
@@ -158,7 +163,14 @@ export default function AccountPage() {
         <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-6 mb-6">
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Subscription</h2>
 
-          {!subscription ? (
+          {!subscription && isAdminOrCreator ? (
+            <div className="flex items-center justify-between">
+              <span className="text-gray-500 text-sm">Access</span>
+              <span className="text-xs font-semibold bg-blue-50 text-blue-600 border border-blue-200 px-2.5 py-1 rounded-full">
+                Creator Account — Full Access
+              </span>
+            </div>
+          ) : !subscription ? (
             <div className="text-center py-4">
               <p className="text-gray-500 mb-4">You don't have an active subscription.</p>
               <a
