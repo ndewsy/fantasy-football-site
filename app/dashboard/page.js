@@ -822,6 +822,7 @@ export default function DashboardPage() {
                           className="bg-gray-50 border border-gray-200 rounded px-2 py-1 text-sm text-[#0F172A] focus:outline-none focus:border-blue-500 disabled:opacity-50"
                         >
                           <option value="subscriber">subscriber</option>
+                          <option value="creator">creator</option>
                           <option value="admin">admin</option>
                         </select>
                       </td>
