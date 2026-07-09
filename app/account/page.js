@@ -25,6 +25,12 @@ export default function AccountPage() {
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState("");
+  const [passwordIsError, setPasswordIsError] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -39,6 +45,38 @@ export default function AccountPage() {
     }
     load();
   }, [router]);
+
+  async function handleChangePassword() {
+    if (newPassword !== confirmPassword) {
+      setPasswordIsError(true);
+      setPasswordMessage("Passwords don't match.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPasswordIsError(true);
+      setPasswordMessage("Password must be at least 6 characters.");
+      return;
+    }
+    setPasswordLoading(true);
+    setPasswordMessage("");
+    setPasswordIsError(false);
+    const supabase = createClient();
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      setPasswordIsError(true);
+      setPasswordMessage(error.message);
+    } else {
+      setPasswordIsError(false);
+      setPasswordMessage("Password updated successfully.");
+      setNewPassword("");
+      setConfirmPassword("");
+      setTimeout(() => {
+        setShowChangePassword(false);
+        setPasswordMessage("");
+      }, 2000);
+    }
+    setPasswordLoading(false);
+  }
 
   async function handleManageSubscription() {
     setPortalLoading(true);
@@ -217,6 +255,67 @@ export default function AccountPage() {
               </a>
             )}
           </div>
+        </div>
+
+        {/* Change Password */}
+        <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-6 mb-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Password</h2>
+            <button
+              onClick={() => {
+                setShowChangePassword(!showChangePassword);
+                setPasswordMessage("");
+                setNewPassword("");
+                setConfirmPassword("");
+              }}
+              className="text-xs text-blue-500 hover:text-blue-600 font-medium"
+            >
+              {showChangePassword ? "Cancel" : "Change password"}
+            </button>
+          </div>
+
+          {showChangePassword && (
+            <div className="mt-4 flex flex-col gap-3">
+              <div>
+                <label className="block text-sm text-gray-500 mb-1.5">New password</label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-[#0F172A] text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  placeholder="••••••••"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-500 mb-1.5">Confirm new password</label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleChangePassword()}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-[#0F172A] text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  placeholder="••••••••"
+                />
+              </div>
+              {passwordMessage && (
+                <div className={`p-3 rounded-lg text-sm ${passwordIsError ? "bg-red-50 border border-red-200 text-red-700" : "bg-green-50 border border-green-200 text-green-700"}`}>
+                  {passwordMessage}
+                </div>
+              )}
+              <button
+                onClick={handleChangePassword}
+                disabled={passwordLoading}
+                className="w-full bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-semibold py-2.5 rounded-xl text-sm transition-all disabled:opacity-50"
+              >
+                {passwordLoading ? "Saving..." : "Save New Password"}
+              </button>
+            </div>
+          )}
+
+          {!showChangePassword && (
+            <p className="text-gray-400 text-sm mt-2">••••••••</p>
+          )}
         </div>
 
         {/* Log out */}
