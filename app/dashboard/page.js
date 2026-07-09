@@ -134,13 +134,14 @@ export default function DashboardPage() {
 
       if (prof.role === "admin") {
         setTab("admin");
-        const [{ data: allProfiles }, { data: allPosts }, subsRes, { data: allPayouts }, { data: allFeedback }] = await Promise.all([
-          supabase.from("profiles").select("*").order("role"),
+        const [profilesRes, { data: allPosts }, subsRes, { data: allPayouts }, { data: allFeedback }] = await Promise.all([
+          fetch('/api/profiles', { headers: { Authorization: `Bearer ${token}` } }),
           supabase.from("posts").select("*").order("created_at", { ascending: false }),
           fetch('/api/subscriptions', { headers: { Authorization: `Bearer ${token}` } }),
           supabase.from("payouts").select("*").order("created_at", { ascending: false }),
           supabase.from("feedback").select("*").order("created_at", { ascending: false }),
         ]);
+        const { profiles: allProfiles } = profilesRes.ok ? await profilesRes.json() : { profiles: [] };
         const { subscriptions: adminSubs } = subsRes.ok ? await subsRes.json() : { subscriptions: [] };
         setAdminProfiles(allProfiles || []);
         setAdminPosts(allPosts || []);
