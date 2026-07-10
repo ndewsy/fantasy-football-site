@@ -95,6 +95,10 @@ export default function DashboardPage() {
   const [creatorSubs, setCreatorSubs] = useState([]);
   const [creatorPayouts, setCreatorPayouts] = useState([]);
 
+  // Creator analytics state
+  const [analyticsPageViews, setAnalyticsPageViews] = useState([]);
+  const [analyticsPlayerClicks, setAnalyticsPlayerClicks] = useState([]);
+
   // Profile editing state
   const [profileName, setProfileName] = useState("");
   const [profileBio, setProfileBio] = useState("");
@@ -214,13 +218,20 @@ export default function DashboardPage() {
 
         setPosts(savedPosts || []);
 
-        const [creatorSubsRes, { data: myPayouts }] = await Promise.all([
+        const twoWeeksAgo = new Date();
+        twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+
+        const [creatorSubsRes, { data: myPayouts }, { data: pageViewData }, { data: playerClickData }] = await Promise.all([
           fetch('/api/subscriptions', { headers: { Authorization: `Bearer ${token}` } }),
           supabase.from("payouts").select("*").eq("creator_id", prof.creator_id).order("created_at", { ascending: false }),
+          supabase.from("events").select("created_at").eq("creator_id", prof.creator_id).eq("event_type", "page_view").gte("created_at", twoWeeksAgo.toISOString()),
+          supabase.from("events").select("player_id").eq("creator_id", prof.creator_id).eq("event_type", "player_click").not("player_id", "is", null),
         ]);
         const { subscriptions: creatorSubsData } = creatorSubsRes.ok ? await creatorSubsRes.json() : { subscriptions: [] };
         setCreatorSubs(creatorSubsData || []);
         setCreatorPayouts(myPayouts || []);
+        setAnalyticsPageViews(pageViewData || []);
+        setAnalyticsPlayerClicks(playerClickData || []);
       }
 
       setLoading(false);
@@ -752,7 +763,7 @@ export default function DashboardPage() {
             ))
           )}
           {profile.is_creator && (
-            ["rankings", "posts", "earnings", "profile"].map((t) => (
+            ["rankings", "posts", "earnings", "analytics", "profile"].map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -762,7 +773,7 @@ export default function DashboardPage() {
                     : "bg-white/60 backdrop-blur-sm text-gray-500 hover:bg-white/80 border border-white/70"
                 }`}
               >
-                {t === "rankings" ? "My Rankings" : t === "posts" ? "My Posts" : t === "earnings" ? "My Earnings" : "My Profile"}
+                {t === "rankings" ? "My Rankings" : t === "posts" ? "My Posts" : t === "earnings" ? "My Earnings" : t === "analytics" ? "My Analytics" : "My Profile"}
               </button>
             ))
           )}
@@ -1872,6 +1883,81 @@ export default function DashboardPage() {
                           <td className="px-4 py-3 text-blue-600 font-semibold">${p.amount}</td>
                           <td className="px-4 py-3 text-gray-400 text-sm">
                             {new Date(p.paid_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ── My Analytics Tab ── */}
+        {tab === "analytics" && (() => {
+          const now = new Date();
+          const thisWeekStart = new Date(now);
+          thisWeekStart.setDate(now.getDate() - 7);
+          const twoWeeksAgo = new Date(now);
+          twoWeeksAgo.setDate(now.getDate() - 14);
+
+          const thisWeekViews = analyticsPageViews.filter(e => new Date(e.created_at) >= thisWeekStart).length;
+          const lastWeekViews = analyticsPageViews.filter(e => {
+            const d = new Date(e.created_at);
+            return d >= twoWeeksAgo && d < thisWeekStart;
+          }).length;
+          const viewDelta = thisWeekViews - lastWeekViews;
+
+          const playerClickCounts = {};
+          for (const e of analyticsPlayerClicks) {
+            playerClickCounts[e.player_id] = (playerClickCounts[e.player_id] || 0) + 1;
+          }
+          const top10 = Object.entries(playerClickCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10);
+
+          return (
+            <div>
+              <h2 className="text-lg font-bold mb-4">Page Views</h2>
+              <div className="grid grid-cols-2 gap-4 mb-8">
+                <div className="bg-white/70 backdrop-blur-md border border-white/80 shadow-lg rounded-xl p-5">
+                  <p className="text-3xl font-bold text-blue-600">{thisWeekViews}</p>
+                  <p className="text-gray-500 text-sm mt-1">This week</p>
+                  {viewDelta !== 0 && (
+                    <p className={`text-xs font-semibold mt-2 ${viewDelta > 0 ? "text-green-600" : "text-red-500"}`}>
+                      {viewDelta > 0 ? "↑" : "↓"} {Math.abs(viewDelta)} vs last week
+                    </p>
+                  )}
+                </div>
+                <div className="bg-white/70 backdrop-blur-md border border-white/80 shadow-lg rounded-xl p-5">
+                  <p className="text-3xl font-bold text-gray-400">{lastWeekViews}</p>
+                  <p className="text-gray-500 text-sm mt-1">Last week</p>
+                </div>
+              </div>
+
+              <h2 className="text-lg font-bold mb-4">Most Clicked Players</h2>
+              {top10.length === 0 ? (
+                <div className="bg-white/70 backdrop-blur-md rounded-xl p-8 border border-white/80 shadow-lg text-center">
+                  <p className="text-gray-400 text-sm">No player clicks recorded yet.</p>
+                </div>
+              ) : (
+                <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-white/40 text-gray-500 text-sm">
+                      <tr>
+                        <th className="text-left px-4 py-3 w-10">#</th>
+                        <th className="text-left px-4 py-3">Player</th>
+                        <th className="text-left px-4 py-3">Clicks</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {top10.map(([playerName, count], i) => (
+                        <tr key={playerName} className="border-t border-gray-100 hover:bg-gray-50 transition-colors">
+                          <td className="px-4 py-3 text-gray-400 font-mono text-sm">{i + 1}</td>
+                          <td className="px-4 py-3 font-medium">{playerName}</td>
+                          <td className="px-4 py-3">
+                            <span className="font-mono font-semibold text-blue-600">{count}</span>
                           </td>
                         </tr>
                       ))}

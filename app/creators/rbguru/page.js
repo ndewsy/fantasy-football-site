@@ -28,6 +28,7 @@ export default function RBGuruPage() {
       setSubscription(subResult.data);
       setPosts(postsResult.data || []);
       setIsDashboardUser(!!(ownProfileResult.data && (ownProfileResult.data.role === "admin" || ownProfileResult.data.is_creator)));
+      supabase.from("events").insert({ event_type: "page_view", creator_id: "rbguru", user_id: user?.id ?? null }).then(() => {}).catch(() => {});
       setLoading(false);
     }
     load();

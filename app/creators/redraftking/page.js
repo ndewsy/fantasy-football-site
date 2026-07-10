@@ -35,6 +35,7 @@ export default function RedraftKingPage() {
       setCreatorProfile(profileResult.data || null);
       setRankingsUpdatedAt(rankingsResult.data?.updated_at || null);
       setIsDashboardUser(!!(ownProfileResult.data && (ownProfileResult.data.role === "admin" || ownProfileResult.data.is_creator)));
+      supabase.from("events").insert({ event_type: "page_view", creator_id: "ffhuddle", user_id: user?.id ?? null }).then(() => {}).catch(() => {});
       setLoading(false);
     }
     load();

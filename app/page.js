@@ -121,6 +121,17 @@ export default function Home() {
     loadAuth();
   }, []);
 
+  // Fire page_view when a creator tab is selected
+  useEffect(() => {
+    if (activeCreator === "consensus") return;
+    const supabase = createClient();
+    supabase.from("events").insert({
+      event_type: "page_view",
+      creator_id: activeCreator,
+      user_id: user?.id ?? null,
+    }).then(() => {}).catch(() => {});
+  }, [activeCreator]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     const cachedFormat = rankingsCache[activeFormat];
 
@@ -218,6 +229,15 @@ export default function Home() {
   }, [playerModalOpen]);
 
   async function openPlayerModal(player) {
+    if (activeCreator !== "consensus") {
+      const supabase = createClient();
+      supabase.from("events").insert({
+        event_type: "player_click",
+        creator_id: activeCreator,
+        player_id: player.name,
+        user_id: user?.id ?? null,
+      }).then(() => {}).catch(() => {});
+    }
     setSelectedPlayer(player);
     setPlayerModalOpen(true);
     setPlayerRankingsLoading(true);
