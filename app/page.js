@@ -74,6 +74,7 @@ export default function Home() {
   const [showCreatorColumns, setShowCreatorColumns] = useState(true);
   const [search, setSearch] = useState("");
   const [posFilter, setPosFilter] = useState("All");
+  const [teamFilter, setTeamFilter] = useState("All");
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [playerModalOpen, setPlayerModalOpen] = useState(false);
   const [playerRankings, setPlayerRankings] = useState({});
@@ -279,6 +280,10 @@ export default function Home() {
 
   const unlocked = authLoaded && !!user && (isSubscribed || isDashboardUser);
 
+  const teamOptions = displayPlayers
+    ? ["All", ...Array.from(new Set(displayPlayers.map(p => p.team).filter(Boolean))).sort()]
+    : ["All"];
+
   let filteredPlayers = displayPlayers;
   if (filteredPlayers && search.trim()) {
     filteredPlayers = filteredPlayers.filter(p => p.name.toLowerCase().includes(search.toLowerCase().trim()));
@@ -286,12 +291,15 @@ export default function Home() {
   if (filteredPlayers && posFilter !== "All") {
     filteredPlayers = filteredPlayers.filter(p => p.pos === posFilter);
   }
+  if (filteredPlayers && teamFilter !== "All") {
+    filteredPlayers = filteredPlayers.filter(p => p.team === teamFilter);
+  }
 
   const lockedCount = filteredPlayers ? Math.max(0, filteredPlayers.length - FREE_ROWS) : 0;
   const activeTiers = activeCreator === "consensus"
     ? DEFAULT_TIERS
     : (tiersCache[activeFormat]?.[activeCreator] || DEFAULT_TIERS);
-  const noFilters = !search.trim() && posFilter === "All";
+  const noFilters = !search.trim() && posFilter === "All" && teamFilter === "All";
 
   const displayPosRanks = {};
   if (displayPlayers) {
@@ -545,10 +553,10 @@ export default function Home() {
           )}
         </div>
 
-        {/* Position filters + search */}
+        {/* Position filters + team filter + search */}
         {!stillLoading && hasData && (
           <>
-            <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
+            <div className="flex flex-wrap items-center gap-2 mb-3">
               {["All", "QB", "RB", "WR", "TE"].map(pos => (
                 <button
                   key={pos}
@@ -562,6 +570,19 @@ export default function Home() {
                   {pos}
                 </button>
               ))}
+              <select
+                value={teamFilter}
+                onChange={e => setTeamFilter(e.target.value)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                  teamFilter !== "All"
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-white/60 backdrop-blur-sm text-gray-600 border-white/70 hover:bg-white/80"
+                }`}
+              >
+                {teamOptions.map(t => (
+                  <option key={t} value={t}>{t === "All" ? "All Teams" : t}</option>
+                ))}
+              </select>
             </div>
             <div className="mb-4">
               <input
@@ -598,7 +619,7 @@ export default function Home() {
           <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg py-16 text-center">
             <p className="text-gray-500 font-medium mb-1">No players match your filters</p>
             <button
-              onClick={() => { setSearch(""); setPosFilter("All"); }}
+              onClick={() => { setSearch(""); setPosFilter("All"); setTeamFilter("All"); }}
               className="text-blue-600 text-sm hover:text-blue-700 mt-2"
             >
               Clear filters
