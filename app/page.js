@@ -614,9 +614,9 @@ export default function Home() {
                           <tr className="select-none pointer-events-none">
                             <td colSpan={colSpan} className="py-1.5 px-6">
                               <div className="flex items-center gap-3">
-                                <div className="flex-1 h-px bg-gray-200" />
-                                <span className="text-xs font-semibold text-gray-400 tracking-wider uppercase">Tier {tierNum}</span>
-                                <div className="flex-1 h-px bg-gray-200" />
+                                <div className="flex-1 h-px bg-blue-200" />
+                                <span className="text-xs font-semibold text-blue-600 tracking-wider uppercase">Tier {tierNum}</span>
+                                <div className="flex-1 h-px bg-blue-200" />
                               </div>
                             </td>
                           </tr>
