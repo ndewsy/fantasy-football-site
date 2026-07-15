@@ -654,10 +654,10 @@ export default function Home() {
                         {showDivider && (
                           <tr className="select-none pointer-events-none">
                             <td colSpan={colSpan} className="py-1.5 px-6">
-                              <div className="flex items-center gap-3">
-                                <div className="flex-1 h-px bg-blue-200" />
+                              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                                <div className="h-px bg-blue-200" />
                                 <span className="text-xs font-semibold text-blue-600 tracking-wider uppercase">Tier {tierNum}</span>
-                                <div className="flex-1 h-px bg-blue-200" />
+                                <div className="h-px bg-blue-200" />
                               </div>
                             </td>
                           </tr>
@@ -700,10 +700,10 @@ export default function Home() {
                           {showDivider && (
                             <tr>
                               <td colSpan={colSpan} className="py-1.5 px-6">
-                                <div className="flex items-center gap-3">
-                                  <div className="flex-1 h-px bg-blue-200" />
+                                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                                  <div className="h-px bg-blue-200" />
                                   <span className="text-xs font-semibold text-blue-600 tracking-wider uppercase">Tier {tierNum}</span>
-                                  <div className="flex-1 h-px bg-blue-200" />
+                                  <div className="h-px bg-blue-200" />
                                 </div>
                               </td>
                             </tr>
@@ -747,10 +747,10 @@ export default function Home() {
                           {showDivider && (
                             <tr className="select-none pointer-events-none">
                               <td colSpan={colSpan} className="py-1.5 px-6">
-                                <div className="flex items-center gap-3">
-                                  <div className="flex-1 h-px bg-blue-200" />
+                                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                                  <div className="h-px bg-blue-200" />
                                   <span className="text-xs font-semibold text-blue-600 tracking-wider uppercase">Tier {tierNum}</span>
-                                  <div className="flex-1 h-px bg-blue-200" />
+                                  <div className="h-px bg-blue-200" />
                                 </div>
                               </td>
                             </tr>
