@@ -688,7 +688,7 @@ export default function Home() {
 
                 {/* Rows 13+: blurred preview for non-subscribers */}
                 {!unlocked && filteredPlayers.length > FREE_ROWS && (
-                  <tbody className="blur-md select-none pointer-events-none">
+                  <tbody className="blur-md select-none pointer-events-none" style={{clipPath: "inset(0)"}}>
                     {filteredPlayers.slice(FREE_ROWS, FREE_ROWS + 10).map((player, i) => {
                       const rank = FREE_ROWS + i + 1;
                       const tierNum = getTierNumber(rank, activeTiers);
@@ -870,7 +870,7 @@ export default function Home() {
       {showScrollTop && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/80 backdrop-blur-md border border-white/80 shadow-lg text-gray-500 hover:text-gray-900 hover:bg-white transition-all text-sm font-medium"
+          className="fixed bottom-20 sm:bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/80 backdrop-blur-md border border-white/80 shadow-lg text-gray-500 hover:text-gray-900 hover:bg-white transition-all text-sm font-medium"
           aria-label="Scroll to top"
         >
           <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

@@ -50,7 +50,7 @@ export default function DynastyDavePage() {
       <NavBar activePath="/creators/dynastydave" />
 
       <div className="max-w-5xl mx-auto px-6 py-12">
-        <div className="flex items-center gap-6 mb-12">
+        <div className="flex flex-wrap items-center gap-4 mb-12">
           <div className="w-20 h-20 rounded-full bg-green-600 flex items-center justify-center text-white font-bold text-2xl">RR</div>
           <div>
             <h1 className="text-3xl font-bold">{creatorProfile?.display_name || "RookieRager"}</h1>
@@ -64,7 +64,7 @@ export default function DynastyDavePage() {
             {creatorProfile?.bio && <p className="text-gray-500 text-sm mt-2 max-w-sm">{creatorProfile.bio}</p>}
           </div>
           {!isSubscribed && (
-            <div className="ml-auto text-center bg-white/70 backdrop-blur-md rounded-xl p-4 border border-white/80 shadow-lg">
+            <div className="w-full sm:w-auto sm:ml-auto text-center bg-white/70 backdrop-blur-md rounded-xl p-4 border border-white/80 shadow-lg">
               <p className="text-gray-500 text-sm mb-2">Get access</p>
               <a href="/subscribe" className="bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold px-6 py-2 rounded-lg inline-block transition-all">Subscribe — $10/mo</a>
             </div>
