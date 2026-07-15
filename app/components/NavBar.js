@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import { createClient } from "@/lib/supabase";
 
 export default function NavBar({ activePath = "/" }) {
@@ -43,9 +42,7 @@ export default function NavBar({ activePath = "/" }) {
 
   return (
     <nav ref={navRef} className="relative sticky top-0 z-50 px-6 py-4 flex items-center justify-between" style={{backgroundImage: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 2px, transparent 2px, transparent 10px), linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #1e40af 100%)', boxShadow: '0 2px 20px rgba(37, 99, 235, 0.4)'}}>
-      <a href="/" className="shrink-0">
-        <Image src="/logo.png" alt="Fantasy Collective" width={1254} height={1254} className="h-10 w-auto" priority />
-      </a>
+      <a href="/" className="text-xl font-bold text-white shrink-0">Fantasy Collective</a>
 
       {/* Desktop nav */}
       <div className="hidden md:flex gap-4 items-center">
