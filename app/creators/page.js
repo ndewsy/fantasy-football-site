@@ -50,17 +50,9 @@ export default function CreatorsPage() {
                   <h3 className="font-bold text-lg">{name}</h3>
                   <p className="text-gray-500 text-sm">{handle}</p>
                 </div>
-                {creator.specialty && (
-                  <span className="ml-auto bg-blue-50 text-blue-700 text-xs px-3 py-1 rounded-full font-medium">{creator.specialty}</span>
-                )}
               </div>
               <p className="text-gray-500 text-sm mb-6">{bio}</p>
-              <div className="flex items-center justify-between">
-                {creator.comingSoon ? (
-                  <span className="text-gray-400 text-sm italic">Opening soon</span>
-                ) : (
-                  <span className="text-gray-500 text-sm">{creator.subscribers.toLocaleString()} members</span>
-                )}
+              <div className="flex items-center justify-end">
                 {creator.comingSoon ? (
                   <span className="bg-gray-100 text-gray-400 font-semibold px-4 py-2 rounded-lg text-sm cursor-not-allowed">Coming Soon</span>
                 ) : (
