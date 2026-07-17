@@ -112,6 +112,10 @@ export default function DashboardPage() {
   const [showCopyMenu, setShowCopyMenu] = useState(false);
   const [copyConfirm, setCopyConfirm] = useState(null);
 
+  // Floating buttons state
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [showFloatingSearch, setShowFloatingSearch] = useState(false);
+
   // Profile editing state
   const [profileName, setProfileName] = useState("");
   const [profileBio, setProfileBio] = useState("");
@@ -255,6 +259,12 @@ export default function DashboardPage() {
     }
     load();
   }, [router]);
+
+  useEffect(() => {
+    function onScroll() { setShowScrollTop(window.scrollY > 400); }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   async function updateFeedbackStatus(id, newStatus) {
     const supabase = createClient();
@@ -1814,6 +1824,51 @@ export default function DashboardPage() {
                 </div>
               </div>
             )}
+
+            {/* Floating buttons: quick-search + scroll-to-top */}
+            {showFloatingSearch && (
+              <div className="fixed inset-0 z-40" onClick={() => setShowFloatingSearch(false)} />
+            )}
+            <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2" onClick={(e) => e.stopPropagation()}>
+              {showFloatingSearch && (
+                <div className="bg-white/90 backdrop-blur-md border border-white/80 shadow-xl rounded-2xl p-3 w-72">
+                  <input
+                    autoFocus
+                    type="text"
+                    value={rankingsSearch}
+                    onChange={(e) => setRankingsSearch(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Escape") setShowFloatingSearch(false); }}
+                    placeholder="Search players..."
+                    className="w-full bg-white/60 border border-gray-200 rounded-xl px-3 py-2 text-sm text-[#0F172A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {rankingsSearch.trim() && (
+                    <p className="text-xs text-gray-400 mt-1.5 px-1">{filteredCurrentPlayers.length} match{filteredCurrentPlayers.length !== 1 ? "es" : ""}</p>
+                  )}
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowFloatingSearch(prev => !prev)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-full backdrop-blur-md border shadow-lg transition-all text-sm font-medium ${showFloatingSearch ? "bg-blue-600 border-blue-600 text-white hover:bg-blue-700" : "bg-white/80 border-white/80 text-gray-500 hover:text-gray-900 hover:bg-white"}`}
+                  aria-label="Find player"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  Find player
+                </button>
+                {showScrollTop && (
+                  <button
+                    type="button"
+                    onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/80 backdrop-blur-md border border-white/80 shadow-lg text-gray-500 hover:text-gray-900 hover:bg-white transition-all text-sm font-medium"
+                    aria-label="Scroll to top"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 12 9 6 15 12"/></svg>
+                    Scroll to top
+                  </button>
+                )}
+              </div>
+            </div>
 
           </div>
         )}
