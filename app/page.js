@@ -81,6 +81,7 @@ export default function Home() {
   const [playerRankingsLoading, setPlayerRankingsLoading] = useState(false);
   const [tiersCache, setTiersCache] = useState({});
   const [updatedAtCache, setUpdatedAtCache] = useState({});
+  const [lockedCache, setLockedCache] = useState({});
   const rankingsRef = useRef(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
 
@@ -151,9 +152,11 @@ export default function Home() {
           const { rankings } = await res.json();
           const formatMap = {};
           const updatedAtMap = {};
+          const lockedMap = {};
           for (const row of (rankings || [])) {
             formatMap[row.creator_id] = row.players;
             if (row.updated_at) updatedAtMap[row.creator_id] = row.updated_at;
+            lockedMap[row.creator_id] = row.locked || false;
           }
           setRankingsCache(prev => ({
             ...prev,
@@ -163,11 +166,15 @@ export default function Home() {
             ...prev,
             [activeFormat]: { ...(prev[activeFormat] || {}), ...updatedAtMap },
           }));
+          setLockedCache(prev => ({
+            ...prev,
+            [activeFormat]: { ...(prev[activeFormat] || {}), ...lockedMap },
+          }));
         } else {
           const res = await fetch(
             `/api/rankings?creator_id=${encodeURIComponent(activeCreator)}&format=${encodeURIComponent(activeFormat)}`
           );
-          const { players, tiers, updatedAt } = await res.json();
+          const { players, tiers, updatedAt, locked } = await res.json();
           setRankingsCache(prev => ({
             ...prev,
             [activeFormat]: { ...(prev[activeFormat] || {}), [activeCreator]: players || [] },
@@ -184,6 +191,10 @@ export default function Home() {
               [activeFormat]: { ...(prev[activeFormat] || {}), [activeCreator]: updatedAt },
             }));
           }
+          setLockedCache(prev => ({
+            ...prev,
+            [activeFormat]: { ...(prev[activeFormat] || {}), [activeCreator]: locked || false },
+          }));
         }
       } catch (err) {
         console.error("Failed to fetch rankings:", err);
@@ -205,9 +216,17 @@ export default function Home() {
   let displayPlayers = null;
   let hasData = false;
 
+  const lockedForFormat = lockedCache[activeFormat] || {};
+  // Individual creator tab locked for this viewer (admins/creators bypass)
+  const isCreatorLocked = activeCreator !== "consensus" && !isDashboardUser && !!lockedForFormat[activeCreator];
+
   if (!stillLoading) {
     if (activeCreator === "consensus") {
-      const consensus = computeConsensus(formatData);
+      // Exclude locked creators from consensus so WIP edits don't skew the average
+      const unlockedFormatData = Object.fromEntries(
+        Object.entries(formatData).filter(([cid]) => !lockedForFormat[cid])
+      );
+      const consensus = computeConsensus(unlockedFormatData);
       if (consensus && consensus.length > 0) {
         displayPlayers = consensus;
         hasData = true;
@@ -605,6 +624,12 @@ export default function Home() {
           <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg py-16 text-center">
             <p className="text-gray-500 font-medium mb-1">Creator coming soon</p>
             <p className="text-gray-400 text-sm">This creator spot is opening up. Stay tuned.</p>
+          </div>
+        ) : isCreatorLocked ? (
+          <div className="bg-white/70 backdrop-blur-md rounded-xl border border-amber-200 shadow-lg py-16 text-center px-6">
+            <p className="text-2xl mb-3">🔄</p>
+            <p className="text-[#0F172A] font-semibold mb-1">Rankings in progress</p>
+            <p className="text-gray-500 text-sm">This creator is currently updating their {activeFormat} rankings. Check back soon.</p>
           </div>
         ) : !hasData ? (
           <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg py-16 text-center">

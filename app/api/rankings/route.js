@@ -30,7 +30,7 @@ export async function GET(request) {
   if (creator_id && format) {
     const { data, error } = await supabase
       .from('rankings')
-      .select('players, tiers, updated_at')
+      .select('players, tiers, updated_at, locked')
       .eq('creator_id', creator_id)
       .eq('format', format)
       .maybeSingle();
@@ -39,14 +39,14 @@ export async function GET(request) {
       return Response.json({ error: error.message }, { status: 500 });
     }
     const { ranked, unranked } = parsePlayers(data?.players);
-    return Response.json({ players: ranked, unranked, tiers: data?.tiers || [], updatedAt: data?.updated_at || null });
+    return Response.json({ players: ranked, unranked, tiers: data?.tiers || [], updatedAt: data?.updated_at || null, locked: data?.locked || false });
   }
 
   // format only → all creators for that format (consensus tab on homepage)
   if (format) {
     const { data, error } = await supabase
       .from('rankings')
-      .select('creator_id, players, updated_at')
+      .select('creator_id, players, updated_at, locked')
       .eq('format', format);
     if (error) {
       console.error('[/api/rankings GET] fetch failed:', error);
@@ -54,7 +54,7 @@ export async function GET(request) {
     }
     const rankings = (data || []).map(row => {
       const { ranked } = parsePlayers(row.players);
-      return { creator_id: row.creator_id, players: ranked, updated_at: row.updated_at };
+      return { creator_id: row.creator_id, players: ranked, updated_at: row.updated_at, locked: row.locked || false };
     });
     return Response.json({ rankings });
   }
@@ -63,7 +63,7 @@ export async function GET(request) {
   if (creator_id) {
     const { data, error } = await supabase
       .from('rankings')
-      .select('format, players, tiers, updated_at')
+      .select('format, players, tiers, updated_at, locked')
       .eq('creator_id', creator_id)
       .order('updated_at', { ascending: true });
     if (error) {
@@ -74,7 +74,7 @@ export async function GET(request) {
       const rawPlayers = row.players;
       const { ranked, unranked } = parsePlayers(rawPlayers);
       console.log(`[/api/rankings GET] format="${row.format}" rawType=${Array.isArray(rawPlayers) ? 'flat-array' : typeof rawPlayers} rankedCount=${ranked.length} unrankedCount=${unranked.length}`);
-      return { format: row.format, players: ranked, unranked, tiers: row.tiers || [], updated_at: row.updated_at };
+      return { format: row.format, players: ranked, unranked, tiers: row.tiers || [], updated_at: row.updated_at, locked: row.locked || false };
     });
     return Response.json({ rankings });
   }
@@ -144,6 +144,42 @@ export async function POST(request) {
     console.error('[/api/rankings] upsert failed:', upsertError);
     return Response.json({ error: upsertError.message }, { status: 500 });
   }
+
+  return Response.json({ ok: true });
+}
+
+export async function PATCH(request) {
+  const authHeader = request.headers.get('Authorization');
+  const token = authHeader?.replace('Bearer ', '');
+  if (!token) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const body = await request.json();
+  const { creator_id, format, locked } = body;
+
+  if (!creator_id || !format || typeof locked !== 'boolean') {
+    return Response.json({ error: 'Missing required fields' }, { status: 400 });
+  }
+
+  const { data: prof } = await supabase
+    .from('profiles')
+    .select('creator_id, role')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (!prof || (prof.creator_id !== creator_id && prof.role !== 'admin')) {
+    return Response.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  const { error: updateError } = await supabase
+    .from('rankings')
+    .update({ locked })
+    .eq('creator_id', creator_id)
+    .eq('format', format);
+
+  if (updateError) return Response.json({ error: updateError.message }, { status: 500 });
 
   return Response.json({ ok: true });
 }

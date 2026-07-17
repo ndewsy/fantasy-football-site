@@ -99,6 +99,9 @@ export default function DashboardPage() {
   const [analyticsPageViews, setAnalyticsPageViews] = useState([]);
   const [analyticsPlayerClicks, setAnalyticsPlayerClicks] = useState([]);
 
+  // Format lock state
+  const [lockedFormats, setLockedFormats] = useState({});
+
   // Profile editing state
   const [profileName, setProfileName] = useState("");
   const [profileBio, setProfileBio] = useState("");
@@ -171,12 +174,15 @@ export default function DashboardPage() {
 
         const rankingsMap = {};
         const tiersMap = {};
+        const lockedMap = {};
         for (const r of (savedRankings || [])) {
           const ranked = r.players || [];
           const unrankedArr = (r.unranked || []).map(p => ({ ...p, unranked: true }));
           rankingsMap[r.format] = [...ranked, ...unrankedArr];
           tiersMap[r.format] = (r.tiers && r.tiers.length > 0) ? r.tiers : [...DEFAULT_TIERS];
+          lockedMap[r.format] = r.locked || false;
         }
+        setLockedFormats(lockedMap);
         // For formats with no saved data yet, initialize with pool and default tiers
         for (const fmt of FORMATS) {
           if (!rankingsMap[fmt]) rankingsMap[fmt] = [...pool];
@@ -293,6 +299,19 @@ export default function DashboardPage() {
       prev.map(p => p.id === profileId ? { ...p, creator_id: newCreatorId || null } : p)
     );
     setRoleUpdating(null);
+  }
+
+  async function toggleFormatLock(fmt) {
+    const newLocked = !lockedFormats[fmt];
+    setLockedFormats(prev => ({ ...prev, [fmt]: newLocked }));
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    await fetch('/api/rankings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ creator_id: profile.creator_id, format: fmt, locked: newLocked }),
+    });
   }
 
   async function saveProfile() {
@@ -1131,17 +1150,31 @@ export default function DashboardPage() {
                     }`}
                   >
                     {fmt}
+                    {lockedFormats[fmt] && <span className="ml-1.5 text-xs">🔒</span>}
                   </button>
                 ))}
               </div>
-              <button
-                type="button"
-                onClick={() => { setShowImport(true); setImportRows([]); setImportError(""); }}
-                className="shrink-0 flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 bg-white/60 backdrop-blur-sm border border-white/70 hover:bg-white/80 px-3 py-2 rounded-lg font-medium transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                Import Excel
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => toggleFormatLock(activeFormat)}
+                  className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg font-medium transition-colors border ${
+                    lockedFormats[activeFormat]
+                      ? "bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100"
+                      : "bg-white/60 backdrop-blur-sm text-gray-500 hover:text-gray-700 border-white/70 hover:bg-white/80"
+                  }`}
+                >
+                  {lockedFormats[activeFormat] ? "🔒 Under Review" : "🔓 Lock for editing"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowImport(true); setImportRows([]); setImportError(""); }}
+                  className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 bg-white/60 backdrop-blur-sm border border-white/70 hover:bg-white/80 px-3 py-2 rounded-lg font-medium transition-colors"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Import Excel
+                </button>
+              </div>
             </div>
 
             <div className="flex items-center justify-between mb-4">
