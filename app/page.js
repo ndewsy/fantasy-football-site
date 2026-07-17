@@ -82,6 +82,7 @@ export default function Home() {
   const [tiersCache, setTiersCache] = useState({});
   const [updatedAtCache, setUpdatedAtCache] = useState({});
   const [lockedCache, setLockedCache] = useState({});
+  const [movementCache, setMovementCache] = useState({});
   const rankingsRef = useRef(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
 
@@ -170,6 +171,12 @@ export default function Home() {
             ...prev,
             [activeFormat]: { ...(prev[activeFormat] || {}), ...lockedMap },
           }));
+          fetch(`/api/rankings/movement?format=${encodeURIComponent(activeFormat)}`)
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+              if (data?.movement) setMovementCache(prev => ({ ...prev, [activeFormat]: { ...(prev[activeFormat] || {}), consensus: data.movement } }));
+            })
+            .catch(() => {});
         } else {
           const res = await fetch(
             `/api/rankings?creator_id=${encodeURIComponent(activeCreator)}&format=${encodeURIComponent(activeFormat)}`
@@ -195,6 +202,12 @@ export default function Home() {
             ...prev,
             [activeFormat]: { ...(prev[activeFormat] || {}), [activeCreator]: locked || false },
           }));
+          fetch(`/api/rankings/movement?creator_id=${encodeURIComponent(activeCreator)}&format=${encodeURIComponent(activeFormat)}`)
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+              if (data?.movement) setMovementCache(prev => ({ ...prev, [activeFormat]: { ...(prev[activeFormat] || {}), [activeCreator]: data.movement } }));
+            })
+            .catch(() => {});
         }
       } catch (err) {
         console.error("Failed to fetch rankings:", err);
@@ -688,7 +701,7 @@ export default function Home() {
                           </tr>
                         )}
                         <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-4 text-gray-400 font-mono text-sm">{rank}</td>
+                          <td className="px-6 py-4 text-gray-400 font-mono text-sm">{rank}{(() => { const m = movementCache[activeFormat]?.[activeCreator]?.[player.name]; if (!m) return null; return <span className={`ml-1.5 text-xs font-semibold ${m > 0 ? "text-green-600" : "text-red-500"}`}>{m > 0 ? "▲" : "▼"}{Math.abs(m)}</span>; })()}</td>
                           <td className="px-6 py-4 font-medium">
                             <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors">
                               {player.name}
@@ -734,7 +747,7 @@ export default function Home() {
                             </tr>
                           )}
                           <tr className="border-b border-gray-100">
-                            <td className="px-6 py-4 text-gray-400 font-mono text-sm">{rank}</td>
+                            <td className="px-6 py-4 text-gray-400 font-mono text-sm">{rank}{(() => { const m = movementCache[activeFormat]?.[activeCreator]?.[player.name]; if (!m) return null; return <span className={`ml-1.5 text-xs font-semibold ${m > 0 ? "text-green-600" : "text-red-500"}`}>{m > 0 ? "▲" : "▼"}{Math.abs(m)}</span>; })()}</td>
                             <td className="px-6 py-4 font-medium">
                               <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors">
                                 {player.name}
@@ -781,7 +794,7 @@ export default function Home() {
                             </tr>
                           )}
                           <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                            <td className="px-6 py-4 text-gray-400 font-mono text-sm">{rank}</td>
+                            <td className="px-6 py-4 text-gray-400 font-mono text-sm">{rank}{(() => { const m = movementCache[activeFormat]?.[activeCreator]?.[player.name]; if (!m) return null; return <span className={`ml-1.5 text-xs font-semibold ${m > 0 ? "text-green-600" : "text-red-500"}`}>{m > 0 ? "▲" : "▼"}{Math.abs(m)}</span>; })()}</td>
                             <td className="px-6 py-4 font-medium">
                               <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors">
                                 {player.name}
