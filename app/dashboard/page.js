@@ -40,6 +40,7 @@ export default function DashboardPage() {
   const rankEditTimerRef = useRef(null);
   const draggedSeparatorTier = useRef(null);
   const tierDropTarget = useRef(null);
+  const lastEditedPlayerRef = useRef(null);
   const [tierDropRank, setTierDropRank] = useState(null);
   const [tiersByFormat, setTiersByFormat] = useState({});
   const [rankingsSearch, setRankingsSearch] = useState("");
@@ -266,6 +267,15 @@ export default function DashboardPage() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  useEffect(() => {
+    if (rankingsSearch.trim()) return;
+    const name = lastEditedPlayerRef.current;
+    if (!name) return;
+    lastEditedPlayerRef.current = null;
+    const row = document.querySelector(`tr[data-player-name="${CSS.escape(name)}"]`);
+    if (row) row.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [rankingsSearch]);
+
   async function updateFeedbackStatus(id, newStatus) {
     const supabase = createClient();
     await supabase.from("feedback").update({ status: newStatus }).eq("id", id);
@@ -426,9 +436,12 @@ export default function DashboardPage() {
   async function handleDragEnd() {
     if (draggedSeparatorTier.current !== null) return;
     const players = pendingRankings.current;
+    const finalIdx = dragIndex.current;
     dragIndex.current = null;
     pendingRankings.current = null;
     if (!players) return;
+    const ranked = players.filter(p => !p.unranked);
+    if (finalIdx !== null && ranked[finalIdx]) lastEditedPlayerRef.current = ranked[finalIdx].name;
     await saveRankingsNow(players);
   }
 
@@ -575,6 +588,7 @@ export default function DashboardPage() {
     const [moved] = ranked.splice(fromIndex, 1);
     ranked.splice(toIndex, 0, moved);
     const newFull = [...ranked, ...unrankedArr];
+    lastEditedPlayerRef.current = playerName;
     setRankings(prev => ({ ...prev, [activeFormat]: newFull }));
     saveRankingsNow(newFull);
   }
@@ -1506,6 +1520,7 @@ export default function DashboardPage() {
                         )}
                       <tr
                         draggable
+                        data-player-name={player.name}
                         onDragStart={(e) => handleDragStart(e, actualIndex)}
                         onDragOver={(e) => handleDragOver(e, actualIndex)}
                         onDragEnd={handleDragEnd}
