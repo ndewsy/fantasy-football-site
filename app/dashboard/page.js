@@ -107,6 +107,11 @@ export default function DashboardPage() {
   // Format lock state
   const [lockedFormats, setLockedFormats] = useState({});
 
+  // Copy Rankings state
+  const [savedFormats, setSavedFormats] = useState(new Set());
+  const [showCopyMenu, setShowCopyMenu] = useState(false);
+  const [copyConfirm, setCopyConfirm] = useState(null);
+
   // Profile editing state
   const [profileName, setProfileName] = useState("");
   const [profileBio, setProfileBio] = useState("");
@@ -188,6 +193,7 @@ export default function DashboardPage() {
           lockedMap[r.format] = r.locked || false;
         }
         setLockedFormats(lockedMap);
+        setSavedFormats(new Set((savedRankings || []).map(r => r.format)));
         // For formats with no saved data yet, initialize with pool and default tiers
         for (const fmt of FORMATS) {
           if (!rankingsMap[fmt]) rankingsMap[fmt] = [...pool];
@@ -632,6 +638,23 @@ export default function DashboardPage() {
     setShowAddTierModal(false);
     setAddTierRank("");
     setAddTierError("");
+  }
+
+  function handleCopyFormat(sourceFormat) {
+    const destHasRanked = (rankings[activeFormat] || []).some(p => !p.unranked);
+    if (destHasRanked) {
+      setCopyConfirm({ sourceFormat });
+    } else {
+      applyCopy(sourceFormat);
+    }
+  }
+
+  function applyCopy(sourceFormat) {
+    const src = sourceFormat || copyConfirm?.sourceFormat;
+    setRankings(prev => ({ ...prev, [activeFormat]: [...(rankings[src] || [])] }));
+    setTiersByFormat(prev => ({ ...prev, [activeFormat]: [...(tiersByFormat[src] || DEFAULT_TIERS)] }));
+    setSavedFormats(prev => new Set([...prev, activeFormat]));
+    setCopyConfirm(null);
   }
 
   function removeTier(tierIndex) {
@@ -1185,6 +1208,37 @@ export default function DashboardPage() {
                 >
                   {lockedFormats[activeFormat] ? "🔒 Under Review" : "🔓 Lock for editing"}
                 </button>
+                {(() => {
+                  const otherSavedFormats = FORMATS.filter(f => f !== activeFormat && savedFormats.has(f));
+                  return (
+                    <div className="relative">
+                      {showCopyMenu && <div className="fixed inset-0 z-40" onClick={() => setShowCopyMenu(false)} />}
+                      <button
+                        type="button"
+                        disabled={otherSavedFormats.length === 0}
+                        title={otherSavedFormats.length === 0 ? "No other rankings to copy from yet" : undefined}
+                        onClick={() => setShowCopyMenu(prev => !prev)}
+                        className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 bg-white/60 backdrop-blur-sm border border-white/70 hover:bg-white/80 px-3 py-2 rounded-lg font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        Copy Rankings
+                      </button>
+                      {showCopyMenu && otherSavedFormats.length > 0 && (
+                        <div className="absolute right-0 top-full mt-1 z-50 bg-white rounded-xl shadow-xl border border-gray-100 py-1 min-w-44">
+                          <p className="text-xs text-gray-400 px-3 pt-1 pb-1">Copy from:</p>
+                          {otherSavedFormats.map(fmt => (
+                            <button
+                              key={fmt}
+                              type="button"
+                              onClick={() => { setShowCopyMenu(false); handleCopyFormat(fmt); }}
+                              className="w-full text-left text-sm text-gray-700 hover:bg-gray-50 px-3 py-2 transition-colors"
+                            >{fmt}</button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
                 <button
                   type="button"
                   onClick={() => { setShowImport(true); setImportRows([]); setImportError(""); }}
@@ -1677,6 +1731,28 @@ export default function DashboardPage() {
                     >
                       {importLoading ? "Importing..." : `Import ${importRows.length} players into ${activeFormat}`}
                     </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Copy Rankings overwrite confirmation */}
+            {copyConfirm && (
+              <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setCopyConfirm(null)}>
+                <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
+                  <h3 className="font-bold text-lg mb-2">Replace {activeFormat} rankings?</h3>
+                  <p className="text-gray-500 text-sm mb-4">This will overwrite your current <span className="font-medium text-gray-700">{activeFormat}</span> rankings with a copy of <span className="font-medium text-gray-700">{copyConfirm.sourceFormat}</span>. Your changes won't be saved until you edit or drag a player.</p>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => applyCopy(copyConfirm.sourceFormat)}
+                      className="flex-1 bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-medium py-2 rounded-lg transition-all text-sm"
+                    >Replace</button>
+                    <button
+                      type="button"
+                      onClick={() => setCopyConfirm(null)}
+                      className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium py-2 rounded-lg transition-colors text-sm"
+                    >Cancel</button>
                   </div>
                 </div>
               </div>
