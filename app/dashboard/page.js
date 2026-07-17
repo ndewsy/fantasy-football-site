@@ -59,6 +59,11 @@ export default function DashboardPage() {
   const [lastClickedPlayer, setLastClickedPlayer] = useState(null);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
 
+  // Add tier modal state
+  const [showAddTierModal, setShowAddTierModal] = useState(false);
+  const [addTierRank, setAddTierRank] = useState("");
+  const [addTierError, setAddTierError] = useState("");
+
   // Excel import state
   const [showImport, setShowImport] = useState(false);
   const [importRows, setImportRows] = useState([]);
@@ -604,15 +609,29 @@ export default function DashboardPage() {
     setBulkDeleteConfirm(false);
   }
 
-  function addTier() {
-    const current = tiersByFormat[activeFormat] || DEFAULT_TIERS;
-    const lastStart = current[current.length - 1];
+  function confirmAddTier() {
+    const pos = parseInt(addTierRank, 10);
     const maxRank = (rankings[activeFormat] || []).filter(p => !p.unranked).length;
-    const newStart = Math.min(lastStart + 12, maxRank);
-    if (newStart <= lastStart) return;
-    const newTiers = [...current, newStart];
+    const current = tiersByFormat[activeFormat] || DEFAULT_TIERS;
+    if (!Number.isInteger(pos) || isNaN(pos) || pos < 1) {
+      setAddTierError("Please enter a positive whole number.");
+      return;
+    }
+    if (pos >= maxRank) {
+      setAddTierError(`Must be less than ${maxRank} (your total ranked players).`);
+      return;
+    }
+    const newTierStart = pos + 1;
+    if (current.includes(newTierStart)) {
+      setAddTierError(`A tier boundary already exists after rank ${pos}.`);
+      return;
+    }
+    const newTiers = [...current, newTierStart].sort((a, b) => a - b);
     setTiersByFormat(prev => ({ ...prev, [activeFormat]: newTiers }));
     saveRankingsNow(rankings[activeFormat] || [], newTiers);
+    setShowAddTierModal(false);
+    setAddTierRank("");
+    setAddTierError("");
   }
 
   function removeTier(tierIndex) {
@@ -1513,7 +1532,7 @@ export default function DashboardPage() {
               <div className="mt-2 mb-4">
                 <button
                   type="button"
-                  onClick={addTier}
+                  onClick={() => { setShowAddTierModal(true); setAddTierRank(""); setAddTierError(""); }}
                   className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
                 >+ Add Tier</button>
               </div>
@@ -1658,6 +1677,41 @@ export default function DashboardPage() {
                     >
                       {importLoading ? "Importing..." : `Import ${importRows.length} players into ${activeFormat}`}
                     </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Add Tier modal */}
+            {showAddTierModal && (
+              <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setShowAddTierModal(false)}>
+                <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
+                  <h3 className="font-bold text-lg mb-1">Add Tier Break</h3>
+                  <p className="text-gray-500 text-sm mb-4">Enter the rank after which the new tier should start.</p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Insert tier after rank</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={addTierRank}
+                    onChange={(e) => { setAddTierRank(e.target.value); setAddTierError(""); }}
+                    onKeyDown={(e) => { if (e.key === "Enter") confirmAddTier(); if (e.key === "Escape") setShowAddTierModal(false); }}
+                    placeholder="e.g. 24"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-1"
+                    autoFocus
+                  />
+                  {addTierError && <p className="text-red-500 text-xs mb-3">{addTierError}</p>}
+                  {!addTierError && <div className="mb-3" />}
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={confirmAddTier}
+                      className="flex-1 bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-medium py-2 rounded-lg transition-all text-sm"
+                    >Add Tier</button>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddTierModal(false)}
+                      className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium py-2 rounded-lg transition-colors text-sm"
+                    >Cancel</button>
                   </div>
                 </div>
               </div>
