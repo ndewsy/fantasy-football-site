@@ -5,24 +5,29 @@ const supabase = createClient(
   process.env.SUPABASE_SECRET_KEY
 );
 
-function normalizeName(name) {
-  return name.toLowerCase().replace(/\./g, ' ').trim().replace(/\s+/g, ' ');
-}
-
-function parseRanked(raw) {
+// Parses a rankings.players JSONB value into an ordered array of player objects.
+// Handles both the new integer-ID format and the legacy embedded-object format.
+function parseRanked(raw, idToName) {
   if (!raw) return [];
-  if (Array.isArray(raw)) return raw.filter(p => !p.unranked).map(({ unranked: _, ...p }) => p);
-  return Array.isArray(raw.ranked) ? raw.ranked : [];
+  const ranked = Array.isArray(raw) ? raw.filter(p => !p?.unranked) : (raw.ranked || []);
+  if (ranked.length === 0) return [];
+  if (typeof ranked[0] === 'number') {
+    return ranked.map(id => {
+      const name = idToName[id];
+      return name ? { name } : null;
+    }).filter(Boolean);
+  }
+  // Legacy: embedded objects
+  return ranked.map(({ unranked: _, ...p }) => p);
 }
 
 function computeConsensus(formatData) {
   const playerMap = {};
   for (const players of Object.values(formatData)) {
     players.forEach((p, i) => {
-      const key = normalizeName(p.name);
-      if (!playerMap[key]) playerMap[key] = { name: p.name, totalRank: 0, count: 0 };
-      playerMap[key].totalRank += i + 1;
-      playerMap[key].count++;
+      if (!playerMap[p.name]) playerMap[p.name] = { name: p.name, totalRank: 0, count: 0 };
+      playerMap[p.name].totalRank += i + 1;
+      playerMap[p.name].count++;
     });
   }
   return Object.values(playerMap)
@@ -38,10 +43,10 @@ function cutoffDate() {
 
 function buildMovement(currentRanked, historicalRanked) {
   const histMap = {};
-  historicalRanked.forEach((p, i) => { histMap[normalizeName(p.name)] = i + 1; });
+  historicalRanked.forEach((p, i) => { histMap[p.name] = i + 1; });
   const movement = {};
   currentRanked.forEach((p, i) => {
-    const oldRank = histMap[normalizeName(p.name)];
+    const oldRank = histMap[p.name];
     if (oldRank !== undefined) {
       const delta = oldRank - (i + 1);
       if (delta !== 0) movement[p.name] = delta;
@@ -56,6 +61,10 @@ export async function GET(request) {
   const format = searchParams.get('format');
 
   if (!format) return Response.json({ error: 'format required' }, { status: 400 });
+
+  // Build id→name lookup for expanding integer arrays
+  const { data: playersData } = await supabase.from('players').select('id, name');
+  const idToName = Object.fromEntries((playersData || []).map(p => [p.id, p.name]));
 
   const cutoff = cutoffDate();
 
@@ -73,9 +82,9 @@ export async function GET(request) {
 
     if (!current || !hist || hist.length === 0) return Response.json({ movement: {} });
 
-    return Response.json({
-      movement: buildMovement(parseRanked(current.players), hist[0].players || []),
-    });
+    const currentRanked = parseRanked(current.players, idToName);
+    const histRanked = parseRanked(hist[0].players, idToName);
+    return Response.json({ movement: buildMovement(currentRanked, histRanked) });
   }
 
   // Consensus
@@ -92,14 +101,14 @@ export async function GET(request) {
 
   const currentFormatData = {};
   for (const row of currentRows) {
-    const ranked = parseRanked(row.players);
+    const ranked = parseRanked(row.players, idToName);
     if (ranked.length > 0) currentFormatData[row.creator_id] = ranked;
   }
 
   const histFormatData = {};
   for (const row of (histRows || [])) {
     if (!histFormatData[row.creator_id]) {
-      const ranked = Array.isArray(row.players) ? row.players : [];
+      const ranked = parseRanked(row.players, idToName);
       if (ranked.length > 0) histFormatData[row.creator_id] = ranked;
     }
   }
@@ -109,7 +118,5 @@ export async function GET(request) {
   const currentConsensus = computeConsensus(currentFormatData);
   const histConsensus = computeConsensus(histFormatData);
 
-  return Response.json({
-    movement: buildMovement(currentConsensus, histConsensus),
-  });
+  return Response.json({ movement: buildMovement(currentConsensus, histConsensus) });
 }

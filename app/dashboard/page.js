@@ -23,6 +23,14 @@ const posColors = {
   TE: "bg-amber-100 text-amber-700",
 };
 
+// Converts a player array from either integer IDs (new format) or objects (legacy)
+// into player objects using the provided id→player map.
+function expandIds(arr, byId) {
+  if (!arr?.length) return [];
+  if (typeof arr[0] === "number") return arr.map(id => byId[id]).filter(Boolean);
+  return arr; // already objects (legacy format)
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [profile, setProfile] = useState(null);
@@ -48,17 +56,10 @@ export default function DashboardPage() {
   const [addPlayerSearch, setAddPlayerSearch] = useState("");
   const [addPlayerResults, setAddPlayerResults] = useState([]);
   const [confirmRemovePlayer, setConfirmRemovePlayer] = useState(null);
-  const [confirmDeleteUnranked, setConfirmDeleteUnranked] = useState(null);
   const [showUnranked, setShowUnranked] = useState(false);
-  const [showNewPlayerForm, setShowNewPlayerForm] = useState(false);
-  const [newPlayerName, setNewPlayerName] = useState("");
-  const [newPlayerPos, setNewPlayerPos] = useState("WR");
-  const [newPlayerTeam, setNewPlayerTeam] = useState("");
-  const [newPlayerTeamError, setNewPlayerTeamError] = useState(false);
-  const [newPlayerSaving, setNewPlayerSaving] = useState(false);
   const [selectedPlayers, setSelectedPlayers] = useState(new Set());
   const [lastClickedPlayer, setLastClickedPlayer] = useState(null);
-  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [bulkMoveConfirm, setBulkMoveConfirm] = useState(false);
 
   // Add tier modal state
   const [showAddTierModal, setShowAddTierModal] = useState(false);
@@ -126,8 +127,9 @@ export default function DashboardPage() {
   const [profileSaved, setProfileSaved] = useState(false);
   const [profileSaveError, setProfileSaveError] = useState("");
 
-  // Full player pool from Supabase
+  // Full player pool from Supabase (canonical players table)
   const [playerPool, setPlayerPool] = useState([]);
+  const [playersById, setPlayersById] = useState({});
 
   useEffect(() => {
     async function load() {
@@ -179,20 +181,22 @@ export default function DashboardPage() {
           fetch(`/api/rankings?creator_id=${encodeURIComponent(prof.creator_id)}`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          supabase.from("players").select("name, position, team").order("adp_rank").limit(300),
+          supabase.from("players").select("id, name, position, team").order("adp_rank"),
         ]);
 
         const { rankings: savedRankings } = rankingsRes.ok ? await rankingsRes.json() : { rankings: [] };
 
-        const pool = (poolData || []).map(p => ({ name: p.name, pos: p.position, team: p.team || "FA" }));
+        const pool = (poolData || []).map(p => ({ id: p.id, name: p.name, pos: p.position, team: p.team || "FA" }));
+        const byId = Object.fromEntries(pool.map(p => [p.id, p]));
         setPlayerPool(pool);
+        setPlayersById(byId);
 
         const rankingsMap = {};
         const tiersMap = {};
         const lockedMap = {};
         for (const r of (savedRankings || [])) {
-          const ranked = r.players || [];
-          const unrankedArr = (r.unranked || []).map(p => ({ ...p, unranked: true }));
+          const ranked = expandIds(r.players || [], byId);
+          const unrankedArr = expandIds(r.unranked || [], byId).map(p => ({ ...p, unranked: true }));
           rankingsMap[r.format] = [...ranked, ...unrankedArr];
           tiersMap[r.format] = (r.tiers && r.tiers.length > 0) ? r.tiers : [...DEFAULT_TIERS];
           lockedMap[r.format] = r.locked || false;
@@ -214,8 +218,8 @@ export default function DashboardPage() {
             const ranked = players.filter(p => p.unranked || p.team !== "FA");
             const nowUnranked = players.filter(p => !p.unranked && p.team === "FA").map(p => ({ ...p, unranked: true }));
             rankingsMap[fmt] = [...ranked, ...nowUnranked];
-            const rankedToSave = rankingsMap[fmt].filter(p => !p.unranked).map(({ unranked: _, ...p }) => p);
-            const unrankedToSave = rankingsMap[fmt].filter(p => p.unranked).map(({ unranked: _, ...p }) => p);
+            const rankedToSave = rankingsMap[fmt].filter(p => !p.unranked).map(p => p.id);
+            const unrankedToSave = rankingsMap[fmt].filter(p => p.unranked).map(p => p.id);
             savesNeeded.push({ format: fmt, players: rankedToSave, unranked: unrankedToSave, tiers: tiersMap[fmt] });
           }
         }
@@ -405,8 +409,8 @@ export default function DashboardPage() {
   }
 
   async function saveRankingsNow(full, tiersOverride) {
-    const rankedOnly = full.filter(p => !p.unranked).map(({ unranked: _, ...p }) => p);
-    const unrankedOnly = full.filter(p => p.unranked).map(({ unranked: _, ...p }) => p);
+    const rankedOnly = full.filter(p => !p.unranked).map(p => p.id);
+    const unrankedOnly = full.filter(p => p.unranked).map(p => p.id);
     const tiers = tiersOverride !== undefined ? tiersOverride : (tiersByFormat[activeFormat] || DEFAULT_TIERS);
     setRankingsSaving(true);
     try {
@@ -456,12 +460,7 @@ export default function DashboardPage() {
     setConfirmRemovePlayer(null);
   }
 
-  function removeCompletely(playerName) {
-    const full = (rankings[activeFormat] || []).filter(p => p.name !== playerName);
-    setRankings(prev => ({ ...prev, [activeFormat]: full }));
-    saveRankingsNow(full);
-    setConfirmRemovePlayer(null);
-  }
+  // removeCompletely removed — canonical players stay in unranked; deactivation is admin-only
 
   function addFromUnranked(playerName) {
     const full = [...(rankings[activeFormat] || [])];
@@ -488,27 +487,6 @@ export default function DashboardPage() {
     setAddPlayerResults([]);
   }
 
-  async function createAndAddPlayer() {
-    if (!newPlayerName.trim()) return;
-    if (!newPlayerTeam.trim()) { setNewPlayerTeamError(true); return; }
-    setNewPlayerTeamError(false);
-    setNewPlayerSaving(true);
-    try {
-      const supabase = createClient();
-      const playerObj = { name: newPlayerName.trim(), pos: newPlayerPos, team: newPlayerTeam.trim() };
-      await supabase.from("players").insert({ name: playerObj.name, position: playerObj.pos, team: playerObj.team });
-      setPlayerPool(prev => [...prev, playerObj]);
-      addPlayer(playerObj);
-      setShowNewPlayerForm(false);
-      setNewPlayerName("");
-      setNewPlayerPos("WR");
-      setNewPlayerTeam("");
-    } catch (err) {
-      console.error("Failed to create player:", err);
-    } finally {
-      setNewPlayerSaving(false);
-    }
-  }
 
   function handleAddPlayerSearch(query) {
     setAddPlayerSearch(query);
@@ -556,17 +534,15 @@ export default function DashboardPage() {
   async function confirmImport() {
     if (importRows.length === 0) return;
     setImportLoading(true);
-    const poolByName = {};
-    for (const p of playerPool) poolByName[p.name.toLowerCase()] = p;
+    const normalizeName = n => n.toLowerCase().replace(/\./g, " ").trim().replace(/\s+/g, " ");
+    const poolByNorm = {};
+    for (const p of playerPool) poolByNorm[normalizeName(p.name)] = p;
     const newRanked = importRows.map(row => {
-      const match = poolByName[row.name.toLowerCase()];
-      return match
-        ? { name: match.name, pos: match.pos, team: match.team }
-        : { name: row.name, pos: row.pos || "—", team: row.team || "FA" };
-    });
-    const newRankedNames = new Set(newRanked.map(p => p.name.toLowerCase()));
+      return poolByNorm[normalizeName(row.name)] || null;
+    }).filter(Boolean);
+    const newRankedIds = new Set(newRanked.map(p => p.id));
     const preservedUnranked = (rankings[activeFormat] || [])
-      .filter(p => p.unranked && !newRankedNames.has(p.name.toLowerCase()))
+      .filter(p => p.unranked && !newRankedIds.has(p.id))
       .map(({ unranked: _, ...p }) => ({ ...p, unranked: true }));
     const full = [...newRanked, ...preservedUnranked];
     setRankings(prev => ({ ...prev, [activeFormat]: full }));
@@ -630,14 +606,6 @@ export default function DashboardPage() {
     setLastClickedPlayer(null);
   }
 
-  function bulkDeletePermanently() {
-    const full = (rankings[activeFormat] || []).filter(p => !selectedPlayers.has(p.name));
-    setRankings(prev => ({ ...prev, [activeFormat]: full }));
-    saveRankingsNow(full);
-    setSelectedPlayers(new Set());
-    setLastClickedPlayer(null);
-    setBulkDeleteConfirm(false);
-  }
 
   function confirmAddTier() {
     const pos = parseInt(addTierRank, 10);
@@ -1208,7 +1176,7 @@ export default function DashboardPage() {
                 {FORMATS.map((fmt) => (
                   <button
                     key={fmt}
-                    onClick={() => { setActiveFormat(fmt); setRankingsSaved(false); setShowAddPlayer(false); setAddPlayerSearch(""); setAddPlayerResults([]); setShowNewPlayerForm(false); }}
+                    onClick={() => { setActiveFormat(fmt); setRankingsSaved(false); setShowAddPlayer(false); setAddPlayerSearch(""); setAddPlayerResults([]); }}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors shrink-0 ${
                       activeFormat === fmt
                         ? "bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white"
@@ -1310,35 +1278,13 @@ export default function DashboardPage() {
                         </td>
                         <td className="hidden sm:table-cell px-4 py-2.5 text-gray-500 text-sm">{player.team}</td>
                         <td className="px-4 py-2.5 text-right">
-                          {confirmDeleteUnranked === player.name ? (
-                            <div className="flex items-center justify-end gap-1.5">
-                              <span className="text-xs text-gray-600 whitespace-nowrap">Permanently delete {player.name}?</span>
-                              <button
-                                type="button"
-                                onClick={() => { removeCompletely(player.name); setConfirmDeleteUnranked(null); }}
-                                className="text-xs bg-red-500 hover:bg-red-600 text-white font-medium px-2 py-0.5 rounded transition-colors whitespace-nowrap"
-                              >Yes, delete</button>
-                              <button
-                                type="button"
-                                onClick={() => setConfirmDeleteUnranked(null)}
-                                className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium px-2 py-0.5 rounded transition-colors"
-                              >Cancel</button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-end gap-2">
-                              <button
-                                type="button"
-                                onClick={() => addFromUnranked(player.name)}
-                                className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 font-medium px-3 py-1 rounded-lg transition-colors"
-                              >+ Add to Rankings</button>
-                              <button
-                                type="button"
-                                onClick={() => setConfirmDeleteUnranked(player.name)}
-                                className="opacity-0 group-hover:opacity-100 w-5 h-5 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center text-xs transition-all"
-                                title="Permanently delete"
-                              >×</button>
-                            </div>
-                          )}
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => addFromUnranked(player.name)}
+                              className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 font-medium px-3 py-1 rounded-lg transition-colors"
+                            >+ Add to Rankings</button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1358,55 +1304,6 @@ export default function DashboardPage() {
                   <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">+</span>
                   Add Player
                 </button>
-              ) : showNewPlayerForm ? (
-                <div className="flex flex-col gap-3">
-                  <p className="text-sm font-medium text-gray-700">Create new player</p>
-                  <div className="flex gap-2 flex-wrap">
-                    <input
-                      type="text"
-                      value={newPlayerName}
-                      onChange={(e) => setNewPlayerName(e.target.value)}
-                      placeholder="Player name"
-                      autoFocus
-                      className="flex-1 min-w-0 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-[#0F172A] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                    />
-                    <select
-                      value={newPlayerPos}
-                      onChange={(e) => setNewPlayerPos(e.target.value)}
-                      className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-[#0F172A] focus:outline-none focus:border-blue-500"
-                    >
-                      <option value="QB">QB</option>
-                      <option value="RB">RB</option>
-                      <option value="WR">WR</option>
-                      <option value="TE">TE</option>
-                    </select>
-                    <div className="flex flex-col gap-1">
-                      <input
-                        type="text"
-                        value={newPlayerTeam}
-                        onChange={(e) => { setNewPlayerTeam(e.target.value); if (e.target.value.trim()) setNewPlayerTeamError(false); }}
-                        placeholder="Team (required)"
-                        className={`w-36 bg-white border rounded-lg px-3 py-2 text-sm text-[#0F172A] focus:outline-none focus:ring-1 ${newPlayerTeamError ? "border-red-400 focus:border-red-400 focus:ring-red-400" : "border-gray-200 focus:border-blue-500 focus:ring-blue-500"}`}
-                      />
-                      {newPlayerTeamError && <p className="text-red-500 text-xs">Team is required</p>}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={createAndAddPlayer}
-                      disabled={!newPlayerName.trim() || newPlayerSaving}
-                      className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
-                    >
-                      {newPlayerSaving ? "Adding..." : "Add to Rankings"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setShowNewPlayerForm(false); setNewPlayerTeamError(false); }}
-                      className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
-                    >Back</button>
-                  </div>
-                </div>
               ) : (
                 <div>
                   <input
@@ -1432,13 +1329,6 @@ export default function DashboardPage() {
                         </button>
                       ))}
                     </div>
-                  )}
-                  {addPlayerSearch.trim() && (
-                    <button
-                      type="button"
-                      onClick={() => { setNewPlayerName(addPlayerSearch.trim()); setNewPlayerPos("WR"); setNewPlayerTeam(""); setNewPlayerTeamError(false); setShowNewPlayerForm(true); }}
-                      className="mt-2 text-sm text-blue-600 hover:text-blue-700 transition-colors font-medium block"
-                    >+ Add &ldquo;{addPlayerSearch.trim()}&rdquo; as new player</button>
                   )}
                   <button
                     type="button"
@@ -1577,11 +1467,6 @@ export default function DashboardPage() {
                               >Move to Unranked</button>
                               <button
                                 type="button"
-                                onClick={(e) => { e.stopPropagation(); removeCompletely(player.name); }}
-                                className="text-xs bg-red-500 hover:bg-red-600 text-white font-medium px-2 py-0.5 rounded transition-colors whitespace-nowrap"
-                              >Remove Completely</button>
-                              <button
-                                type="button"
                                 onClick={(e) => { e.stopPropagation(); setConfirmRemovePlayer(null); }}
                                 className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium px-2 py-0.5 rounded transition-colors"
                               >Cancel</button>
@@ -1623,14 +1508,9 @@ export default function DashboardPage() {
                 <span className="text-sm font-medium text-gray-700">{selectedPlayers.size} player{selectedPlayers.size !== 1 ? "s" : ""} selected</span>
                 <button
                   type="button"
-                  onClick={bulkMoveToUnranked}
+                  onClick={() => setBulkMoveConfirm(true)}
                   className="text-sm bg-blue-500 hover:bg-blue-600 text-white font-medium px-3 py-1.5 rounded-lg transition-colors"
                 >Move to Unranked</button>
-                <button
-                  type="button"
-                  onClick={() => setBulkDeleteConfirm(true)}
-                  className="text-sm bg-red-500 hover:bg-red-600 text-white font-medium px-3 py-1.5 rounded-lg transition-colors"
-                >Delete Permanently</button>
                 <button
                   type="button"
                   onClick={() => { setSelectedPlayers(new Set()); setLastClickedPlayer(null); }}
@@ -1818,21 +1698,20 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* Bulk delete confirmation modal */}
-            {bulkDeleteConfirm && (
-              <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center" onClick={(e) => { e.stopPropagation(); setBulkDeleteConfirm(false); }}>
+            {/* Bulk move-to-unranked confirmation modal */}
+            {bulkMoveConfirm && (
+              <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center" onClick={(e) => { e.stopPropagation(); setBulkMoveConfirm(false); }}>
                 <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
-                  <h3 className="font-bold text-lg mb-2">Delete {selectedPlayers.size} player{selectedPlayers.size !== 1 ? "s" : ""}?</h3>
-                  <p className="text-gray-500 text-sm mb-4">This will permanently remove them from your rankings and cannot be undone.</p>
+                  <h3 className="font-bold text-lg mb-2">Move {selectedPlayers.size} player{selectedPlayers.size !== 1 ? "s" : ""} to Unranked?</h3>
                   <div className="flex gap-3">
                     <button
                       type="button"
-                      onClick={bulkDeletePermanently}
-                      className="flex-1 bg-red-500 hover:bg-red-600 text-white font-medium py-2 rounded-lg transition-colors"
-                    >Yes, delete all</button>
+                      onClick={() => { bulkMoveToUnranked(); setBulkMoveConfirm(false); }}
+                      className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 rounded-lg transition-colors"
+                    >Yes, move all</button>
                     <button
                       type="button"
-                      onClick={() => setBulkDeleteConfirm(false)}
+                      onClick={() => setBulkMoveConfirm(false)}
                       className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium py-2 rounded-lg transition-colors"
                     >Cancel</button>
                   </div>

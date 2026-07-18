@@ -41,6 +41,13 @@ function getTierNumber(rank, tiers) {
   return 1;
 }
 
+// Converts a player array from integer IDs (new format) or objects (legacy) to player objects.
+function expandIds(arr, byId) {
+  if (!arr?.length) return [];
+  if (typeof arr[0] === "number") return arr.map(id => byId[id]).filter(Boolean);
+  return arr;
+}
+
 function normalizeName(name) {
   return name.toLowerCase().replace(/\./g, ' ').trim().replace(/\s+/g, ' ');
 }
@@ -101,10 +108,9 @@ export default function Home() {
       const supabase = createClient();
       const { data } = await supabase
         .from("players")
-        .select("name, position, team")
-        .order("adp_rank")
-        .limit(300);
-      setPlayerPool((data || []).map(p => ({ name: p.name, pos: p.position, team: p.team || "FA" })));
+        .select("id, name, position, team")
+        .order("adp_rank");
+      setPlayerPool((data || []).map(p => ({ id: p.id, name: p.name, pos: p.position, team: p.team || "FA" })));
       setPoolLoaded(true);
     }
     loadPool();
@@ -158,8 +164,9 @@ export default function Home() {
           const formatMap = {};
           const updatedAtMap = {};
           const lockedMap = {};
+          const byId = Object.fromEntries(playerPool.map(p => [p.id, p]));
           for (const row of (rankings || [])) {
-            formatMap[row.creator_id] = row.players;
+            formatMap[row.creator_id] = expandIds(row.players, byId);
             if (row.updated_at) updatedAtMap[row.creator_id] = row.updated_at;
             lockedMap[row.creator_id] = row.locked || false;
           }
@@ -186,9 +193,10 @@ export default function Home() {
             `/api/rankings?creator_id=${encodeURIComponent(activeCreator)}&format=${encodeURIComponent(activeFormat)}`
           );
           const { players, tiers, updatedAt, locked } = await res.json();
+          const byId = Object.fromEntries(playerPool.map(p => [p.id, p]));
           setRankingsCache(prev => ({
             ...prev,
-            [activeFormat]: { ...(prev[activeFormat] || {}), [activeCreator]: players || [] },
+            [activeFormat]: { ...(prev[activeFormat] || {}), [activeCreator]: expandIds(players || [], byId) },
           }));
           if (tiers && tiers.length > 0) {
             setTiersCache(prev => ({
@@ -288,7 +296,8 @@ export default function Home() {
           const res = await fetch(`/api/rankings?format=${encodeURIComponent(fmt)}`);
           const { rankings } = await res.json();
           const fmtMap = {};
-          for (const row of (rankings || [])) fmtMap[row.creator_id] = row.players;
+          const byId = Object.fromEntries(playerPool.map(p => [p.id, p]));
+          for (const row of (rankings || [])) fmtMap[row.creator_id] = expandIds(row.players, byId);
           formatData = fmtMap;
           setRankingsCache(prev => ({ ...prev, [fmt]: fmtMap }));
         } catch {
