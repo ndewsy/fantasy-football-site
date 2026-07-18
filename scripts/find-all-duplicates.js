@@ -1,9 +1,11 @@
 // Comprehensive duplicate detection across the full players table.
-// Combines four normalization strategies in a single pass:
+// Combines five normalization strategies in a single pass:
 //   1. Strip punctuation (periods, apostrophes, hyphens, commas)
 //   2. Collapse whitespace
 //   3. Strip generational suffixes (Jr./Sr./II/III/IV/V)
 //   4. Levenshtein distance on the fully-normalized base name
+//   5. Nickname prefix: same last name + one first name is a prefix of the other
+//      (e.g. "Chig Okonkwo" / "Chigozeim Okonkwo", "Cam Newton" / "Cameron Newton")
 //
 // Outputs a review report — does NOT write anything to the DB.
 //
@@ -55,6 +57,32 @@ function fuzzyThreshold(name) {
   return 3;
 }
 
+// Split a normalized full name into { first, last }.
+// Handles "first last", "first middle last" (treats everything but last token as first),
+// and single-token names (first = "", last = token).
+function splitName(normName) {
+  const parts = normName.trim().split(" ");
+  if (parts.length === 1) return { first: "", last: parts[0] };
+  return { first: parts.slice(0, -1).join(" "), last: parts[parts.length - 1] };
+}
+
+// Returns true if nameA and nameB share the same last name AND one first name
+// is a non-empty prefix of the other (minimum 2 chars for the shorter prefix
+// to avoid single-letter false positives).
+function isNicknamePrefixPair(normA, normB) {
+  if (normA === normB) return false;
+  const a = splitName(normA);
+  const b = splitName(normB);
+  if (a.last !== b.last) return false;
+  if (!a.first || !b.first) return false;
+  const shorter = a.first.length <= b.first.length ? a.first : b.first;
+  const longer  = a.first.length <= b.first.length ? b.first : a.first;
+  // Require the shorter first name to be at least 2 chars and a true prefix
+  // (not just equal — equal would be caught by exact normalization).
+  if (shorter.length < 2 || shorter === longer) return false;
+  return longer.startsWith(shorter);
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -101,14 +129,18 @@ async function main() {
       members,
     }));
 
-  // ── Phase 2: fuzzy pairs not already caught by exact grouping ───────────
-  // Compare every pair whose normalized keys differ but are within threshold.
-  // Build a lookup of players that are already in an exact group so we can
-  // flag overlaps.
-  const inExactGroup = new Set(exactGroups.flatMap(g => g.members.map(m => m.id)));
+  // Track pairs already surfaced so phases 2 and 3 don't re-emit them.
+  const seenPairs = new Set();
+  for (const g of exactGroups) {
+    for (let i = 0; i < g.members.length; i++)
+      for (let j = i + 1; j < g.members.length; j++) {
+        const a = g.members[i].id, b = g.members[j].id;
+        seenPairs.add(`${Math.min(a,b)}-${Math.max(a,b)}`);
+      }
+  }
 
+  // ── Phase 2: fuzzy pairs not already caught by exact grouping ───────────
   const fuzzyPairs = [];
-  const seen = new Set(); // "minId-maxId" to avoid duplicate pair entries
 
   for (let i = 0; i < players.length; i++) {
     for (let j = i + 1; j < players.length; j++) {
@@ -117,14 +149,14 @@ async function main() {
       if (keyA === keyB) continue; // already caught in phase 1
 
       const pairKey = `${Math.min(a.id, b.id)}-${Math.max(a.id, b.id)}`;
-      if (seen.has(pairKey)) continue;
+      if (seenPairs.has(pairKey)) continue;
 
       const longer = keyA.length >= keyB.length ? keyA : keyB;
       const threshold = fuzzyThreshold(longer);
       const distance = lev(keyA, keyB);
 
       if (distance <= threshold) {
-        seen.add(pairKey);
+        seenPairs.add(pairKey);
         fuzzyPairs.push({
           match_type: "fuzzy",
           edit_distance: distance,
@@ -136,8 +168,32 @@ async function main() {
     }
   }
 
+  // ── Phase 3: nickname prefix pairs ──────────────────────────────────────
+  // Same last name + one first name is a prefix of the other.
+  const nicknamePairs = [];
+
+  for (let i = 0; i < players.length; i++) {
+    for (let j = i + 1; j < players.length; j++) {
+      const a = players[i], b = players[j];
+      const keyA = fullNorm(a.name), keyB = fullNorm(b.name);
+
+      const pairKey = `${Math.min(a.id, b.id)}-${Math.max(a.id, b.id)}`;
+      if (seenPairs.has(pairKey)) continue;
+
+      if (isNicknamePrefixPair(keyA, keyB)) {
+        seenPairs.add(pairKey);
+        nicknamePairs.push({
+          match_type: "nickname_prefix",
+          normalized_key_a: keyA,
+          normalized_key_b: keyB,
+          members: [a, b],
+        });
+      }
+    }
+  }
+
   // ── Combine and annotate ─────────────────────────────────────────────────
-  const allGroups = [...exactGroups, ...fuzzyPairs];
+  const allGroups = [...exactGroups, ...fuzzyPairs, ...nicknamePairs];
 
   const annotated = allGroups.map(g => {
     const members = g.members;
@@ -171,25 +227,27 @@ async function main() {
     };
   });
 
-  // Sort: exact matches first, then fuzzy by distance, then alphabetically
+  // Sort: exact → nickname_prefix → fuzzy by distance → alphabetically
+  const matchOrder = { exact_after_normalization: 0, nickname_prefix: 1, fuzzy: 2 };
   annotated.sort((a, b) => {
-    if (a.match_type !== b.match_type) {
-      return a.match_type === "exact_after_normalization" ? -1 : 1;
-    }
+    const orderDiff = (matchOrder[a.match_type] ?? 99) - (matchOrder[b.match_type] ?? 99);
+    if (orderDiff !== 0) return orderDiff;
     if (a.edit_distance !== b.edit_distance) return (a.edit_distance || 0) - (b.edit_distance || 0);
     const keyA = a.normalized_key || a.normalized_key_a || "";
     const keyB = b.normalized_key || b.normalized_key_a || "";
     return keyA.localeCompare(keyB);
   });
 
-  const exactCount = annotated.filter(g => g.match_type === "exact_after_normalization").length;
-  const fuzzyCount = annotated.filter(g => g.match_type === "fuzzy").length;
-  const withWarnings = annotated.filter(g => g.warnings.length > 0).length;
+  const exactCount    = annotated.filter(g => g.match_type === "exact_after_normalization").length;
+  const nickCount     = annotated.filter(g => g.match_type === "nickname_prefix").length;
+  const fuzzyCount    = annotated.filter(g => g.match_type === "fuzzy").length;
+  const withWarnings  = annotated.filter(g => g.warnings.length > 0).length;
 
   const report = {
     summary: {
       total_players_scanned: players.length,
       exact_match_groups: exactCount,
+      nickname_prefix_pairs: nickCount,
       fuzzy_match_pairs: fuzzyCount,
       groups_with_conflict_warnings: withWarnings,
       note: "Groups with POSITION or TEAM MISMATCH warnings are likely false positives — review carefully.",
