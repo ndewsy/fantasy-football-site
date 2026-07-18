@@ -71,6 +71,7 @@ export default function DashboardPage() {
   const [importRows, setImportRows] = useState([]);
   const [importError, setImportError] = useState("");
   const [importLoading, setImportLoading] = useState(false);
+  const [importSkipped, setImportSkipped] = useState([]);
   const importFileRef = useRef(null);
 
   // Posts state
@@ -611,8 +612,11 @@ export default function DashboardPage() {
     const normalizeName = n => n.toLowerCase().replace(/\./g, " ").trim().replace(/\s+/g, " ");
     const poolByNorm = {};
     for (const p of playerPool) poolByNorm[normalizeName(p.name)] = p;
+    const skipped = [];
     const newRanked = importRows.map(row => {
-      return poolByNorm[normalizeName(row.name)] || null;
+      const match = poolByNorm[normalizeName(row.name)] || null;
+      if (!match) skipped.push(row.name);
+      return match;
     }).filter(Boolean);
     const newRankedIds = new Set(newRanked.map(p => p.id));
     const preservedUnranked = (rankings[activeFormat] || [])
@@ -621,10 +625,14 @@ export default function DashboardPage() {
     const full = [...newRanked, ...preservedUnranked];
     setRankings(prev => ({ ...prev, [activeFormat]: full }));
     await saveRankingsNow(full);
-    setShowImport(false);
     setImportRows([]);
     setImportError("");
     setImportLoading(false);
+    if (skipped.length > 0) {
+      setImportSkipped(skipped);
+    } else {
+      setShowImport(false);
+    }
   }
 
   function movePlayerToRank(playerName, targetRank) {
@@ -1408,7 +1416,7 @@ export default function DashboardPage() {
                 })()}
                 <button
                   type="button"
-                  onClick={() => { setShowImport(true); setImportRows([]); setImportError(""); }}
+                  onClick={() => { setShowImport(true); setImportRows([]); setImportError(""); setImportSkipped([]); }}
                   className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 bg-white/60 backdrop-blur-sm border border-white/70 hover:bg-white/80 px-3 py-2 rounded-lg font-medium transition-colors"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -1699,7 +1707,7 @@ export default function DashboardPage() {
               <div
                 className="fixed inset-0 z-50 flex items-center justify-center p-4"
                 style={{ background: "rgba(0,0,0,0.4)" }}
-                onClick={() => { setShowImport(false); setImportRows([]); setImportError(""); }}
+                onClick={() => { setShowImport(false); setImportRows([]); setImportError(""); setImportSkipped([]); }}
               >
                 <div
                   className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
@@ -1708,11 +1716,13 @@ export default function DashboardPage() {
                   {/* Header */}
                   <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                     <div>
-                      <h2 className="text-lg font-bold text-[#0F172A]">Import Rankings from Excel</h2>
+                      <h2 className="text-lg font-bold text-[#0F172A]">
+                        {importSkipped.length > 0 ? "Import complete" : "Import Rankings from Excel"}
+                      </h2>
                       <p className="text-gray-400 text-sm mt-0.5">Format: {activeFormat}</p>
                     </div>
                     <button
-                      onClick={() => { setShowImport(false); setImportRows([]); setImportError(""); }}
+                      onClick={() => { setShowImport(false); setImportRows([]); setImportError(""); setImportSkipped([]); }}
                       className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors text-lg leading-none"
                     >×</button>
                   </div>
@@ -1746,16 +1756,31 @@ export default function DashboardPage() {
                       </div>
                     )}
 
+                    {importSkipped.length > 0 && importRows.length === 0 && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
+                        <p className="font-semibold text-amber-800 text-sm mb-3">
+                          {importSkipped.length} player{importSkipped.length !== 1 ? "s" : ""} in your file weren't found and were skipped:
+                        </p>
+                        <ul className="flex flex-col gap-1.5 mb-4">
+                          {importSkipped.map((name, i) => (
+                            <li key={i} className="text-amber-700 text-sm font-medium">{name}</li>
+                          ))}
+                        </ul>
+                        <p className="text-amber-600 text-xs">Flag these names for an admin to add to the player database, then re-import your file.</p>
+                      </div>
+                    )}
+
                     {importRows.length > 0 && (() => {
-                      const poolNames = new Set(playerPool.map(p => p.name.toLowerCase()));
-                      const unmatchedCount = importRows.filter(r => !poolNames.has(r.name.toLowerCase())).length;
+                      const normalizeName = n => n.toLowerCase().replace(/\./g, " ").trim().replace(/\s+/g, " ");
+                      const poolByNorm = Object.fromEntries(playerPool.map(p => [normalizeName(p.name), p]));
+                      const unmatched = importRows.filter(r => !poolByNorm[normalizeName(r.name)]);
                       return (
                         <>
                           <div className="flex items-center justify-between mb-3">
                             <p className="text-sm font-semibold text-[#0F172A]">{importRows.length} players parsed</p>
-                            {unmatchedCount > 0 && (
+                            {unmatched.length > 0 && (
                               <span className="text-xs bg-amber-50 border border-amber-200 text-amber-700 px-2 py-1 rounded-full font-medium">
-                                {unmatchedCount} not in player pool — will be added
+                                {unmatched.length} not in player pool — will be skipped
                               </span>
                             )}
                           </div>
@@ -1771,14 +1796,14 @@ export default function DashboardPage() {
                               </thead>
                               <tbody>
                                 {importRows.map((row, i) => {
-                                  const inPool = poolNames.has(row.name.toLowerCase());
+                                  const inPool = !!poolByNorm[normalizeName(row.name)];
                                   return (
                                     <tr key={i} className="border-t border-gray-50 hover:bg-gray-50">
                                       <td className="px-3 py-2 text-gray-400 font-mono text-xs">{row.rank}</td>
                                       <td className="px-3 py-2 font-medium text-sm">
                                         {row.name}
                                         {!inPool && (
-                                          <span className="ml-2 text-xs bg-amber-50 text-amber-600 border border-amber-200 px-1.5 py-0.5 rounded">new</span>
+                                          <span className="ml-2 text-xs bg-amber-50 text-amber-600 border border-amber-200 px-1.5 py-0.5 rounded">skip</span>
                                         )}
                                       </td>
                                       <td className="px-3 py-2">
@@ -1798,19 +1823,30 @@ export default function DashboardPage() {
 
                   {/* Footer */}
                   <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between gap-3">
-                    <button
-                      onClick={() => { setShowImport(false); setImportRows([]); setImportError(""); }}
-                      className="text-sm text-gray-500 hover:text-gray-700 font-medium transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={confirmImport}
-                      disabled={importRows.length === 0 || importLoading}
-                      className="bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold px-6 py-2.5 rounded-xl text-sm transition-all disabled:opacity-40"
-                    >
-                      {importLoading ? "Importing..." : `Import ${importRows.length} players into ${activeFormat}`}
-                    </button>
+                    {importSkipped.length > 0 && importRows.length === 0 ? (
+                      <button
+                        onClick={() => { setShowImport(false); setImportRows([]); setImportError(""); setImportSkipped([]); }}
+                        className="ml-auto bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold px-6 py-2.5 rounded-xl text-sm transition-all"
+                      >
+                        Done
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => { setShowImport(false); setImportRows([]); setImportError(""); setImportSkipped([]); }}
+                          className="text-sm text-gray-500 hover:text-gray-700 font-medium transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={confirmImport}
+                          disabled={importRows.length === 0 || importLoading}
+                          className="bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold px-6 py-2.5 rounded-xl text-sm transition-all disabled:opacity-40"
+                        >
+                          {importLoading ? "Importing..." : `Import ${importRows.length} players into ${activeFormat}`}
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
