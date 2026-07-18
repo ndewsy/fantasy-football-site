@@ -164,9 +164,8 @@ export default function Home() {
           const formatMap = {};
           const updatedAtMap = {};
           const lockedMap = {};
-          const byId = Object.fromEntries(playerPool.map(p => [p.id, p]));
           for (const row of (rankings || [])) {
-            formatMap[row.creator_id] = expandIds(row.players, byId);
+            formatMap[row.creator_id] = row.players || [];
             if (row.updated_at) updatedAtMap[row.creator_id] = row.updated_at;
             lockedMap[row.creator_id] = row.locked || false;
           }
@@ -193,10 +192,9 @@ export default function Home() {
             `/api/rankings?creator_id=${encodeURIComponent(activeCreator)}&format=${encodeURIComponent(activeFormat)}`
           );
           const { players, tiers, updatedAt, locked } = await res.json();
-          const byId = Object.fromEntries(playerPool.map(p => [p.id, p]));
           setRankingsCache(prev => ({
             ...prev,
-            [activeFormat]: { ...(prev[activeFormat] || {}), [activeCreator]: expandIds(players || [], byId) },
+            [activeFormat]: { ...(prev[activeFormat] || {}), [activeCreator]: players || [] },
           }));
           if (tiers && tiers.length > 0) {
             setTiersCache(prev => ({
@@ -245,11 +243,18 @@ export default function Home() {
   // Individual creator tab locked for this viewer (admins/creators bypass)
   const isCreatorLocked = activeCreator !== "consensus" && !isDashboardUser && !!lockedForFormat[activeCreator];
 
+  // Expand integer ID arrays at render time — playerPool is guaranteed loaded here
+  // (stillLoading includes !poolLoaded, so !stillLoading means pool is ready).
+  const byId = !stillLoading ? Object.fromEntries(playerPool.map(p => [p.id, p])) : {};
+  const expandedFormatData = !stillLoading && formatData
+    ? Object.fromEntries(Object.entries(formatData).map(([cid, arr]) => [cid, expandIds(arr, byId)]))
+    : {};
+
   if (!stillLoading) {
     if (activeCreator === "consensus") {
       // Exclude locked creators from consensus so WIP edits don't skew the average
       const unlockedFormatData = Object.fromEntries(
-        Object.entries(formatData).filter(([cid]) => !lockedForFormat[cid])
+        Object.entries(expandedFormatData).filter(([cid]) => !lockedForFormat[cid])
       );
       const consensus = computeConsensus(unlockedFormatData);
       if (consensus && consensus.length > 0) {
@@ -262,7 +267,7 @@ export default function Home() {
     } else {
       const creatorMeta = CREATORS.find(c => c.id === activeCreator);
       if (!creatorMeta?.comingSoon) {
-        displayPlayers = formatData[activeCreator] ?? null;
+        displayPlayers = expandedFormatData[activeCreator] ?? null;
         hasData = displayPlayers !== null;
       }
     }
@@ -289,26 +294,29 @@ export default function Home() {
     setPlayerRankings({});
 
     const rankingsData = {};
+    const modalById = Object.fromEntries(playerPool.map(p => [p.id, p]));
     await Promise.all(FORMATS.map(async (fmt) => {
-      let formatData = rankingsCache[fmt];
-      if (!formatData) {
+      let rawFormatData = rankingsCache[fmt];
+      if (!rawFormatData) {
         try {
           const res = await fetch(`/api/rankings?format=${encodeURIComponent(fmt)}`);
           const { rankings } = await res.json();
           const fmtMap = {};
-          const byId = Object.fromEntries(playerPool.map(p => [p.id, p]));
-          for (const row of (rankings || [])) fmtMap[row.creator_id] = expandIds(row.players, byId);
-          formatData = fmtMap;
+          for (const row of (rankings || [])) fmtMap[row.creator_id] = row.players || [];
+          rawFormatData = fmtMap;
           setRankingsCache(prev => ({ ...prev, [fmt]: fmtMap }));
         } catch {
-          formatData = {};
+          rawFormatData = {};
         }
       }
-      const consensus = computeConsensus(formatData);
+      const expandedFmt = Object.fromEntries(
+        Object.entries(rawFormatData).map(([cid, arr]) => [cid, expandIds(arr, modalById)])
+      );
+      const consensus = computeConsensus(expandedFmt);
       const pKey = normalizeName(player.name);
       const cIdx = consensus ? consensus.findIndex(p => normalizeName(p.name) === pKey) : -1;
-      const rrIdx = (formatData["rookierager"] || []).findIndex(p => normalizeName(p.name) === pKey);
-      const ffIdx = (formatData["ffhuddle"] || []).findIndex(p => normalizeName(p.name) === pKey);
+      const rrIdx = (expandedFmt["rookierager"] || []).findIndex(p => normalizeName(p.name) === pKey);
+      const ffIdx = (expandedFmt["ffhuddle"] || []).findIndex(p => normalizeName(p.name) === pKey);
       rankingsData[fmt] = {
         consensus: cIdx >= 0 ? cIdx + 1 : null,
         rookierager: rrIdx >= 0 ? rrIdx + 1 : null,
@@ -357,9 +365,9 @@ export default function Home() {
   }
 
   const creatorPosRanks = {};
-  if (showCreatorColumns && activeCreator === "consensus" && formatData && !stillLoading) {
+  if (showCreatorColumns && activeCreator === "consensus" && !stillLoading) {
     for (const creator of ACTIVE_CREATORS) {
-      const list = formatData[creator.id];
+      const list = expandedFormatData[creator.id];
       if (list) {
         const posCount = {};
         creatorPosRanks[creator.id] = {};

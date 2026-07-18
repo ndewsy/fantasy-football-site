@@ -205,7 +205,7 @@ export default function DashboardPage() {
         setSavedFormats(new Set((savedRankings || []).map(r => r.format)));
         // For formats with no saved data yet, initialize with pool and default tiers
         for (const fmt of FORMATS) {
-          if (!rankingsMap[fmt]) rankingsMap[fmt] = [...pool];
+          if (!rankingsMap[fmt] || rankingsMap[fmt].length === 0) rankingsMap[fmt] = [...pool];
           if (!tiersMap[fmt]) tiersMap[fmt] = [...DEFAULT_TIERS];
         }
 
