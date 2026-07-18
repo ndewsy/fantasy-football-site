@@ -5,6 +5,10 @@ const supabase = createClient(
   process.env.SUPABASE_SECRET_KEY
 );
 
+function normalizeName(name) {
+  return name.toLowerCase().replace(/\./g, ' ').trim().replace(/\s+/g, ' ');
+}
+
 function parseRanked(raw) {
   if (!raw) return [];
   if (Array.isArray(raw)) return raw.filter(p => !p.unranked).map(({ unranked: _, ...p }) => p);
@@ -15,13 +19,14 @@ function computeConsensus(formatData) {
   const playerMap = {};
   for (const players of Object.values(formatData)) {
     players.forEach((p, i) => {
-      if (!playerMap[p.name]) playerMap[p.name] = { totalRank: 0, count: 0 };
-      playerMap[p.name].totalRank += i + 1;
-      playerMap[p.name].count++;
+      const key = normalizeName(p.name);
+      if (!playerMap[key]) playerMap[key] = { name: p.name, totalRank: 0, count: 0 };
+      playerMap[key].totalRank += i + 1;
+      playerMap[key].count++;
     });
   }
-  return Object.entries(playerMap)
-    .map(([name, { totalRank, count }]) => ({ name, avgRank: totalRank / count }))
+  return Object.values(playerMap)
+    .map(p => ({ name: p.name, avgRank: p.totalRank / p.count }))
     .sort((a, b) => a.avgRank - b.avgRank);
 }
 
@@ -33,10 +38,10 @@ function cutoffDate() {
 
 function buildMovement(currentRanked, historicalRanked) {
   const histMap = {};
-  historicalRanked.forEach((p, i) => { histMap[p.name] = i + 1; });
+  historicalRanked.forEach((p, i) => { histMap[normalizeName(p.name)] = i + 1; });
   const movement = {};
   currentRanked.forEach((p, i) => {
-    const oldRank = histMap[p.name];
+    const oldRank = histMap[normalizeName(p.name)];
     if (oldRank !== undefined) {
       const delta = oldRank - (i + 1);
       if (delta !== 0) movement[p.name] = delta;

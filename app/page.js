@@ -41,6 +41,10 @@ function getTierNumber(rank, tiers) {
   return 1;
 }
 
+function normalizeName(name) {
+  return name.toLowerCase().replace(/\./g, ' ').trim().replace(/\s+/g, ' ');
+}
+
 function computeConsensus(formatData) {
   const creatorLists = Object.values(formatData);
   if (creatorLists.length === 0) return null;
@@ -48,7 +52,7 @@ function computeConsensus(formatData) {
   const playerMap = {};
   for (const players of creatorLists) {
     players.forEach((player, i) => {
-      const key = player.name;
+      const key = normalizeName(player.name);
       if (!playerMap[key]) playerMap[key] = { ...player, totalRank: 0, count: 0 };
       playerMap[key].totalRank += i + 1;
       playerMap[key].count++;
@@ -292,9 +296,10 @@ export default function Home() {
         }
       }
       const consensus = computeConsensus(formatData);
-      const cIdx = consensus ? consensus.findIndex(p => p.name === player.name) : -1;
-      const rrIdx = (formatData["rookierager"] || []).findIndex(p => p.name === player.name);
-      const ffIdx = (formatData["ffhuddle"] || []).findIndex(p => p.name === player.name);
+      const pKey = normalizeName(player.name);
+      const cIdx = consensus ? consensus.findIndex(p => normalizeName(p.name) === pKey) : -1;
+      const rrIdx = (formatData["rookierager"] || []).findIndex(p => normalizeName(p.name) === pKey);
+      const ffIdx = (formatData["ffhuddle"] || []).findIndex(p => normalizeName(p.name) === pKey);
       rankingsData[fmt] = {
         consensus: cIdx >= 0 ? cIdx + 1 : null,
         rookierager: rrIdx >= 0 ? rrIdx + 1 : null,
@@ -351,7 +356,7 @@ export default function Home() {
         creatorPosRanks[creator.id] = {};
         for (const player of list) {
           posCount[player.pos] = (posCount[player.pos] || 0) + 1;
-          creatorPosRanks[creator.id][player.name] = `${player.pos}${posCount[player.pos]}`;
+          creatorPosRanks[creator.id][normalizeName(player.name)] = `${player.pos}${posCount[player.pos]}`;
         }
       }
     }
@@ -715,7 +720,7 @@ export default function Home() {
                           <td className="hidden sm:table-cell px-6 py-4 text-gray-500">{player.team}</td>
                           {showCreatorColumns && activeCreator === "consensus" && ACTIVE_CREATORS.map(c => (
                             <td key={c.id} className="hidden sm:table-cell px-6 py-4 text-xs font-mono text-gray-400">
-                              {creatorPosRanks[c.id]?.[player.name] || "—"}
+                              {creatorPosRanks[c.id]?.[normalizeName(player.name)] || "—"}
                             </td>
                           ))}
                         </tr>
@@ -761,7 +766,7 @@ export default function Home() {
                             <td className="px-6 py-4 text-gray-500">{player.team}</td>
                             {showCreatorColumns && activeCreator === "consensus" && ACTIVE_CREATORS.map(c => (
                               <td key={c.id} className="px-6 py-4 text-xs font-mono text-gray-400">
-                                {creatorPosRanks[c.id]?.[player.name] || "—"}
+                                {creatorPosRanks[c.id]?.[normalizeName(player.name)] || "—"}
                               </td>
                             ))}
                           </tr>
@@ -808,7 +813,7 @@ export default function Home() {
                             <td className="px-6 py-4 text-gray-500">{player.team}</td>
                             {showCreatorColumns && activeCreator === "consensus" && ACTIVE_CREATORS.map(c => (
                               <td key={c.id} className="px-6 py-4 text-xs font-mono text-gray-400">
-                                {creatorPosRanks[c.id]?.[player.name] || "—"}
+                                {creatorPosRanks[c.id]?.[normalizeName(player.name)] || "—"}
                               </td>
                             ))}
                           </tr>
