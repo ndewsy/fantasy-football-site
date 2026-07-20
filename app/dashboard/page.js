@@ -82,6 +82,9 @@ export default function DashboardPage() {
   const [postFile, setPostFile] = useState(null);
   const [fileDragging, setFileDragging] = useState(false);
   const [postSaving, setPostSaving] = useState(false);
+  const [postError, setPostError] = useState("");
+  const [dropUploadStatus, setDropUploadStatus] = useState(null); // null | 'uploading' | 'success' | 'error'
+  const [dropUploadError, setDropUploadError] = useState("");
   const fileInputRef = useRef(null);
 
   // Admin state
@@ -761,6 +764,7 @@ export default function DashboardPage() {
 
   function handleFileDragOver(e) {
     e.preventDefault();
+    if (dropUploadStatus === 'uploading') return;
     setFileDragging(true);
   }
 
@@ -768,41 +772,95 @@ export default function DashboardPage() {
     setFileDragging(false);
   }
 
-  function handleFileDrop(e) {
+  async function handleFileDrop(e) {
     e.preventDefault();
     setFileDragging(false);
+    if (dropUploadStatus === 'uploading') return;
     const file = e.dataTransfer.files[0];
-    if (file) setPostFile(file);
+    if (!file) return;
+
+    const MAX_BYTES = 20 * 1024 * 1024;
+    if (file.size > MAX_BYTES) {
+      setDropUploadStatus('error');
+      setDropUploadError('File too large — max 20 MB');
+      return;
+    }
+
+    // Auto-save: upload file and create post immediately on drop
+    setDropUploadStatus('uploading');
+    setDropUploadError('');
+
+    const supabase = createClient();
+    const path = `${profile.creator_id}/${Date.now()}-${file.name}`;
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('posts')
+      .upload(path, file, { upsert: true });
+
+    if (uploadError) {
+      setDropUploadStatus('error');
+      setDropUploadError(`Upload failed: ${uploadError.message}`);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage.from('posts').getPublicUrl(path);
+    const file_url = urlData.publicUrl;
+    const title = file.name.replace(/\.[^.]+$/, '');
+
+    const { data: newPost, error: insertError } = await supabase
+      .from('posts')
+      .insert({ creator_id: profile.creator_id, title, tag: 'Analysis', content: '', file_url })
+      .select()
+      .single();
+
+    if (insertError) {
+      setDropUploadStatus('error');
+      setDropUploadError(`Save failed: ${insertError.message}`);
+      return;
+    }
+
+    setPosts(prev => [newPost, ...prev]);
+    setDropUploadStatus('success');
+    setTimeout(() => setDropUploadStatus(null), 3000);
   }
 
   async function handleCreatePost(e) {
     e.preventDefault();
     if (!postTitle.trim() || !postContent.trim()) return;
     setPostSaving(true);
+    setPostError('');
 
     const supabase = createClient();
     let file_url = null;
 
     if (postFile) {
-      const path = `${profile.creator_id}/${new Date().toISOString()}-${postFile.name}`;
-      const { data: uploadData } = await supabase.storage
-        .from("posts")
+      const path = `${profile.creator_id}/${Date.now()}-${postFile.name}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('posts')
         .upload(path, postFile, { upsert: true });
-      if (uploadData) {
-        const { data: urlData } = supabase.storage.from("posts").getPublicUrl(path);
-        file_url = urlData.publicUrl;
+      if (uploadError) {
+        setPostError(`File upload failed: ${uploadError.message}`);
+        setPostSaving(false);
+        return;
       }
+      const { data: urlData } = supabase.storage.from('posts').getPublicUrl(path);
+      file_url = urlData.publicUrl;
     }
 
-    const { data: newPost } = await supabase
-      .from("posts")
+    const { data: newPost, error: insertError } = await supabase
+      .from('posts')
       .insert({ creator_id: profile.creator_id, title: postTitle, tag: postTag, content: postContent, file_url })
       .select()
       .single();
 
-    if (newPost) setPosts(prev => [newPost, ...prev]);
-    setPostTitle("");
-    setPostContent("");
+    if (insertError) {
+      setPostError(`Failed to publish: ${insertError.message}`);
+      setPostSaving(false);
+      return;
+    }
+
+    setPosts(prev => [newPost, ...prev]);
+    setPostTitle('');
+    setPostContent('');
     setPostFile(null);
     setPostSaving(false);
   }
@@ -2022,21 +2080,39 @@ export default function DashboardPage() {
                   />
                 </div>
 
-                {/* File drop zone */}
+                {/* File drop zone — drop auto-saves; click to attach to a typed post */}
                 <div>
-                  <label className="block text-sm text-gray-500 mb-1">Attachment (optional)</label>
+                  <label className="block text-sm text-gray-500 mb-1">
+                    Attachment — <span className="text-gray-400">drop a file to publish it instantly, or attach below</span>
+                  </label>
                   <div
                     onDragOver={handleFileDragOver}
                     onDragLeave={handleFileDragLeave}
                     onDrop={handleFileDrop}
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`border-2 border-dashed rounded-lg px-4 py-6 text-center cursor-pointer transition-colors ${
-                      fileDragging
-                        ? "border-blue-500 bg-blue-50/80 backdrop-blur-sm"
-                        : "border-white/70 hover:border-blue-300 bg-white/40 backdrop-blur-sm"
+                    onClick={() => dropUploadStatus !== 'uploading' && fileInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-lg px-4 py-6 text-center transition-colors ${
+                      dropUploadStatus === 'uploading'
+                        ? "border-blue-400 bg-blue-50/60 cursor-wait"
+                        : dropUploadStatus === 'success'
+                        ? "border-green-400 bg-green-50/60 cursor-pointer"
+                        : dropUploadStatus === 'error'
+                        ? "border-red-400 bg-red-50/60 cursor-pointer"
+                        : fileDragging
+                        ? "border-blue-500 bg-blue-50/80 backdrop-blur-sm cursor-copy"
+                        : "border-white/70 hover:border-blue-300 bg-white/40 backdrop-blur-sm cursor-pointer"
                     }`}
                   >
-                    {postFile ? (
+                    {dropUploadStatus === 'uploading' ? (
+                      <p className="text-blue-600 text-sm font-medium">Uploading...</p>
+                    ) : dropUploadStatus === 'success' ? (
+                      <p className="text-green-600 text-sm font-medium">Saved!</p>
+                    ) : dropUploadStatus === 'error' ? (
+                      <div>
+                        <p className="text-red-600 text-sm font-medium">Upload failed</p>
+                        <p className="text-red-500 text-xs mt-1">{dropUploadError}</p>
+                        <p className="text-gray-400 text-xs mt-2">Click to try again</p>
+                      </div>
+                    ) : postFile ? (
                       <div className="flex items-center justify-center gap-2">
                         <span className="text-blue-600 text-sm font-medium">{postFile.name}</span>
                         <button
@@ -2049,7 +2125,7 @@ export default function DashboardPage() {
                       </div>
                     ) : (
                       <p className="text-gray-400 text-sm">
-                        Drop a file here, or <span className="text-blue-600">click to browse</span>
+                        Drop a file to publish instantly, or <span className="text-blue-600">click to attach</span> to this post
                       </p>
                     )}
                   </div>
@@ -2060,6 +2136,10 @@ export default function DashboardPage() {
                     onChange={(e) => { if (e.target.files[0]) setPostFile(e.target.files[0]); }}
                   />
                 </div>
+
+                {postError && (
+                  <p className="text-red-500 text-sm">{postError}</p>
+                )}
 
                 <button
                   type="submit"
