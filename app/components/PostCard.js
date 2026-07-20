@@ -1,4 +1,5 @@
 "use client";
+import { useRef, useEffect, useState } from "react";
 
 const IMAGE_EXTS = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "avif"]);
 const PDF_EXTS   = new Set(["pdf"]);
@@ -18,11 +19,81 @@ function fileName(url) {
   try {
     const pathname = new URL(url).pathname;
     const raw = decodeURIComponent(pathname.split("/").pop());
-    // Strip leading timestamp prefix added during upload (e.g. "1234567890-realname.pdf")
     return raw.replace(/^\d{10,}-/, "");
   } catch {
     return "Attachment";
   }
+}
+
+function PdfThumbnail({ url, name }) {
+  const canvasRef = useRef(null);
+  const [status, setStatus] = useState("loading");
+
+  useEffect(() => {
+    let cancelled = false;
+    async function render() {
+      try {
+        const pdfjsLib = await import("pdfjs-dist");
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+        const pdf = await pdfjsLib.getDocument({ url }).promise;
+        const page = await pdf.getPage(1);
+        if (cancelled) return;
+        const baseViewport = page.getViewport({ scale: 1 });
+        const scale = 400 / baseViewport.width;
+        const viewport = page.getViewport({ scale });
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+        if (!cancelled) setStatus("done");
+      } catch {
+        if (!cancelled) setStatus("failed");
+      }
+    }
+    render();
+    return () => { cancelled = true; };
+  }, [url]);
+
+  const fallback = (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-3 flex items-center gap-2 text-sm text-red-600 hover:text-red-700 font-medium"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <span>📄</span>
+      <span className="underline underline-offset-2">{name}</span>
+    </a>
+  );
+
+  if (status === "failed") return fallback;
+
+  return (
+    <div className="mt-3">
+      {status === "loading" && (
+        <div className="h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs animate-pulse">
+          Loading preview…
+        </div>
+      )}
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`block group ${status === "loading" ? "hidden" : ""}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <canvas
+          ref={canvasRef}
+          className="max-w-full rounded-lg border border-gray-100 shadow-sm group-hover:opacity-90 transition-opacity"
+        />
+        <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1 font-medium">
+          <span>📄</span>{name}
+        </p>
+      </a>
+    </div>
+  );
 }
 
 function PostAttachment({ url }) {
@@ -42,20 +113,7 @@ function PostAttachment({ url }) {
     );
   }
 
-  if (PDF_EXTS.has(ext)) {
-    return (
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-3 flex items-center gap-2 text-sm text-red-600 hover:text-red-700 font-medium"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <span>📄</span>
-        <span className="underline underline-offset-2">{name}</span>
-      </a>
-    );
-  }
+  if (PDF_EXTS.has(ext)) return <PdfThumbnail url={url} name={name} />;
 
   if (SHEET_EXTS.has(ext)) {
     return (

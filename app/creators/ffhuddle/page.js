@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
 import PostCard from "@/app/components/PostCard";
 
-export default function DynastyDavePage() {
+export default function RedraftKingPage() {
   const [user, setUser] = useState(null);
   const [subscription, setSubscription] = useState(null);
   const [posts, setPosts] = useState([]);
@@ -23,9 +23,9 @@ export default function DynastyDavePage() {
         user
           ? supabase.from("subscriptions").select("*").eq("user_id", user.id).maybeSingle()
           : Promise.resolve({ data: null }),
-        supabase.from("posts").select("*").eq("creator_id", "rookierager").order("created_at", { ascending: false }),
-        supabase.from("profiles").select("display_name, handle, bio, announcement").eq("creator_id", "rookierager").eq("is_creator", true).maybeSingle(),
-        supabase.from("rankings").select("updated_at").eq("creator_id", "rookierager").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+        supabase.from("posts").select("*").eq("creator_id", "ffhuddle").order("created_at", { ascending: false }),
+        supabase.from("profiles").select("display_name, handle, bio, announcement").eq("creator_id", "ffhuddle").eq("is_creator", true).maybeSingle(),
+        supabase.from("rankings").select("updated_at").eq("creator_id", "ffhuddle").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
         user
           ? supabase.from("profiles").select("role, is_creator").eq("id", user.id).maybeSingle()
           : Promise.resolve({ data: null }),
@@ -36,7 +36,7 @@ export default function DynastyDavePage() {
       setCreatorProfile(profileResult.data || null);
       setRankingsUpdatedAt(rankingsResult.data?.updated_at || null);
       setIsDashboardUser(!!(ownProfileResult.data && (ownProfileResult.data.role === "admin" || ownProfileResult.data.is_creator)));
-      supabase.from("events").insert({ event_type: "page_view", creator_id: "rookierager", user_id: user?.id ?? null }).then(() => {}).catch(() => {});
+      supabase.from("events").insert({ event_type: "page_view", creator_id: "ffhuddle", user_id: user?.id ?? null }).then(() => {}).catch(() => {});
       setLoading(false);
     }
     load();
@@ -48,15 +48,15 @@ export default function DynastyDavePage() {
 
   return (
     <main className="min-h-screen text-[#0F172A]">
-      <NavBar activePath="/creators/dynastydave" />
+      <NavBar activePath="/creators/ffhuddle" />
 
       <div className="max-w-5xl mx-auto px-6 py-12">
         <div className="flex flex-wrap items-center gap-4 mb-12">
-          <div className="w-20 h-20 rounded-full bg-green-600 flex items-center justify-center text-white font-bold text-2xl">RR</div>
+          <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-2xl">FFH</div>
           <div>
-            <h1 className="text-3xl font-bold">{creatorProfile?.display_name || "RookieRager"}</h1>
-            <p className="text-gray-500">{creatorProfile?.handle || "@rookierager"}</p>
-            <p className="text-gray-400 text-sm mt-1">1,240 members</p>
+            <h1 className="text-3xl font-bold">{creatorProfile?.display_name || "FantasyFootballHuddle"}</h1>
+            <p className="text-gray-500">{creatorProfile?.handle || "@ffhuddle"}</p>
+            <p className="text-gray-400 text-sm mt-1">980 members</p>
             {rankingsUpdatedAt && (
               <p className="text-gray-400 text-xs mt-1">
                 Rankings last updated {new Date(rankingsUpdatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}

@@ -5,12 +5,10 @@ import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
 
 const CREATOR_INFO = {
-  dynastydave:          { name: "RookieRager",            path: "/creators/dynastydave" },
-  redraftking:          { name: "FantasyFootballHuddle",  path: "/creators/redraftking" },
+  rookierager:          { name: "RookieRager",            path: "/creators/rookierager" },
+  ffhuddle:             { name: "FantasyFootballHuddle",  path: "/creators/ffhuddle" },
   rbguru:               { name: "RB Guru",                path: "/creators/rbguru" },
   wrtargets:            { name: "WR Targets",             path: "/creators/wrtargets" },
-  rookierager:          { name: "RookieRager",            path: "/creators/dynastydave" },
-  fantasyfootballhuddle:{ name: "FantasyFootballHuddle",  path: "/creators/redraftking" },
 };
 
 function parseAddOns(raw) {

@@ -439,8 +439,8 @@ export default function Home() {
             <p className="text-center text-gray-500 mb-10">Expert analysts with proven track records</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {[
-                { path: "/creators/dynastydave", name: "RookieRager", handle: "@rookierager", avatar: "RR", color: "bg-green-600", bio: "10 years of dynasty experience. Known for elite TE and QB analysis in superflex formats.", specialty: "Dynasty SF" },
-                { path: "/creators/redraftking", name: "FantasyFootballHuddle", handle: "@ffhuddle", avatar: "FFH", color: "bg-blue-600", bio: "Season-long specialist. ADP beater and waiver wire wizard. 3x contest winner.", specialty: "Redraft" },
+                { path: "/creators/rookierager", name: "RookieRager", handle: "@rookierager", avatar: "RR", color: "bg-green-600", bio: "10 years of dynasty experience. Known for elite TE and QB analysis in superflex formats.", specialty: "Dynasty SF" },
+                { path: "/creators/ffhuddle", name: "FantasyFootballHuddle", handle: "@ffhuddle", avatar: "FFH", color: "bg-blue-600", bio: "Season-long specialist. ADP beater and waiver wire wizard. 3x contest winner.", specialty: "Redraft" },
               ].map(creator => (
                 <div key={creator.name} className="bg-white/70 backdrop-blur-md rounded-xl p-6 border border-white/80 shadow-lg">
                   <div className="flex items-start gap-4 mb-4">
