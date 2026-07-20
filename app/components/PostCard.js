@@ -1,10 +1,25 @@
 "use client";
 import { useRef, useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import rehypeSanitize from "rehype-sanitize";
 
 const IMAGE_EXTS = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "avif"]);
 const PDF_EXTS   = new Set(["pdf"]);
 const SHEET_EXTS = new Set(["xls", "xlsx", "csv", "ods", "numbers"]);
 const DOC_EXTS   = new Set(["doc", "docx", "odt", "rtf", "txt", "pages"]);
+
+const MD_COMPONENTS = {
+  h1: ({ children }) => <h1 className="text-base font-bold mt-2 mb-1 text-[#0F172A]">{children}</h1>,
+  h2: ({ children }) => <h2 className="text-sm font-bold mt-2 mb-1 text-[#0F172A]">{children}</h2>,
+  h3: ({ children }) => <h3 className="text-sm font-semibold mt-1 mb-0.5 text-[#0F172A]">{children}</h3>,
+  strong: ({ children }) => <strong className="font-semibold text-[#0F172A]">{children}</strong>,
+  em: ({ children }) => <em className="italic">{children}</em>,
+  p: ({ children }) => <p className="mb-1.5 last:mb-0">{children}</p>,
+  ul: ({ children }) => <ul className="list-disc list-inside mb-1.5 space-y-0.5">{children}</ul>,
+  ol: ({ children }) => <ol className="list-decimal list-inside mb-1.5 space-y-0.5">{children}</ol>,
+  li: ({ children }) => <li className="text-sm">{children}</li>,
+  code: ({ children }) => <code className="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
+};
 
 function fileExt(url) {
   try {
@@ -176,7 +191,11 @@ export default function PostCard({ post, isSubscribed }) {
           )}
           <h3 className="font-semibold mb-2">{post.title}</h3>
           {post.content && (
-            <p className="text-gray-500 text-sm">{post.content}</p>
+            <div className="text-gray-500 text-sm mb-1">
+              <ReactMarkdown rehypePlugins={[rehypeSanitize]} components={MD_COMPONENTS}>
+                {post.content}
+              </ReactMarkdown>
+            </div>
           )}
           <PostAttachment url={post.file_url} />
           <p className="text-gray-400 text-xs mt-3">{dateStr}</p>

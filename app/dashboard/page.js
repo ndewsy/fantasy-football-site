@@ -3,6 +3,8 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
+import ReactMarkdown from "react-markdown";
+import rehypeSanitize from "rehype-sanitize";
 
 const FORMATS = ["Dynasty SF", "Dynasty 1QB", "Redraft 1QB", "Redraft SF"];
 const DEFAULT_TIERS = [1, 13, 25, 37, 49, 61, 73, 85, 97, 109, 121, 151];
@@ -86,6 +88,8 @@ export default function DashboardPage() {
   const [dropUploadStatus, setDropUploadStatus] = useState(null); // null | 'uploading' | 'success' | 'error'
   const [dropUploadError, setDropUploadError] = useState("");
   const [deletingPostId, setDeletingPostId] = useState(null);
+  const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
+  const contentRef = useRef(null);
   const fileInputRef = useRef(null);
 
   // Admin state
@@ -849,7 +853,7 @@ export default function DashboardPage() {
 
     const { data: newPost, error: insertError } = await supabase
       .from('posts')
-      .insert({ creator_id: profile.creator_id, title: postTitle, tag: postTag, content: postContent, file_url })
+      .insert({ creator_id: profile.creator_id, title: postTitle, tag: postTag.trim() || TAGS[0], content: postContent, file_url })
       .select()
       .single();
 
@@ -890,6 +894,33 @@ export default function DashboardPage() {
     }
 
     setPosts(prev => prev.filter(p => p.id !== post.id));
+  }
+
+  function applyInlineFormat(prefix, suffix) {
+    const ta = contentRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const before = postContent.slice(0, start);
+    const selected = postContent.slice(start, end);
+    const after = postContent.slice(end);
+    setPostContent(before + prefix + selected + suffix + after);
+    requestAnimationFrame(() => {
+      ta.focus();
+      ta.setSelectionRange(start + prefix.length, end + prefix.length);
+    });
+  }
+
+  function applyLinePrefix(prefix) {
+    const ta = contentRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const lineStart = postContent.lastIndexOf('\n', start - 1) + 1;
+    setPostContent(postContent.slice(0, lineStart) + prefix + postContent.slice(lineStart));
+    requestAnimationFrame(() => {
+      ta.focus();
+      ta.setSelectionRange(start + prefix.length, start + prefix.length);
+    });
   }
 
   if (loading) {
@@ -2082,27 +2113,68 @@ export default function DashboardPage() {
                   />
                 </div>
 
-                <div>
+                <div className="relative">
                   <label className="block text-sm text-gray-500 mb-1">Tag</label>
-                  <select
+                  <input
+                    type="text"
                     value={postTag}
-                    onChange={(e) => setPostTag(e.target.value)}
+                    onChange={(e) => setPostTag(e.target.value.slice(0, 30))}
+                    onFocus={() => setTagDropdownOpen(true)}
+                    onBlur={() => setTimeout(() => setTagDropdownOpen(false), 150)}
+                    placeholder="Choose or type a tag…"
                     className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-[#0F172A] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  >
-                    {TAGS.map((t) => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
+                  />
+                  {tagDropdownOpen && (() => {
+                    const normalised = postTag.trim().toLowerCase();
+                    const usedTags = [...new Set([...TAGS, ...posts.map(p => p.tag).filter(Boolean)])];
+                    const suggestions = usedTags.filter(t => !normalised || t.toLowerCase().includes(normalised));
+                    if (!suggestions.length) return null;
+                    return (
+                      <ul className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                        {suggestions.map(t => (
+                          <li key={t}>
+                            <button
+                              type="button"
+                              onMouseDown={() => { setPostTag(t); setTagDropdownOpen(false); }}
+                              className="w-full text-left px-4 py-2 text-sm text-[#0F172A] hover:bg-blue-50 hover:text-blue-700"
+                            >
+                              {t}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    );
+                  })()}
                 </div>
 
                 <div>
-                  <label className="block text-sm text-gray-500 mb-1">Content</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-sm text-gray-500">Content</label>
+                    <div className="flex items-center gap-1">
+                      {[
+                        { label: "B", title: "Bold", action: () => applyInlineFormat("**", "**"), cls: "font-bold" },
+                        { label: "I", title: "Italic", action: () => applyInlineFormat("*", "*"), cls: "italic" },
+                        { label: "H", title: "Header", action: () => applyLinePrefix("# "), cls: "font-semibold" },
+                      ].map(({ label, title, action, cls }) => (
+                        <button
+                          key={label}
+                          type="button"
+                          title={title}
+                          onMouseDown={(e) => { e.preventDefault(); action(); }}
+                          className={`w-7 h-7 flex items-center justify-center rounded text-gray-500 hover:text-[#0F172A] hover:bg-gray-100 text-sm transition-colors ${cls}`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <textarea
+                    ref={contentRef}
                     value={postContent}
                     onChange={(e) => setPostContent(e.target.value)}
-                    placeholder="Write your post..."
+                    placeholder="Write your post…"
                     rows={5}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-[#0F172A] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-[#0F172A] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none font-mono text-sm"
                     required
                   />
                 </div>
@@ -2214,7 +2286,9 @@ export default function DashboardPage() {
                           </button>
                         </div>
                       </div>
-                      <p className="text-gray-500 text-xs line-clamp-2 mb-2">{post.content}</p>
+                      <div className="text-gray-500 text-xs line-clamp-2 mb-2 [&_h1]:font-bold [&_h2]:font-bold [&_strong]:font-semibold [&_em]:italic">
+                        <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{post.content}</ReactMarkdown>
+                      </div>
                       <div className="flex items-center gap-3">
                         <span className="text-gray-400 text-xs">
                           {new Date(post.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
