@@ -4,10 +4,10 @@ import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
 
 const creators = [
-  { id: "rookierager", name: "RookieRager", handle: "@rookierager", specialty: "Dynasty SF", bio: "10 years of dynasty experience. Known for elite TE and QB analysis in superflex formats.", avatar: "RR", color: "bg-green-600", subscribers: 1240 },
-  { id: "ffhuddle", name: "FantasyFootballHuddle", handle: "@ffhuddle", specialty: "Redraft PPR", bio: "Season-long specialist. ADP beater and waiver wire wizard. 3x contest winner.", avatar: "FFH", color: "bg-blue-600", subscribers: 980 },
-  { id: "rbguru", name: "Coming Soon", handle: "@tba", specialty: "", bio: "A new creator is joining the platform soon.", avatar: "?", color: "bg-gray-400", subscribers: 0, comingSoon: true },
-  { id: "wrtargets", name: "Coming Soon", handle: "@tba", specialty: "", bio: "A new creator is joining the platform soon.", avatar: "?", color: "bg-gray-400", subscribers: 0, comingSoon: true },
+  { id: "rookierager", name: "RookieRager", handle: "@rookierager", specialty: "Dynasty SF", bio: "10 years of dynasty experience. Known for elite TE and QB analysis in superflex formats.", avatar: "RR", color: "bg-green-600" },
+  { id: "ffhuddle", name: "FantasyFootballHuddle", handle: "@ffhuddle", specialty: "Redraft PPR", bio: "Season-long specialist. ADP beater and waiver wire wizard. 3x contest winner.", avatar: "FFH", color: "bg-blue-600" },
+  { id: "rbguru", name: "Coming Soon", handle: "@tba", specialty: "", bio: "A new creator is joining the platform soon.", avatar: "?", color: "bg-gray-400", comingSoon: true },
+  { id: "wrtargets", name: "Coming Soon", handle: "@tba", specialty: "", bio: "A new creator is joining the platform soon.", avatar: "?", color: "bg-gray-400", comingSoon: true },
 ];
 
 export default function CreatorsPage() {

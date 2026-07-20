@@ -56,7 +56,7 @@ export default function RedraftKingPage() {
           <div>
             <h1 className="text-3xl font-bold">{creatorProfile?.display_name || "FantasyFootballHuddle"}</h1>
             <p className="text-gray-500">{creatorProfile?.handle || "@ffhuddle"}</p>
-            <p className="text-gray-400 text-sm mt-1">980 members</p>
+
             {rankingsUpdatedAt && (
               <p className="text-gray-400 text-xs mt-1">
                 Rankings last updated {new Date(rankingsUpdatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}

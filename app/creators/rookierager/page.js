@@ -56,7 +56,7 @@ export default function DynastyDavePage() {
           <div>
             <h1 className="text-3xl font-bold">{creatorProfile?.display_name || "RookieRager"}</h1>
             <p className="text-gray-500">{creatorProfile?.handle || "@rookierager"}</p>
-            <p className="text-gray-400 text-sm mt-1">1,240 members</p>
+
             {rankingsUpdatedAt && (
               <p className="text-gray-400 text-xs mt-1">
                 Rankings last updated {new Date(rankingsUpdatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
