@@ -31,6 +31,7 @@ export async function POST(request) {
     payment_method_types: ['card'],
     line_items: lineItems,
     mode: 'subscription',
+    allow_promotion_codes: true,
     metadata: {
       user_id: userId,
       included_creator: includedCreator,
