@@ -26,7 +26,7 @@ export async function GET(request) {
 
   // creator_id + format → specific players (individual creator tab on homepage)
   if (creator_id && format) {
-    const { data, error } = await supabase
+    const { data, error } = await supabase()
       .from('rankings')
       .select('players, tiers, updated_at, locked')
       .eq('creator_id', creator_id)
@@ -42,7 +42,7 @@ export async function GET(request) {
 
   // format only → all creators for that format (consensus tab on homepage)
   if (format) {
-    const { data, error } = await supabase
+    const { data, error } = await supabase()
       .from('rankings')
       .select('creator_id, players, updated_at, locked')
       .eq('format', format);
@@ -59,7 +59,7 @@ export async function GET(request) {
 
   // creator_id only → all formats for that creator (dashboard load)
   if (creator_id) {
-    const { data, error } = await supabase
+    const { data, error } = await supabase()
       .from('rankings')
       .select('format, players, tiers, updated_at, locked')
       .eq('creator_id', creator_id)
@@ -101,7 +101,7 @@ export async function POST(request) {
   }
 
   // Verify the authenticated user owns this creator_id
-  const { data: profile, error: profileError } = await supabase
+  const { data: profile, error: profileError } = await supabase()
     .from('profiles')
     .select('creator_id')
     .eq('id', user.id)
@@ -122,7 +122,7 @@ export async function POST(request) {
 
   console.log('[/api/rankings] upserting:', { creator_id, format, rankedCount: players.length, unrankedCount: playersPayload.unranked.length });
 
-  const { data: upsertData, error: upsertError } = await supabase
+  const { data: upsertData, error: upsertError } = await supabase()
     .from('rankings')
     .upsert(
       {
@@ -161,7 +161,7 @@ export async function PATCH(request) {
     return Response.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
-  const { data: prof } = await supabase
+  const { data: prof } = await supabase()
     .from('profiles')
     .select('creator_id, role')
     .eq('id', user.id)
@@ -171,7 +171,7 @@ export async function PATCH(request) {
     return Response.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await supabase()
     .from('rankings')
     .update({ locked })
     .eq('creator_id', creator_id)

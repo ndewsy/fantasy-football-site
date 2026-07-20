@@ -17,7 +17,7 @@ export async function GET(request) {
 
   const today = new Date().toISOString().split('T')[0];
 
-  const { data: rows, error } = await supabase
+  const { data: rows, error } = await supabase()
     .from('rankings')
     .select('creator_id, format, players');
 
@@ -34,7 +34,7 @@ export async function GET(request) {
     return Response.json({ ok: true, inserted: 0 });
   }
 
-  const { error: upsertError } = await supabase
+  const { error: upsertError } = await supabase()
     .from('rankings_history')
     .upsert(snapshots, { onConflict: 'creator_id,format,snapshot_date', ignoreDuplicates: true });
 

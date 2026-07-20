@@ -11,7 +11,7 @@ export async function GET(request) {
   const { data: { user }, error: authError } = await supabase().auth.getUser(token);
   if (authError || !user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data: prof } = await supabase
+  const { data: prof } = await supabase()
     .from('profiles')
     .select('role, is_creator')
     .eq('id', user.id)
@@ -21,7 +21,7 @@ export async function GET(request) {
     return Response.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabase()
     .from('subscriptions')
     .select('*')
     .eq('status', 'active');

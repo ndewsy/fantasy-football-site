@@ -19,7 +19,7 @@ export async function POST(request) {
   const body = await request.json();
   const { display_name, handle, bio, announcement } = body;
 
-  const { error } = await supabase
+  const { error } = await supabase()
     .from('profiles')
     .update({
       display_name: display_name || null,
