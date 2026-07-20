@@ -22,7 +22,7 @@ export default function DynastyDavePage() {
         user
           ? supabase.from("subscriptions").select("*").eq("user_id", user.id).maybeSingle()
           : Promise.resolve({ data: null }),
-        supabase.from("posts").select("*").eq("creator_id", "dynastydave").order("created_at", { ascending: false }),
+        supabase.from("posts").select("*").eq("creator_id", "rookierager").order("created_at", { ascending: false }),
         supabase.from("profiles").select("display_name, handle, bio, announcement").eq("creator_id", "rookierager").eq("is_creator", true).maybeSingle(),
         supabase.from("rankings").select("updated_at").eq("creator_id", "rookierager").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
         user
