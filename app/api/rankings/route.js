@@ -1,9 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SECRET_KEY
-);
+let _supabase;
+const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY));
 
 // players column stores { ranked: [...], unranked: [...] } OR a legacy flat array.
 // Legacy flat arrays may embed unranked players inline with an `unranked: true` property,
@@ -90,7 +88,7 @@ export async function POST(request) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  const { data: { user }, error: authError } = await supabase().auth.getUser(token);
   if (authError || !user) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -153,7 +151,7 @@ export async function PATCH(request) {
   const token = authHeader?.replace('Bearer ', '');
   if (!token) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  const { data: { user }, error: authError } = await supabase().auth.getUser(token);
   if (authError || !user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await request.json();

@@ -1,12 +1,9 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SECRET_KEY
-);
+let _stripe, _supabase;
+const stripe = () => (_stripe ??= new Stripe(process.env.STRIPE_SECRET_KEY));
+const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY));
 
 export async function POST(request) {
   const { includedCreator, addOns } = await request.json();
@@ -15,7 +12,7 @@ export async function POST(request) {
 
   let userId = null;
   if (token) {
-    const { data: { user } } = await supabase.auth.getUser(token);
+    const { data: { user } } = await supabase().auth.getUser(token);
     userId = user?.id;
   }
 
@@ -27,7 +24,7 @@ export async function POST(request) {
     lineItems.push({ price: 'price_1TrMBvA2rwv8VsfEI4KxfDsq', quantity: 1 });
   }
 
-  const session = await stripe.checkout.sessions.create({
+  const session = await stripe().checkout.sessions.create({
     payment_method_types: ['card'],
     line_items: lineItems,
     mode: 'subscription',

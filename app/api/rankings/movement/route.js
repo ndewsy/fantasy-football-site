@@ -1,9 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SECRET_KEY
-);
+let _supabase;
+const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY));
 
 // Parses a rankings.players JSONB value into an ordered array of player objects.
 // Handles both the new integer-ID format and the legacy embedded-object format.
@@ -63,15 +61,15 @@ export async function GET(request) {
   if (!format) return Response.json({ error: 'format required' }, { status: 400 });
 
   // Build id→name lookup for expanding integer arrays
-  const { data: playersData } = await supabase.from('players').select('id, name');
+  const { data: playersData } = await supabase().from('players').select('id, name');
   const idToName = Object.fromEntries((playersData || []).map(p => [p.id, p.name]));
 
   const cutoff = cutoffDate();
 
   if (creator_id) {
     const [{ data: current }, { data: hist }] = await Promise.all([
-      supabase.from('rankings').select('players').eq('creator_id', creator_id).eq('format', format).maybeSingle(),
-      supabase.from('rankings_history')
+      supabase().from('rankings').select('players').eq('creator_id', creator_id).eq('format', format).maybeSingle(),
+      supabase().from('rankings_history')
         .select('players')
         .eq('creator_id', creator_id)
         .eq('format', format)
@@ -89,8 +87,8 @@ export async function GET(request) {
 
   // Consensus
   const [{ data: currentRows }, { data: histRows }] = await Promise.all([
-    supabase.from('rankings').select('creator_id, players').eq('format', format),
-    supabase.from('rankings_history')
+    supabase().from('rankings').select('creator_id, players').eq('format', format),
+    supabase().from('rankings_history')
       .select('creator_id, players, snapshot_date')
       .eq('format', format)
       .lte('snapshot_date', cutoff)

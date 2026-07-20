@@ -1,12 +1,9 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SECRET_KEY
-);
+let _stripe, _supabase;
+const stripe = () => (_stripe ??= new Stripe(process.env.STRIPE_SECRET_KEY));
+const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY));
 
 export async function POST(request) {
   try {
@@ -17,7 +14,7 @@ export async function POST(request) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: authError } = await supabase().auth.getUser(token);
     if (authError || !user) {
       console.warn('[/api/verify-checkout] Auth failed:', authError?.message);
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
@@ -40,7 +37,7 @@ export async function POST(request) {
 
     let stripeSession;
     try {
-      stripeSession = await stripe.checkout.sessions.retrieve(session_id);
+      stripeSession = await stripe().checkout.sessions.retrieve(session_id);
     } catch (err) {
       console.error('[/api/verify-checkout] Stripe retrieve failed:', err.message);
       return Response.json({ error: 'Invalid session' }, { status: 400 });
@@ -81,7 +78,7 @@ export async function POST(request) {
     const stripeCustomerId = stripeSession.customer || null;
     console.log('[/api/verify-checkout] Upserting subscription:', { user_id: user.id, includedCreator, addOns, stripeCustomerId });
 
-    const { error } = await supabase.from('subscriptions').upsert(
+    const { error } = await supabase().from('subscriptions').upsert(
       {
         user_id: user.id,
         status: 'active',
