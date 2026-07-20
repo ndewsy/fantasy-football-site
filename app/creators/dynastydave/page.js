@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
+import PostCard from "@/app/components/PostCard";
 
 export default function DynastyDavePage() {
   const [user, setUser] = useState(null);
@@ -100,32 +101,9 @@ export default function DynastyDavePage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {posts.map((post) => {
-              const dateStr = new Date(post.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-              return (
-                <div key={post.id} className="bg-white/70 backdrop-blur-md rounded-xl p-5 border border-white/80 shadow-lg relative overflow-hidden">
-                  {isSubscribed ? (
-                    <>
-                      <span className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded mb-2 inline-block font-medium">{post.tag}</span>
-                      <h3 className="font-semibold mb-2">{post.title}</h3>
-                      <p className="text-gray-500 text-sm">{post.content}</p>
-                      <p className="text-gray-400 text-xs mt-2">{dateStr}</p>
-                    </>
-                  ) : (
-                    <>
-                      <div className="blur-sm pointer-events-none">
-                        <span className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded mb-2 inline-block font-medium">{post.tag}</span>
-                        <h3 className="font-semibold mb-1">{post.title}</h3>
-                        <p className="text-gray-400 text-xs">{dateStr}</p>
-                      </div>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-2xl">🔒</span>
-                      </div>
-                    </>
-                  )}
-                </div>
-              );
-            })}
+            {posts.map((post) => (
+              <PostCard key={post.id} post={post} isSubscribed={isSubscribed} />
+            ))}
           </div>
         )}
       </div>
