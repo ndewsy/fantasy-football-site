@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
 import PostCard from "@/app/components/PostCard";
+import CreatorAvatar from "@/app/components/CreatorAvatar";
 
 export default function DynastyDavePage() {
   const [user, setUser] = useState(null);
@@ -24,7 +25,7 @@ export default function DynastyDavePage() {
           ? supabase.from("subscriptions").select("*").eq("user_id", user.id).maybeSingle()
           : Promise.resolve({ data: null }),
         supabase.from("posts").select("*").eq("creator_id", "rookierager").order("created_at", { ascending: false }),
-        supabase.from("profiles").select("display_name, handle, bio, announcement").eq("creator_id", "rookierager").eq("is_creator", true).maybeSingle(),
+        supabase.from("profiles").select("display_name, handle, bio, announcement, logo_url").eq("creator_id", "rookierager").eq("is_creator", true).maybeSingle(),
         supabase.from("rankings").select("updated_at").eq("creator_id", "rookierager").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
         user
           ? supabase.from("profiles").select("role, is_creator").eq("id", user.id).maybeSingle()
@@ -52,7 +53,7 @@ export default function DynastyDavePage() {
 
       <div className="max-w-5xl mx-auto px-6 py-12">
         <div className="flex flex-wrap items-center gap-4 mb-12">
-          <div className="w-20 h-20 rounded-full bg-green-600 flex items-center justify-center text-white font-bold text-2xl">RR</div>
+          <CreatorAvatar logoUrl={creatorProfile?.logo_url} initials="RR" colorClass="bg-green-600" size="lg" />
           <div>
             <h1 className="text-3xl font-bold">{creatorProfile?.display_name || "RookieRager"}</h1>
             <p className="text-gray-500">{creatorProfile?.handle || "@rookierager"}</p>

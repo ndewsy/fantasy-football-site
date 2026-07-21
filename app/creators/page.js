@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
+import CreatorAvatar from "@/app/components/CreatorAvatar";
 
 const creators = [
   { id: "rookierager", name: "RookieRager", handle: "@rookierager", specialty: "Dynasty SF", bio: "10 years of dynasty experience. Known for elite TE and QB analysis in superflex formats.", avatar: "RR", color: "bg-green-600" },
@@ -16,7 +17,7 @@ export default function CreatorsPage() {
   useEffect(() => {
     async function load() {
       const supabase = createClient();
-      const { data: profiles } = await supabase.from("profiles").select("creator_id, display_name, handle, bio").eq("is_creator", true);
+      const { data: profiles } = await supabase.from("profiles").select("creator_id, display_name, handle, bio, logo_url").eq("is_creator", true);
       const map = {};
       for (const p of (profiles || [])) {
         if (p.creator_id) map[p.creator_id] = p;
@@ -43,9 +44,12 @@ export default function CreatorsPage() {
             return (
             <div key={creator.id} className={`bg-white/70 backdrop-blur-md rounded-xl p-6 border border-white/80 shadow-lg transition-shadow ${creator.comingSoon ? "opacity-70" : "hover:shadow-xl"}`}>
               <div className="flex items-center gap-4 mb-4">
-                <div className={creator.color + " w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-lg"}>
-                  {creator.avatar}
-                </div>
+                <CreatorAvatar
+                  logoUrl={db?.logo_url}
+                  initials={creator.avatar}
+                  colorClass={creator.color}
+                  size="md"
+                />
                 <div>
                   <h3 className="font-bold text-lg">{name}</h3>
                   <p className="text-gray-500 text-sm">{handle}</p>

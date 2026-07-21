@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
+import CreatorAvatar from "@/app/components/CreatorAvatar";
 
 const FORMATS = ["Dynasty SF", "Dynasty 1QB", "Redraft 1QB", "Redraft SF"];
 const DEFAULT_TIERS = [1, 13, 25, 37, 49, 61, 73, 85, 97, 109, 121, 151];
@@ -90,6 +91,8 @@ export default function DashboardPage() {
   const [deletingPostId, setDeletingPostId] = useState(null);
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
   const contentRef = useRef(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoUploadError, setLogoUploadError] = useState("");
   const fileInputRef = useRef(null);
 
   // Admin state
@@ -896,6 +899,52 @@ export default function DashboardPage() {
     setPosts(prev => prev.filter(p => p.id !== post.id));
   }
 
+  async function handleLogoUpload(file) {
+    if (!file || !file.type.startsWith("image/")) {
+      setLogoUploadError("Please select an image file.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setLogoUploadError("Image must be under 5 MB.");
+      return;
+    }
+    setLogoUploading(true);
+    setLogoUploadError("");
+
+    const supabase = createClient();
+    const ext = file.name.split(".").pop().toLowerCase();
+    const path = `${profile.creator_id}/logo.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("avatars")
+      .upload(path, file, { upsert: true });
+
+    if (uploadError) {
+      setLogoUploadError(`Upload failed: ${uploadError.message}`);
+      setLogoUploading(false);
+      return;
+    }
+
+    const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
+
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch("/api/profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+      body: JSON.stringify({ logo_url: publicUrl }),
+    });
+
+    if (!res.ok) {
+      const { error } = await res.json();
+      setLogoUploadError(`Save failed: ${error}`);
+      setLogoUploading(false);
+      return;
+    }
+
+    setProfile(prev => ({ ...prev, logo_url: publicUrl }));
+    setLogoUploading(false);
+  }
+
   function applyInlineFormat(prefix, suffix) {
     const ta = contentRef.current;
     if (!ta) return;
@@ -975,19 +1024,29 @@ export default function DashboardPage() {
 
       <div className="max-w-5xl mx-auto px-6 py-10">
         <div className="mb-8 flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Welcome back, {profile.display_name}</h1>
-            <p className="text-gray-500 mt-1 inline-flex items-center gap-2 flex-wrap">
-              {profile.role === "admin" && (
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-red-500 inline-block"></span>Admin
-                </span>
-              )}
-              {profile.role === "admin" && profile.is_creator && <span className="text-gray-300">·</span>}
-              {profile.is_creator && (
-                <span>Creator · @{profile.creator_id}</span>
-              )}
-            </p>
+          <div className="flex items-center gap-4">
+            {profile.is_creator && (
+              <CreatorAvatar
+                logoUrl={profile.logo_url}
+                initials={(profile.creator_id || "?").slice(0, 2).toUpperCase()}
+                colorClass="bg-blue-600"
+                size="lg"
+              />
+            )}
+            <div>
+              <h1 className="text-3xl font-bold">Welcome back, {profile.display_name}</h1>
+              <p className="text-gray-500 mt-1 inline-flex items-center gap-2 flex-wrap">
+                {profile.role === "admin" && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-red-500 inline-block"></span>Admin
+                  </span>
+                )}
+                {profile.role === "admin" && profile.is_creator && <span className="text-gray-300">·</span>}
+                {profile.is_creator && (
+                  <span>Creator · @{profile.creator_id}</span>
+                )}
+              </p>
+            </div>
           </div>
           {profile.role === "admin" && (
             <span className="bg-red-50 border border-red-200 text-red-600 text-xs font-semibold px-3 py-1.5 rounded-lg">
@@ -2497,6 +2556,40 @@ export default function DashboardPage() {
           <div className="max-w-lg">
             <h2 className="text-lg font-bold mb-6">My Profile</h2>
             <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-6 flex flex-col gap-5">
+
+              {/* Logo upload */}
+              <div>
+                <label className="block text-sm text-gray-500 mb-3">Logo / Profile Picture</label>
+                <div className="flex items-center gap-4">
+                  <CreatorAvatar
+                    logoUrl={profile.logo_url}
+                    initials={(profile.creator_id || "?").slice(0, 2).toUpperCase()}
+                    colorClass="bg-blue-600"
+                    size="lg"
+                  />
+                  <div className="flex-1">
+                    <label className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg px-4 py-4 text-center cursor-pointer transition-colors ${logoUploading ? "border-blue-400 bg-blue-50/60 cursor-wait" : "border-gray-200 hover:border-blue-300 bg-gray-50"}`}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="sr-only"
+                        disabled={logoUploading}
+                        onChange={(e) => e.target.files?.[0] && handleLogoUpload(e.target.files[0])}
+                      />
+                      {logoUploading ? (
+                        <span className="text-blue-600 text-sm font-medium">Uploading…</span>
+                      ) : (
+                        <>
+                          <span className="text-gray-500 text-sm">{profile.logo_url ? "Replace logo" : "Upload logo"}</span>
+                          <span className="text-gray-400 text-xs mt-0.5">PNG, JPG, SVG · max 5 MB</span>
+                        </>
+                      )}
+                    </label>
+                    {logoUploadError && <p className="text-red-500 text-xs mt-1">{logoUploadError}</p>}
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm text-gray-500 mb-1">Display Name</label>
                 <input

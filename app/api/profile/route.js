@@ -17,16 +17,23 @@ export async function POST(request) {
   }
 
   const body = await request.json();
-  const { display_name, handle, bio, announcement } = body;
+
+  // Only update fields explicitly included in the request body.
+  // Callers that send only { logo_url } won't accidentally null out other fields.
+  const update = {};
+  if ('display_name'  in body) update.display_name  = body.display_name  || null;
+  if ('handle'        in body) update.handle        = body.handle        || null;
+  if ('bio'           in body) update.bio           = body.bio           || null;
+  if ('announcement'  in body) update.announcement  = body.announcement  || null;
+  if ('logo_url'      in body) update.logo_url      = body.logo_url      || null;
+
+  if (Object.keys(update).length === 0) {
+    return Response.json({ error: 'No fields to update' }, { status: 400 });
+  }
 
   const { error } = await supabase()
     .from('profiles')
-    .update({
-      display_name: display_name || null,
-      handle: handle || null,
-      bio: bio || null,
-      announcement: announcement || null,
-    })
+    .update(update)
     .eq('id', user.id);
 
   if (error) {
