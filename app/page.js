@@ -153,7 +153,8 @@ export default function Home() {
       // need all active creators — skip only if every one is already cached
       if (cachedFormat && ACTIVE_CREATORS.every(c => cachedFormat[c.id] !== undefined)) return;
     } else {
-      if (cachedFormat && cachedFormat[activeCreator] !== undefined) return;
+      // Don't skip for individual creators — break_rank can change from the dashboard
+      // and the stale cache would hide it until the user hard-refreshes.
     }
 
     setRankingsLoading(true);

@@ -447,15 +447,22 @@ export default function DashboardPage() {
   }
 
   async function saveBreakRank(fmt, rawValue) {
+    const prevValue = breakRankByFormat[fmt] ?? null;
     const value = rawValue === "" || rawValue == null ? null : Number(rawValue);
     setBreakRankByFormat(prev => ({ ...prev, [fmt]: value }));
     const supabase = createClient();
     const { data: { session } } = await supabase.auth.getSession();
-    await fetch('/api/rankings', {
+    const res = await fetch('/api/rankings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
       body: JSON.stringify({ creator_id: profile.creator_id, format: fmt, break_rank: value }),
     });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      console.error('[saveBreakRank] PATCH failed:', res.status, body);
+      setBreakRankByFormat(prev => ({ ...prev, [fmt]: prevValue }));
+      setBreakRankInput(prevValue != null ? String(prevValue) : "");
+    }
   }
 
   async function saveProfile() {
