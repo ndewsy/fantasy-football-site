@@ -93,6 +93,7 @@ export default function Home() {
   const [tiersCache, setTiersCache] = useState({});
   const [updatedAtCache, setUpdatedAtCache] = useState({});
   const [lockedCache, setLockedCache] = useState({});
+  const [breakRankCache, setBreakRankCache] = useState({});
   const [movementCache, setMovementCache] = useState({});
   const rankingsRef = useRef(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -191,7 +192,7 @@ export default function Home() {
           const res = await fetch(
             `/api/rankings?creator_id=${encodeURIComponent(activeCreator)}&format=${encodeURIComponent(activeFormat)}`
           );
-          const { players, tiers, updatedAt, locked } = await res.json();
+          const { players, tiers, updatedAt, locked, break_rank } = await res.json();
           setRankingsCache(prev => ({
             ...prev,
             [activeFormat]: { ...(prev[activeFormat] || {}), [activeCreator]: players || [] },
@@ -211,6 +212,10 @@ export default function Home() {
           setLockedCache(prev => ({
             ...prev,
             [activeFormat]: { ...(prev[activeFormat] || {}), [activeCreator]: locked || false },
+          }));
+          setBreakRankCache(prev => ({
+            ...prev,
+            [activeFormat]: { ...(prev[activeFormat] || {}), [activeCreator]: break_rank ?? null },
           }));
           fetch(`/api/rankings/movement?creator_id=${encodeURIComponent(activeCreator)}&format=${encodeURIComponent(activeFormat)}`)
             .then(r => r.ok ? r.json() : null)
@@ -362,6 +367,17 @@ export default function Home() {
       posCount[player.pos] = (posCount[player.pos] || 0) + 1;
       displayPosRanks[player.name] = `${player.pos}${posCount[player.pos]}`;
     }
+  }
+
+  // Break rank only applies on individual creator tabs (not consensus)
+  const breakRankForCreator = activeCreator !== "consensus"
+    ? (breakRankCache[activeFormat]?.[activeCreator] ?? null)
+    : null;
+
+  // Map player name → 1-indexed position in the full unfiltered displayPlayers list
+  const displayRankByName = {};
+  if (displayPlayers) {
+    displayPlayers.forEach((p, i) => { displayRankByName[p.name] = i + 1; });
   }
 
   const creatorPosRanks = {};
@@ -793,52 +809,89 @@ export default function Home() {
                   </tbody>
                 )}
 
-                {/* Rows 13+: full unblurred list for subscribers */}
-                {unlocked && filteredPlayers.length > FREE_ROWS && (
-                  <tbody>
-                    {filteredPlayers.slice(FREE_ROWS).map((player, i) => {
-                      const rank = FREE_ROWS + i + 1;
-                      const tierNum = getTierNumber(rank, activeTiers);
-                      const prevTierNum = getTierNumber(rank - 1, activeTiers);
-                      const showDivider = noFilters && tierNum !== prevTierNum;
-                      const colSpan = 4 + (showCreatorColumns && activeCreator === "consensus" ? ACTIVE_CREATORS.length : 0);
-                      return (
-                        <Fragment key={player.name}>
-                          {showDivider && (
+                {/* Rows 13+: full unblurred list for subscribers, split at break_rank */}
+                {unlocked && filteredPlayers.length > FREE_ROWS && (() => {
+                  const colSpan = 4 + (showCreatorColumns && activeCreator === "consensus" ? ACTIVE_CREATORS.length : 0);
+                  const subscriberPlayers = filteredPlayers.slice(FREE_ROWS);
+
+                  // Find where the break falls within the subscriber slice
+                  const breakIdx = breakRankForCreator != null
+                    ? subscriberPlayers.findIndex((p, i) => {
+                        const dr = displayRankByName[p.name] ?? (FREE_ROWS + i + 1);
+                        return dr >= breakRankForCreator;
+                      })
+                    : -1;
+
+                  const preBreak = breakIdx === -1 ? subscriberPlayers : subscriberPlayers.slice(0, breakIdx);
+                  const postBreak = breakIdx === -1 ? [] : subscriberPlayers.slice(breakIdx);
+
+                  function renderRow(player, globalIdx) {
+                    const rank = FREE_ROWS + globalIdx + 1;
+                    const tierNum = getTierNumber(rank, activeTiers);
+                    const prevTierNum = getTierNumber(rank - 1, activeTiers);
+                    const showDivider = noFilters && tierNum !== prevTierNum;
+                    return (
+                      <Fragment key={player.name}>
+                        {showDivider && (
+                          <tr className="select-none pointer-events-none">
+                            <td colSpan={colSpan} className="py-1.5 px-6">
+                              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                                <div className="h-px bg-blue-200" />
+                                <span className="text-xs font-semibold text-blue-600 tracking-wider uppercase">Tier {tierNum}</span>
+                                <div className="h-px bg-blue-200" />
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                        <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4 text-gray-400 font-mono text-sm">{rank}{(() => { const m = movementCache[activeFormat]?.[activeCreator]?.[player.name]; if (!m) return null; return <span className={`ml-1.5 text-xs font-semibold ${m > 0 ? "text-green-600" : "text-red-500"}`}>{m > 0 ? "▲" : "▼"}{Math.abs(m)}</span>; })()}</td>
+                          <td className="px-6 py-4 font-medium">
+                            <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors">
+                              {player.name}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2 py-1 rounded text-xs font-semibold ${posColors[player.pos] || "bg-gray-100 text-gray-600"}`}>
+                              {displayPosRanks[player.name]}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-gray-500">{player.team}</td>
+                          {showCreatorColumns && activeCreator === "consensus" && ACTIVE_CREATORS.map(c => (
+                            <td key={c.id} className="px-6 py-4 text-xs font-mono text-gray-400">
+                              {creatorPosRanks[c.id]?.[normalizeName(player.name)] || "—"}
+                            </td>
+                          ))}
+                        </tr>
+                      </Fragment>
+                    );
+                  }
+
+                  return (
+                    <>
+                      <tbody>
+                        {preBreak.map((player, i) => renderRow(player, i))}
+                      </tbody>
+                      {postBreak.length > 0 && (
+                        <>
+                          <tbody>
                             <tr className="select-none pointer-events-none">
-                              <td colSpan={colSpan} className="py-1.5 px-6">
-                                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                                  <div className="h-px bg-blue-200" />
-                                  <span className="text-xs font-semibold text-blue-600 tracking-wider uppercase">Tier {tierNum}</span>
-                                  <div className="h-px bg-blue-200" />
+                              <td colSpan={colSpan} className="py-3 px-6 bg-amber-50 border-y border-amber-200">
+                                <div className="flex items-center gap-3">
+                                  <div className="flex-1 h-px bg-amber-300" />
+                                  <span className="text-amber-700 text-xs font-semibold whitespace-nowrap">The following rankings are in progress</span>
+                                  <div className="flex-1 h-px bg-amber-300" />
                                 </div>
                               </td>
                             </tr>
-                          )}
-                          <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                            <td className="px-6 py-4 text-gray-400 font-mono text-sm">{rank}{(() => { const m = movementCache[activeFormat]?.[activeCreator]?.[player.name]; if (!m) return null; return <span className={`ml-1.5 text-xs font-semibold ${m > 0 ? "text-green-600" : "text-red-500"}`}>{m > 0 ? "▲" : "▼"}{Math.abs(m)}</span>; })()}</td>
-                            <td className="px-6 py-4 font-medium">
-                              <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors">
-                                {player.name}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4">
-                              <span className={`px-2 py-1 rounded text-xs font-semibold ${posColors[player.pos] || "bg-gray-100 text-gray-600"}`}>
-                                {displayPosRanks[player.name]}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 text-gray-500">{player.team}</td>
-                            {showCreatorColumns && activeCreator === "consensus" && ACTIVE_CREATORS.map(c => (
-                              <td key={c.id} className="px-6 py-4 text-xs font-mono text-gray-400">
-                                {creatorPosRanks[c.id]?.[normalizeName(player.name)] || "—"}
-                              </td>
-                            ))}
-                          </tr>
-                        </Fragment>
-                      );
-                    })}
-                  </tbody>
-                )}
+                          </tbody>
+                          <tbody className="blur-sm select-none pointer-events-none">
+                            {postBreak.map((player, i) => renderRow(player, breakIdx + i))}
+                          </tbody>
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
               </table>
             </div>
 

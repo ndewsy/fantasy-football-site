@@ -28,7 +28,7 @@ export async function GET(request) {
   if (creator_id && format) {
     const { data, error } = await supabase()
       .from('rankings')
-      .select('players, tiers, updated_at, locked')
+      .select('players, tiers, updated_at, locked, break_rank')
       .eq('creator_id', creator_id)
       .eq('format', format)
       .maybeSingle();
@@ -37,7 +37,7 @@ export async function GET(request) {
       return Response.json({ error: error.message }, { status: 500 });
     }
     const { ranked, unranked } = parsePlayers(data?.players);
-    return Response.json({ players: ranked, unranked, tiers: data?.tiers || [], updatedAt: data?.updated_at || null, locked: data?.locked || false });
+    return Response.json({ players: ranked, unranked, tiers: data?.tiers || [], updatedAt: data?.updated_at || null, locked: data?.locked || false, break_rank: data?.break_rank ?? null });
   }
 
   // format only → all creators for that format (consensus tab on homepage)
@@ -61,7 +61,7 @@ export async function GET(request) {
   if (creator_id) {
     const { data, error } = await supabase()
       .from('rankings')
-      .select('format, players, tiers, updated_at, locked')
+      .select('format, players, tiers, updated_at, locked, break_rank')
       .eq('creator_id', creator_id)
       .order('updated_at', { ascending: true });
     if (error) {
@@ -72,7 +72,7 @@ export async function GET(request) {
       const rawPlayers = row.players;
       const { ranked, unranked } = parsePlayers(rawPlayers);
       console.log(`[/api/rankings GET] format="${row.format}" rawType=${Array.isArray(rawPlayers) ? 'flat-array' : typeof rawPlayers} rankedCount=${ranked.length} unrankedCount=${unranked.length}`);
-      return { format: row.format, players: ranked, unranked, tiers: row.tiers || [], updated_at: row.updated_at, locked: row.locked || false };
+      return { format: row.format, players: ranked, unranked, tiers: row.tiers || [], updated_at: row.updated_at, locked: row.locked || false, break_rank: row.break_rank ?? null };
     });
     return Response.json({ rankings });
   }
@@ -155,10 +155,18 @@ export async function PATCH(request) {
   if (authError || !user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await request.json();
-  const { creator_id, format, locked } = body;
+  const { creator_id, format } = body;
 
-  if (!creator_id || !format || typeof locked !== 'boolean') {
+  if (!creator_id || !format) {
     return Response.json({ error: 'Missing required fields' }, { status: 400 });
+  }
+
+  const update = {};
+  if ('locked' in body && typeof body.locked === 'boolean') update.locked = body.locked;
+  if ('break_rank' in body) update.break_rank = body.break_rank == null ? null : Number(body.break_rank);
+
+  if (Object.keys(update).length === 0) {
+    return Response.json({ error: 'No fields to update' }, { status: 400 });
   }
 
   const { data: prof } = await supabase()
@@ -173,7 +181,7 @@ export async function PATCH(request) {
 
   const { error: updateError } = await supabase()
     .from('rankings')
-    .update({ locked })
+    .update(update)
     .eq('creator_id', creator_id)
     .eq('format', format);
 

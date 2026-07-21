@@ -131,6 +131,8 @@ export default function DashboardPage() {
 
   // Format lock state
   const [lockedFormats, setLockedFormats] = useState({});
+  const [breakRankByFormat, setBreakRankByFormat] = useState({});
+  const [breakRankInput, setBreakRankInput] = useState("");
 
   // Copy Rankings state
   const [savedFormats, setSavedFormats] = useState(new Set());
@@ -217,14 +219,18 @@ export default function DashboardPage() {
         const rankingsMap = {};
         const tiersMap = {};
         const lockedMap = {};
+        const breakRankMap = {};
         for (const r of (savedRankings || [])) {
           const ranked = expandIds(r.players || [], byId);
           const unrankedArr = expandIds(r.unranked || [], byId).map(p => ({ ...p, unranked: true }));
           rankingsMap[r.format] = [...ranked, ...unrankedArr];
           tiersMap[r.format] = (r.tiers && r.tiers.length > 0) ? r.tiers : [...DEFAULT_TIERS];
           lockedMap[r.format] = r.locked || false;
+          breakRankMap[r.format] = r.break_rank ?? null;
         }
         setLockedFormats(lockedMap);
+        setBreakRankByFormat(breakRankMap);
+        setBreakRankInput(String(breakRankMap[FORMATS[0]] ?? ""));
         setSavedFormats(new Set((savedRankings || []).map(r => r.format)));
         // For formats with no saved data yet, initialize with pool and default tiers
         for (const fmt of FORMATS) {
@@ -432,6 +438,18 @@ export default function DashboardPage() {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ creator_id: profile.creator_id, format: fmt, locked: newLocked }),
+    });
+  }
+
+  async function saveBreakRank(fmt, rawValue) {
+    const value = rawValue === "" || rawValue == null ? null : Number(rawValue);
+    setBreakRankByFormat(prev => ({ ...prev, [fmt]: value }));
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    await fetch('/api/rankings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+      body: JSON.stringify({ creator_id: profile.creator_id, format: fmt, break_rank: value }),
     });
   }
 
@@ -904,45 +922,30 @@ export default function DashboardPage() {
       setLogoUploadError("Please select an image file.");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setLogoUploadError("Image must be under 5 MB.");
-      return;
-    }
     setLogoUploading(true);
     setLogoUploadError("");
 
-    const supabase = createClient();
-    const ext = file.name.split(".").pop().toLowerCase();
-    const path = `${profile.creator_id}/logo.${ext}`;
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
 
-    const { error: uploadError } = await supabase.storage
-      .from("avatars")
-      .upload(path, file, { upsert: true });
+      const formData = new FormData();
+      formData.append("file", file);
 
-    if (uploadError) {
-      setLogoUploadError(`Upload failed: ${uploadError.message}`);
+      const res = await fetch("/api/avatar", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+        body: formData,
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || "Upload failed");
+
+      setProfile(prev => ({ ...prev, logo_url: body.publicUrl }));
+    } catch (err) {
+      setLogoUploadError(err.message || "Upload failed — try again.");
+    } finally {
       setLogoUploading(false);
-      return;
     }
-
-    const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
-
-    const { data: { session } } = await supabase.auth.getSession();
-    const res = await fetch("/api/profile", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
-      body: JSON.stringify({ logo_url: publicUrl }),
-    });
-
-    if (!res.ok) {
-      const { error } = await res.json();
-      setLogoUploadError(`Save failed: ${error}`);
-      setLogoUploading(false);
-      return;
-    }
-
-    setProfile(prev => ({ ...prev, logo_url: publicUrl }));
-    setLogoUploading(false);
   }
 
   function applyInlineFormat(prefix, suffix) {
@@ -1534,7 +1537,7 @@ export default function DashboardPage() {
                 {FORMATS.map((fmt) => (
                   <button
                     key={fmt}
-                    onClick={() => { setActiveFormat(fmt); setRankingsSaved(false); setShowAddPlayer(false); setAddPlayerSearch(""); setAddPlayerResults([]); }}
+                    onClick={() => { setActiveFormat(fmt); setRankingsSaved(false); setShowAddPlayer(false); setAddPlayerSearch(""); setAddPlayerResults([]); setBreakRankInput(String(breakRankByFormat[fmt] ?? "")); }}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors shrink-0 ${
                       activeFormat === fmt
                         ? "bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white"
@@ -1546,7 +1549,7 @@ export default function DashboardPage() {
                   </button>
                 ))}
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                 <button
                   type="button"
                   onClick={() => toggleFormatLock(activeFormat)}
@@ -1558,6 +1561,32 @@ export default function DashboardPage() {
                 >
                   {lockedFormats[activeFormat] ? "🔒 Under Review" : "🔓 Lock for editing"}
                 </button>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-gray-400 shrink-0">Break at rank:</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max={currentPlayers.length || undefined}
+                    placeholder="—"
+                    value={breakRankInput}
+                    onChange={e => setBreakRankInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") saveBreakRank(activeFormat, breakRankInput); }}
+                    className="w-16 bg-white/60 border border-white/70 rounded-lg px-2 py-1.5 text-xs text-center text-[#0F172A] focus:outline-none focus:border-blue-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => saveBreakRank(activeFormat, breakRankInput)}
+                    className="text-xs px-2.5 py-1.5 rounded-lg font-medium bg-white/60 border border-white/70 text-gray-600 hover:bg-white/80 transition-colors"
+                  >Set</button>
+                  {breakRankByFormat[activeFormat] != null && (
+                    <button
+                      type="button"
+                      onClick={() => { setBreakRankInput(""); saveBreakRank(activeFormat, null); }}
+                      className="text-xs text-gray-400 hover:text-gray-600 transition-colors px-1"
+                      title="Clear break"
+                    >✕</button>
+                  )}
+                </div>
                 {(() => {
                   const otherSavedFormats = FORMATS.filter(f => f !== activeFormat && savedFormats.has(f));
                   return (
