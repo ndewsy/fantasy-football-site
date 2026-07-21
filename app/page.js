@@ -724,16 +724,15 @@ export default function Home() {
                     const tierNum = getTierNumber(rank, activeTiers);
                     const prevTierNum = i > 0 ? getTierNumber(rank - 1, activeTiers) : tierNum;
                     const showDivider = noFilters && (i === 0 || tierNum !== prevTierNum);
-                    const colSpan = 4 + (showCreatorColumns && activeCreator === "consensus" ? ACTIVE_CREATORS.length : 0);
                     return (
                       <Fragment key={player.name}>
                         {showDivider && (
                           <tr className="select-none pointer-events-none">
-                            <td colSpan={colSpan} className="py-1.5 px-6">
-                              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                                <div className="h-px bg-blue-200" />
+                            <td colSpan={999} className="py-1.5 px-6">
+                              <div className="w-full flex items-center gap-3">
+                                <div className="flex-1 h-px bg-blue-200" />
                                 <span className="text-xs font-semibold text-blue-600 tracking-wider uppercase">Tier {tierNum}</span>
-                                <div className="h-px bg-blue-200" />
+                                <div className="flex-1 h-px bg-blue-200" />
                               </div>
                             </td>
                           </tr>
@@ -770,16 +769,15 @@ export default function Home() {
                       const tierNum = getTierNumber(rank, activeTiers);
                       const prevTierNum = getTierNumber(rank - 1, activeTiers);
                       const showDivider = noFilters && tierNum !== prevTierNum;
-                      const colSpan = 4 + (showCreatorColumns && activeCreator === "consensus" ? ACTIVE_CREATORS.length : 0);
                       return (
                         <Fragment key={player.name}>
                           {showDivider && (
                             <tr>
-                              <td colSpan={colSpan} className="py-1.5 px-6">
-                                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                                  <div className="h-px bg-blue-200" />
+                              <td colSpan={999} className="py-1.5 px-6">
+                                <div className="w-full flex items-center gap-3">
+                                  <div className="flex-1 h-px bg-blue-200" />
                                   <span className="text-xs font-semibold text-blue-600 tracking-wider uppercase">Tier {tierNum}</span>
-                                  <div className="h-px bg-blue-200" />
+                                  <div className="flex-1 h-px bg-blue-200" />
                                 </div>
                               </td>
                             </tr>
@@ -811,7 +809,6 @@ export default function Home() {
 
                 {/* Rows 13+: full unblurred list for subscribers, split at break_rank */}
                 {unlocked && filteredPlayers.length > FREE_ROWS && (() => {
-                  const colSpan = 4 + (showCreatorColumns && activeCreator === "consensus" ? ACTIVE_CREATORS.length : 0);
                   const subscriberPlayers = filteredPlayers.slice(FREE_ROWS);
 
                   // Find where the break falls within the subscriber slice
@@ -834,11 +831,11 @@ export default function Home() {
                       <Fragment key={player.name}>
                         {showDivider && (
                           <tr className="select-none pointer-events-none">
-                            <td colSpan={colSpan} className="py-1.5 px-6">
-                              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                                <div className="h-px bg-blue-200" />
+                            <td colSpan={999} className="py-1.5 px-6">
+                              <div className="w-full flex items-center gap-3">
+                                <div className="flex-1 h-px bg-blue-200" />
                                 <span className="text-xs font-semibold text-blue-600 tracking-wider uppercase">Tier {tierNum}</span>
-                                <div className="h-px bg-blue-200" />
+                                <div className="flex-1 h-px bg-blue-200" />
                               </div>
                             </td>
                           </tr>
@@ -875,8 +872,8 @@ export default function Home() {
                         <>
                           <tbody>
                             <tr className="select-none pointer-events-none">
-                              <td colSpan={colSpan} className="py-3 px-6 bg-amber-50 border-y border-amber-200">
-                                <div className="flex items-center gap-3">
+                              <td colSpan={999} className="py-3 px-6 bg-amber-50 border-y border-amber-200">
+                                <div className="w-full flex items-center gap-3">
                                   <div className="flex-1 h-px bg-amber-300" />
                                   <span className="text-amber-700 text-xs font-semibold whitespace-nowrap">The following rankings are in progress</span>
                                   <div className="flex-1 h-px bg-amber-300" />
