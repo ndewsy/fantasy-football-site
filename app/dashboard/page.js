@@ -6,6 +6,7 @@ import NavBar from "@/app/components/NavBar";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import CreatorAvatar from "@/app/components/CreatorAvatar";
+import Cropper from "react-easy-crop";
 
 const FORMATS = ["Dynasty SF", "Dynasty 1QB", "Redraft 1QB", "Redraft SF"];
 const DEFAULT_TIERS = [1, 13, 25, 37, 49, 61, 73, 85, 97, 109, 121, 151];
@@ -94,6 +95,10 @@ export default function DashboardPage() {
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoUploadError, setLogoUploadError] = useState("");
   const fileInputRef = useRef(null);
+  const [cropSrc, setCropSrc] = useState(null);
+  const [cropXY, setCropXY] = useState({ x: 0, y: 0 });
+  const [cropZoom, setCropZoom] = useState(1);
+  const [cropArea, setCropArea] = useState(null);
 
   // Admin state
   const [adminProfiles, setAdminProfiles] = useState([]);
@@ -917,6 +922,44 @@ export default function DashboardPage() {
     setPosts(prev => prev.filter(p => p.id !== post.id));
   }
 
+  function openCropModal(file) {
+    if (!file || !file.type.startsWith("image/")) {
+      setLogoUploadError("Please select an image file.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = e => {
+      setCropSrc(e.target.result);
+      setCropZoom(1);
+      setCropXY({ x: 0, y: 0 });
+      setCropArea(null);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function confirmCrop() {
+    if (!cropSrc || !cropArea) return;
+    const image = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = cropSrc;
+    });
+    const SIZE = 400;
+    const canvas = document.createElement("canvas");
+    canvas.width = SIZE;
+    canvas.height = SIZE;
+    const ctx = canvas.getContext("2d");
+    ctx.beginPath();
+    ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2, 0, 2 * Math.PI);
+    ctx.clip();
+    ctx.drawImage(image, cropArea.x, cropArea.y, cropArea.width, cropArea.height, 0, 0, SIZE, SIZE);
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+    if (!blob) { setLogoUploadError("Crop failed — please try again."); return; }
+    setCropSrc(null);
+    await handleLogoUpload(new File([blob], "logo.png", { type: "image/png" }));
+  }
+
   async function handleLogoUpload(file) {
     if (!file || !file.type.startsWith("image/")) {
       setLogoUploadError("Please select an image file.");
@@ -1022,6 +1065,7 @@ export default function DashboardPage() {
   const currentPeriod = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
   return (
+    <>
     <main className="min-h-screen text-[#0F172A]">
       <NavBar activePath="/dashboard" />
 
@@ -1059,13 +1103,13 @@ export default function DashboardPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-8 overflow-x-auto pb-1">
+        <div className="flex flex-wrap gap-2 mb-8">
           {profile.role === "admin" && (
             [["admin", "Admin Overview"], ["payouts", "Revenue & Payouts"], ["feedback", "Feedback"]].map(([t, label]) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-colors shrink-0 ${
+                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
                   tab === t
                     ? "bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white"
                     : "bg-white/60 backdrop-blur-sm text-gray-500 hover:bg-white/80 border border-white/70"
@@ -1080,7 +1124,7 @@ export default function DashboardPage() {
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-colors shrink-0 ${
+                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
                   tab === t
                     ? "bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white"
                     : "bg-white/60 backdrop-blur-sm text-gray-500 hover:bg-white/80 border border-white/70"
@@ -2603,7 +2647,7 @@ export default function DashboardPage() {
                         accept="image/*"
                         className="sr-only"
                         disabled={logoUploading}
-                        onChange={(e) => e.target.files?.[0] && handleLogoUpload(e.target.files[0])}
+                        onChange={(e) => { if (e.target.files?.[0]) { openCropModal(e.target.files[0]); e.target.value = ""; } }}
                       />
                       {logoUploading ? (
                         <span className="text-blue-600 text-sm font-medium">Uploading…</span>
@@ -2678,5 +2722,59 @@ export default function DashboardPage() {
 
       </div>
     </main>
+
+    {/* ── Logo Crop Modal ── */}
+    {cropSrc && (
+      <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100">
+            <h3 className="font-semibold text-[#0F172A]">Adjust Photo</h3>
+            <p className="text-gray-400 text-xs mt-0.5">Drag to reposition · scroll or slide to zoom</p>
+          </div>
+          <div className="relative bg-gray-900" style={{ height: 300 }}>
+            <Cropper
+              image={cropSrc}
+              crop={cropXY}
+              zoom={cropZoom}
+              aspect={1}
+              cropShape="round"
+              showGrid={false}
+              onCropChange={setCropXY}
+              onZoomChange={setCropZoom}
+              onCropComplete={(_, pixels) => setCropArea(pixels)}
+            />
+          </div>
+          <div className="px-5 py-3 flex items-center gap-3">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 shrink-0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            <input
+              type="range"
+              min={1}
+              max={3}
+              step={0.05}
+              value={cropZoom}
+              onChange={e => setCropZoom(Number(e.target.value))}
+              className="flex-1 accent-blue-600"
+            />
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 shrink-0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+          <div className="flex gap-3 px-5 pb-5">
+            <button
+              onClick={() => { setCropSrc(null); setLogoUploadError(""); }}
+              className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmCrop}
+              disabled={logoUploading}
+              className="flex-1 py-2.5 rounded-xl bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white text-sm font-semibold hover:brightness-110 transition-all disabled:opacity-50"
+            >
+              {logoUploading ? "Saving…" : "Save Photo"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
