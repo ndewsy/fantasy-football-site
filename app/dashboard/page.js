@@ -1109,14 +1109,14 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Tabs */}
-        <div className="flex flex-wrap gap-2 mb-8">
+        {/* Row 1 — Dashboard tabs */}
+        <div className="flex gap-1.5 mb-6 overflow-x-auto pb-1">
           {profile.role === "admin" && (
             [["admin", "Admin Overview"], ["payouts", "Revenue & Payouts"], ["feedback", "Feedback"]].map(([t, label]) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap shrink-0 ${
                   tab === t
                     ? "bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white"
                     : "bg-white/60 backdrop-blur-sm text-gray-500 hover:bg-white/80 border border-white/70"
@@ -1131,7 +1131,7 @@ export default function DashboardPage() {
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap shrink-0 ${
                   tab === t
                     ? "bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white"
                     : "bg-white/60 backdrop-blur-sm text-gray-500 hover:bg-white/80 border border-white/70"
@@ -1583,101 +1583,102 @@ export default function DashboardPage() {
         {/* ── Rankings Tab ── */}
         {tab === "rankings" && (
           <div onClick={() => { setSelectedPlayers(new Set()); setLastClickedPlayer(null); }}>
-            <div className="flex items-center justify-between gap-3 mb-6">
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {FORMATS.map((fmt) => (
-                  <button
-                    key={fmt}
-                    onClick={() => { setActiveFormat(fmt); setRankingsSaved(false); setShowAddPlayer(false); setAddPlayerSearch(""); setAddPlayerResults([]); setBreakRankInput(String(breakRankByFormat[fmt] ?? "")); }}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors shrink-0 ${
-                      activeFormat === fmt
-                        ? "bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white"
-                        : "bg-white/60 backdrop-blur-sm text-gray-600 hover:bg-white/80 border border-white/70"
-                    }`}
-                  >
-                    {fmt}
-                    {lockedFormats[fmt] && <span className="ml-1.5 text-xs">🔒</span>}
-                  </button>
-                ))}
-              </div>
-              <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+            {/* Row 2 — Format tabs */}
+            <div className="flex gap-2 mb-3 pb-3 border-b border-gray-100">
+              {FORMATS.map((fmt) => (
                 <button
-                  type="button"
-                  onClick={() => toggleFormatLock(activeFormat)}
-                  className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg font-medium transition-colors border ${
-                    lockedFormats[activeFormat]
-                      ? "bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100"
-                      : "bg-white/60 backdrop-blur-sm text-gray-500 hover:text-gray-700 border-white/70 hover:bg-white/80"
+                  key={fmt}
+                  onClick={() => { setActiveFormat(fmt); setRankingsSaved(false); setShowAddPlayer(false); setAddPlayerSearch(""); setAddPlayerResults([]); setBreakRankInput(String(breakRankByFormat[fmt] ?? "")); }}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors shrink-0 ${
+                    activeFormat === fmt
+                      ? "bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white"
+                      : "bg-white/60 backdrop-blur-sm text-gray-600 hover:bg-white/80 border border-white/70"
                   }`}
                 >
-                  {lockedFormats[activeFormat] ? "🔒 Under Review" : "🔓 Lock for editing"}
+                  {fmt}
+                  {lockedFormats[fmt] && <span className="ml-1.5 text-xs">🔒</span>}
                 </button>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-gray-400 shrink-0">Break at rank:</span>
-                  <input
-                    type="number"
-                    min="1"
-                    max={currentPlayers.length || undefined}
-                    placeholder="—"
-                    value={breakRankInput}
-                    onChange={e => setBreakRankInput(e.target.value)}
-                    onKeyDown={e => { if (e.key === "Enter") saveBreakRank(activeFormat, breakRankInput); }}
-                    className="w-16 bg-white/60 border border-white/70 rounded-lg px-2 py-1.5 text-xs text-center text-[#0F172A] focus:outline-none focus:border-blue-400"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => saveBreakRank(activeFormat, breakRankInput)}
-                    className="text-xs px-2.5 py-1.5 rounded-lg font-medium bg-white/60 border border-white/70 text-gray-600 hover:bg-white/80 transition-colors"
-                  >Set</button>
-                  {breakRankByFormat[activeFormat] != null && (
-                    <button
-                      type="button"
-                      onClick={() => { setBreakRankInput(""); saveBreakRank(activeFormat, null); }}
-                      className="text-xs text-gray-400 hover:text-gray-600 transition-colors px-1"
-                      title="Clear break"
-                    >✕</button>
-                  )}
-                </div>
-                {(() => {
-                  const otherSavedFormats = FORMATS.filter(f => f !== activeFormat && savedFormats.has(f));
-                  return (
-                    <div className="relative">
-                      {showCopyMenu && <div className="fixed inset-0 z-40" onClick={() => setShowCopyMenu(false)} />}
-                      <button
-                        type="button"
-                        disabled={otherSavedFormats.length === 0}
-                        title={otherSavedFormats.length === 0 ? "No other rankings to copy from yet" : undefined}
-                        onClick={() => setShowCopyMenu(prev => !prev)}
-                        className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 bg-white/60 backdrop-blur-sm border border-white/70 hover:bg-white/80 px-3 py-2 rounded-lg font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                        Copy Rankings
-                      </button>
-                      {showCopyMenu && otherSavedFormats.length > 0 && (
-                        <div className="absolute right-0 top-full mt-1 z-50 bg-white rounded-xl shadow-xl border border-gray-100 py-1 min-w-44">
-                          <p className="text-xs text-gray-400 px-3 pt-1 pb-1">Copy from:</p>
-                          {otherSavedFormats.map(fmt => (
-                            <button
-                              key={fmt}
-                              type="button"
-                              onClick={() => { setShowCopyMenu(false); handleCopyFormat(fmt); }}
-                              className="w-full text-left text-sm text-gray-700 hover:bg-gray-50 px-3 py-2 transition-colors"
-                            >{fmt}</button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
+              ))}
+            </div>
+
+            {/* Row 3 — Action toolbar */}
+            <div className="flex flex-wrap items-center gap-3 mb-6">
+              <button
+                type="button"
+                onClick={() => toggleFormatLock(activeFormat)}
+                className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg font-medium transition-colors border shrink-0 ${
+                  lockedFormats[activeFormat]
+                    ? "bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100"
+                    : "bg-white/60 backdrop-blur-sm text-gray-500 hover:text-gray-700 border-white/70 hover:bg-white/80"
+                }`}
+              >
+                {lockedFormats[activeFormat] ? "🔒 Under Review" : "🔓 Lock for editing"}
+              </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="text-xs text-gray-400">Break at rank:</span>
+                <input
+                  type="number"
+                  min="1"
+                  max={currentPlayers.length || undefined}
+                  placeholder="—"
+                  value={breakRankInput}
+                  onChange={e => setBreakRankInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") saveBreakRank(activeFormat, breakRankInput); }}
+                  className="w-16 bg-white/60 border border-white/70 rounded-lg px-2 py-1.5 text-xs text-center text-[#0F172A] focus:outline-none focus:border-blue-400"
+                />
                 <button
                   type="button"
-                  onClick={() => { setShowImport(true); setImportRows([]); setImportError(""); setImportSkipped([]); }}
-                  className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 bg-white/60 backdrop-blur-sm border border-white/70 hover:bg-white/80 px-3 py-2 rounded-lg font-medium transition-colors"
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                  Import Excel
-                </button>
+                  onClick={() => saveBreakRank(activeFormat, breakRankInput)}
+                  className="text-xs px-2.5 py-1.5 rounded-lg font-medium bg-white/60 border border-white/70 text-gray-600 hover:bg-white/80 transition-colors"
+                >Set</button>
+                {breakRankByFormat[activeFormat] != null && (
+                  <button
+                    type="button"
+                    onClick={() => { setBreakRankInput(""); saveBreakRank(activeFormat, null); }}
+                    className="text-xs text-gray-400 hover:text-gray-600 transition-colors px-1"
+                    title="Clear break"
+                  >✕</button>
+                )}
               </div>
+              {(() => {
+                const otherSavedFormats = FORMATS.filter(f => f !== activeFormat && savedFormats.has(f));
+                return (
+                  <div className="relative shrink-0">
+                    {showCopyMenu && <div className="fixed inset-0 z-40" onClick={() => setShowCopyMenu(false)} />}
+                    <button
+                      type="button"
+                      disabled={otherSavedFormats.length === 0}
+                      title={otherSavedFormats.length === 0 ? "No other rankings to copy from yet" : undefined}
+                      onClick={() => setShowCopyMenu(prev => !prev)}
+                      className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 bg-white/60 backdrop-blur-sm border border-white/70 hover:bg-white/80 px-3 py-2 rounded-lg font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                      Copy Rankings
+                    </button>
+                    {showCopyMenu && otherSavedFormats.length > 0 && (
+                      <div className="absolute left-0 top-full mt-1 z-50 bg-white rounded-xl shadow-xl border border-gray-100 py-1 min-w-44">
+                        <p className="text-xs text-gray-400 px-3 pt-1 pb-1">Copy from:</p>
+                        {otherSavedFormats.map(fmt => (
+                          <button
+                            key={fmt}
+                            type="button"
+                            onClick={() => { setShowCopyMenu(false); handleCopyFormat(fmt); }}
+                            className="w-full text-left text-sm text-gray-700 hover:bg-gray-50 px-3 py-2 transition-colors"
+                          >{fmt}</button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+              <button
+                type="button"
+                onClick={() => { setShowImport(true); setImportRows([]); setImportError(""); setImportSkipped([]); }}
+                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 bg-white/60 backdrop-blur-sm border border-white/70 hover:bg-white/80 px-3 py-2 rounded-lg font-medium transition-colors shrink-0"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Import Excel
+              </button>
             </div>
 
             <div className="flex items-center justify-between mb-4">
