@@ -115,6 +115,15 @@ export default function DashboardPage() {
   const [feedbackItems, setFeedbackItems] = useState([]);
   const [feedbackSubTab, setFeedbackSubTab] = useState("help");
 
+  // Player Database tab state
+  const [playerDbList, setPlayerDbList] = useState([]);
+  const [playerDbLoading, setPlayerDbLoading] = useState(false);
+  const [playerDbSearch, setPlayerDbSearch] = useState('');
+  const [playerDbPosFilter, setPlayerDbPosFilter] = useState('');
+  const [playerDbSyncing, setPlayerDbSyncing] = useState(false);
+  const [playerDbSyncResult, setPlayerDbSyncResult] = useState(null);
+  const [playerDbSyncError, setPlayerDbSyncError] = useState('');
+
   // Admin add-player state
   const [showAdminAddPlayer, setShowAdminAddPlayer] = useState(false);
   const [adminPlayerName, setAdminPlayerName] = useState("");
@@ -321,6 +330,10 @@ export default function DashboardPage() {
     if (row) row.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [rankingsSearch]);
 
+  useEffect(() => {
+    if (tab === 'playerdb' && profile?.role === 'admin') loadPlayerDb();
+  }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function updateFeedbackStatus(id, newStatus) {
     const supabase = createClient();
     await supabase.from("feedback").update({ status: newStatus }).eq("id", id);
@@ -437,6 +450,37 @@ export default function DashboardPage() {
       setAdminPlayerError(err.message);
     } finally {
       setAdminPlayerSaving(false);
+    }
+  }
+
+  async function loadPlayerDb() {
+    setPlayerDbLoading(true);
+    const supabase = createClient();
+    const { data } = await supabase
+      .from('players')
+      .select('id, name, position, team, status, source, last_synced_at, sleeper_id')
+      .order('position').order('name');
+    setPlayerDbList(data || []);
+    setPlayerDbLoading(false);
+  }
+
+  async function triggerPlayerSync() {
+    setPlayerDbSyncing(true);
+    setPlayerDbSyncResult(null);
+    setPlayerDbSyncError('');
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch('/api/players/sync', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session?.access_token}` },
+    });
+    const body = await res.json();
+    setPlayerDbSyncing(false);
+    if (res.ok) {
+      setPlayerDbSyncResult(body);
+      loadPlayerDb();
+    } else {
+      setPlayerDbSyncError(body.error || 'Sync failed');
     }
   }
 
@@ -1119,7 +1163,7 @@ export default function DashboardPage() {
         {/* Row 1 — Dashboard tabs */}
         <div className="flex gap-1.5 mb-6 overflow-x-auto pb-1">
           {profile.role === "admin" && (
-            [["admin", "Admin Overview"], ["payouts", "Revenue & Payouts"], ["feedback", "Feedback"], ["players", "Add Players"]].map(([t, label]) => (
+            [["admin", "Admin Overview"], ["payouts", "Revenue & Payouts"], ["feedback", "Feedback"], ["players", "Add Players"], ["playerdb", "Player Database"]].map(([t, label]) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -1591,6 +1635,123 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
+
+        {/* ── Player Database Tab ── */}
+        {tab === "playerdb" && (() => {
+          const filtered = playerDbList.filter(p => {
+            if (playerDbPosFilter && p.position !== playerDbPosFilter) return false;
+            if (playerDbSearch) {
+              const q = playerDbSearch.toLowerCase();
+              return p.name?.toLowerCase().includes(q) || p.team?.toLowerCase().includes(q);
+            }
+            return true;
+          });
+          return (
+            <div>
+              <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
+                <div>
+                  <h2 className="text-xl font-bold mb-1">Player Database</h2>
+                  <p className="text-gray-500 text-sm">All players sourced from Sleeper or added manually. Syncs daily at 4am UTC.</p>
+                </div>
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                  <button
+                    onClick={triggerPlayerSync}
+                    disabled={playerDbSyncing}
+                    className="px-4 py-2 bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white text-sm font-semibold rounded-lg hover:brightness-110 transition-all disabled:opacity-50 whitespace-nowrap"
+                  >
+                    {playerDbSyncing ? 'Syncing…' : 'Sync Now'}
+                  </button>
+                  {playerDbSyncResult && (
+                    <span className="text-xs text-green-600 font-medium">
+                      Done — {playerDbSyncResult.total} active players · {playerDbSyncResult.bridged} bridged · {playerDbSyncResult.upserted} upserted
+                    </span>
+                  )}
+                  {playerDbSyncError && (
+                    <span className="text-xs text-red-600">{playerDbSyncError}</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-3 mb-4 flex-wrap items-center">
+                <input
+                  type="text"
+                  placeholder="Search by name or team…"
+                  value={playerDbSearch}
+                  onChange={e => setPlayerDbSearch(e.target.value)}
+                  className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-[#0F172A] placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 min-w-52"
+                />
+                <select
+                  value={playerDbPosFilter}
+                  onChange={e => setPlayerDbPosFilter(e.target.value)}
+                  className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-[#0F172A] focus:outline-none focus:border-blue-500"
+                >
+                  <option value="">All Positions</option>
+                  {['QB', 'RB', 'WR', 'TE'].map(pos => <option key={pos} value={pos}>{pos}</option>)}
+                </select>
+                <span className="text-xs text-gray-400">{filtered.length} of {playerDbList.length} players</span>
+              </div>
+
+              {playerDbLoading ? (
+                <p className="text-gray-400 text-sm py-8 text-center">Loading…</p>
+              ) : (
+                <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100 bg-white/40">
+                        <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Name</th>
+                        <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Pos</th>
+                        <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Team</th>
+                        <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Status</th>
+                        <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Source</th>
+                        <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Last Synced</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.map(p => (
+                        <tr key={p.id} className="border-b border-gray-50 hover:bg-white/50">
+                          <td className="px-4 py-2.5 font-medium text-[#0F172A]">{p.name}</td>
+                          <td className="px-4 py-2.5">
+                            <span className={`px-1.5 py-0.5 rounded text-xs font-semibold ${posColors[p.position] || 'bg-gray-100 text-gray-500'}`}>
+                              {p.position}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5 text-gray-600">{p.team || '—'}</td>
+                          <td className="px-4 py-2.5">
+                            <span className={`text-xs font-medium ${
+                              p.status === 'Active' ? 'text-green-600' :
+                              p.status ? 'text-amber-600' : 'text-gray-400'
+                            }`}>
+                              {p.status || '—'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                              p.source === 'sleeper' ? 'bg-purple-50 text-purple-700' : 'bg-gray-100 text-gray-500'
+                            }`}>
+                              {p.source === 'sleeper' ? 'Sleeper' : 'Manual'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5 text-gray-400 text-xs whitespace-nowrap">
+                            {p.last_synced_at
+                              ? new Date(p.last_synced_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                              : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                      {filtered.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="px-4 py-8 text-center text-gray-400 text-sm">
+                            {playerDbList.length === 0 ? 'No players yet. Run a sync to import from Sleeper.' : 'No players match your filters.'}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* ── Rankings Tab ── */}
         {tab === "rankings" && (
