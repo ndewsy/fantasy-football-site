@@ -239,7 +239,14 @@ export default function DashboardPage() {
         setSavedFormats(new Set((savedRankings || []).map(r => r.format)));
         // For formats with no saved data yet, initialize with pool and default tiers
         for (const fmt of FORMATS) {
-          if (!rankingsMap[fmt] || rankingsMap[fmt].length === 0) rankingsMap[fmt] = [...pool];
+          if (!rankingsMap[fmt]) rankingsMap[fmt] = [];
+          if (rankingsMap[fmt].length === 0) {
+            rankingsMap[fmt] = [...pool];
+          } else {
+            const existingIds = new Set(rankingsMap[fmt].map(p => p.id));
+            const missing = pool.filter(p => !existingIds.has(p.id)).map(p => ({ ...p, unranked: true }));
+            if (missing.length > 0) rankingsMap[fmt] = [...rankingsMap[fmt], ...missing];
+          }
           if (!tiersMap[fmt]) tiersMap[fmt] = [...DEFAULT_TIERS];
         }
 
@@ -1112,7 +1119,7 @@ export default function DashboardPage() {
         {/* Row 1 — Dashboard tabs */}
         <div className="flex gap-1.5 mb-6 overflow-x-auto pb-1">
           {profile.role === "admin" && (
-            [["admin", "Admin Overview"], ["payouts", "Revenue & Payouts"], ["feedback", "Feedback"]].map(([t, label]) => (
+            [["admin", "Admin Overview"], ["payouts", "Revenue & Payouts"], ["feedback", "Feedback"], ["players", "Add Players"]].map(([t, label]) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -1242,107 +1249,6 @@ export default function DashboardPage() {
                   )}
                 </tbody>
               </table>
-            </div>
-
-            {/* Add Player to Database */}
-            <h2 className="text-lg font-bold mb-3 mt-8">Player Database</h2>
-            <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg p-5 mb-8">
-              {adminPlayerSaved && (
-                <div className="mb-4 px-4 py-2.5 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm font-medium">
-                  "{adminPlayerSaved}" added to player database.
-                </div>
-              )}
-              {!showAdminAddPlayer ? (
-                <button
-                  onClick={() => setShowAdminAddPlayer(true)}
-                  className="flex items-center gap-2 text-blue-600 font-medium text-sm hover:text-blue-700 transition-colors"
-                >
-                  <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">+</span>
-                  Add New Player
-                </button>
-              ) : (
-                <div className="flex flex-col gap-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="sm:col-span-1">
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Name</label>
-                      <input
-                        type="text"
-                        value={adminPlayerName}
-                        onChange={e => handleAdminPlayerNameChange(e.target.value)}
-                        placeholder="e.g. Marvin Harrison Jr."
-                        autoFocus
-                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-[#0F172A] placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Position</label>
-                      <select
-                        value={adminPlayerPos}
-                        onChange={e => setAdminPlayerPos(e.target.value)}
-                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-[#0F172A] focus:outline-none focus:border-blue-500"
-                      >
-                        {["QB", "RB", "WR", "TE"].map(p => <option key={p} value={p}>{p}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Team</label>
-                      <input
-                        type="text"
-                        value={adminPlayerTeam}
-                        onChange={e => setAdminPlayerTeam(e.target.value.toUpperCase())}
-                        placeholder="e.g. DAL"
-                        maxLength={4}
-                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-[#0F172A] placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-
-                  {adminPlayerNearDups.length > 0 && !adminPlayerProceed && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                      <p className="text-amber-800 font-semibold text-sm mb-2">⚠ Similar player(s) already exist:</p>
-                      <div className="flex flex-col gap-1.5 mb-3">
-                        {adminPlayerNearDups.map(p => (
-                          <div key={p.id} className="flex items-center gap-2 text-sm">
-                            <span className={`px-1.5 py-0.5 rounded text-xs font-semibold ${posColors[p.pos] || "bg-gray-100 text-gray-500"}`}>{p.pos}</span>
-                            <span className="font-medium text-[#0F172A]">{p.name}</span>
-                            <span className="text-gray-500">{p.team}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <button
-                        onClick={() => setAdminPlayerProceed(true)}
-                        className="text-xs font-medium text-amber-700 hover:text-amber-900 underline"
-                      >
-                        This is a different person — proceed anyway
-                      </button>
-                    </div>
-                  )}
-
-                  {adminPlayerError && (
-                    <p className="text-red-600 text-sm">{adminPlayerError}</p>
-                  )}
-
-                  <div className="flex gap-3 items-center">
-                    <button
-                      onClick={createAdminPlayer}
-                      disabled={adminPlayerSaving || !adminPlayerName.trim() || !adminPlayerTeam.trim() || (adminPlayerNearDups.length > 0 && !adminPlayerProceed)}
-                      className="px-4 py-2 bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white text-sm font-semibold rounded-lg hover:brightness-110 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      {adminPlayerSaving ? "Saving…" : "Add Player"}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowAdminAddPlayer(false);
-                        setAdminPlayerName(""); setAdminPlayerPos("WR"); setAdminPlayerTeam("");
-                        setAdminPlayerNearDups([]); setAdminPlayerProceed(false); setAdminPlayerError("");
-                      }}
-                      className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Recent posts */}
@@ -1577,6 +1483,112 @@ export default function DashboardPage() {
                 </div>
               );
             })()}
+          </div>
+        )}
+
+        {/* ── Add Players Tab ── */}
+        {tab === "players" && (
+          <div>
+            <h2 className="text-xl font-bold mb-1">Player Database</h2>
+            <p className="text-gray-500 text-sm mb-6">Add players to the shared database. New players appear in every creator's Unranked list automatically.</p>
+            <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg p-5 max-w-lg">
+              {adminPlayerSaved && (
+                <div className="mb-4 px-4 py-2.5 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm font-medium">
+                  "{adminPlayerSaved}" added to player database.
+                </div>
+              )}
+              {!showAdminAddPlayer ? (
+                <button
+                  onClick={() => setShowAdminAddPlayer(true)}
+                  className="flex items-center gap-2 text-blue-600 font-medium text-sm hover:text-blue-700 transition-colors"
+                >
+                  <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">+</span>
+                  Add New Player
+                </button>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-1">
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Name</label>
+                      <input
+                        type="text"
+                        value={adminPlayerName}
+                        onChange={e => handleAdminPlayerNameChange(e.target.value)}
+                        placeholder="e.g. Marvin Harrison Jr."
+                        autoFocus
+                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-[#0F172A] placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Position</label>
+                      <select
+                        value={adminPlayerPos}
+                        onChange={e => setAdminPlayerPos(e.target.value)}
+                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-[#0F172A] focus:outline-none focus:border-blue-500"
+                      >
+                        {["QB", "RB", "WR", "TE"].map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Team</label>
+                      <input
+                        type="text"
+                        value={adminPlayerTeam}
+                        onChange={e => setAdminPlayerTeam(e.target.value.toUpperCase())}
+                        placeholder="e.g. DAL"
+                        maxLength={4}
+                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-[#0F172A] placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  {adminPlayerNearDups.length > 0 && !adminPlayerProceed && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                      <p className="text-amber-800 font-semibold text-sm mb-2">⚠ Similar player(s) already exist:</p>
+                      <div className="flex flex-col gap-1.5 mb-3">
+                        {adminPlayerNearDups.map(p => (
+                          <div key={p.id} className="flex items-center gap-2 text-sm">
+                            <span className={`px-1.5 py-0.5 rounded text-xs font-semibold ${posColors[p.pos] || "bg-gray-100 text-gray-500"}`}>{p.pos}</span>
+                            <span className="font-medium text-[#0F172A]">{p.name}</span>
+                            <span className="text-gray-500">{p.team}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => setAdminPlayerProceed(true)}
+                        className="text-xs font-medium text-amber-700 hover:text-amber-900 underline"
+                      >
+                        This is a different person — proceed anyway
+                      </button>
+                    </div>
+                  )}
+
+                  {adminPlayerError && (
+                    <p className="text-red-600 text-sm">{adminPlayerError}</p>
+                  )}
+
+                  <div className="flex gap-3 items-center">
+                    <button
+                      onClick={createAdminPlayer}
+                      disabled={adminPlayerSaving || !adminPlayerName.trim() || !adminPlayerTeam.trim() || (adminPlayerNearDups.length > 0 && !adminPlayerProceed)}
+                      className="px-4 py-2 bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white text-sm font-semibold rounded-lg hover:brightness-110 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {adminPlayerSaving ? "Saving…" : "Add Player"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowAdminAddPlayer(false);
+                        setAdminPlayerName(""); setAdminPlayerPos("WR"); setAdminPlayerTeam("");
+                        setAdminPlayerNearDups([]); setAdminPlayerProceed(false); setAdminPlayerError("");
+                      }}
+                      className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
