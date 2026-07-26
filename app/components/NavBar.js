@@ -37,7 +37,7 @@ export default function NavBar({ activePath = "/" }) {
     { href: "/", label: "Rankings" },
     { href: "/creators", label: "Creators" },
     { href: "/feedback", label: "Feedback" },
-    ...(user ? [{ href: "/picks", label: "Picks" }] : []),
+    ...(user ? [{ href: "/picks", label: "Picks" }, { href: "/leaderboard", label: "Leaderboard" }] : []),
     ...(isDashboardUser ? [{ href: "/dashboard", label: "Creator Dashboard" }] : []),
   ];
 
