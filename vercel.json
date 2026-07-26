@@ -7,10 +7,6 @@
     {
       "path": "/api/cron/sync-players",
       "schedule": "0 4 * * *"
-    },
-    {
-      "path": "/api/cron/sync-scores",
-      "schedule": "0 */2 * * *"
     }
   ]
 }
