@@ -390,8 +390,8 @@ export default function PicksPage() {
             {/* ── Schedule view ───────────────────────────────────────────── */}
             {viewMode === 'schedule' && (
               <>
-                {/* Week tab strip */}
-                <div ref={weekTabsRef} className="flex gap-1.5 mb-5 overflow-x-auto pb-1">
+                {/* Week tab strip — 6 cols on mobile, 9 on sm+, wraps to 2 rows */}
+                <div ref={weekTabsRef} className="grid grid-cols-6 sm:grid-cols-9 gap-1.5 mb-5">
                   {weeks.map(w => {
                     const active = activeWeek === w;
                     const pct    = weekProgress[w] ?? 0;
@@ -399,7 +399,7 @@ export default function PicksPage() {
                       <button
                         key={w}
                         onClick={() => setActiveWeek(w)}
-                        className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors whitespace-nowrap shrink-0 ${
+                        className={`w-full flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-colors ${
                           active
                             ? 'bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white'
                             : 'bg-white/60 backdrop-blur-sm text-gray-500 hover:bg-white/80 border border-white/70'
