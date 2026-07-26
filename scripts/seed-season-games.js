@@ -17,31 +17,33 @@ const KNOWN_KICKOFFS = {
   '1-0': '2026-09-10T00:20:00Z', // NE @ SEA, Wed 9/9 8:20pm ET
 };
 
-function inferKickoff(dateStr) {
-  // Infers a UTC kickoff from a local ET date string.
-  // In September EDT = UTC-4. Standard windows:
-  //   Sunday 1:00pm ET  → T17:00:00Z
-  //   Sunday 4:25pm ET  → T20:25:00Z (handled via KNOWN_KICKOFFS for specific games)
-  //   Sunday 8:20pm ET  → T00:20:00Z next day (SNF)
-  //   Thursday 8:20pm ET → T00:20:00Z next day (TNF)
-  //   Monday 8:15pm ET  → T00:15:00Z next day (MNF)
-  // Default to Sunday 1pm ET for any unrecognised date.
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); // 0=Sun 1=Mon … 4=Thu
-  if (dow === 0) return `${dateStr}T17:00:00Z`;  // Sunday 1pm ET
-  if (dow === 1) {
-    // MNF — 8:15pm Mon ET = Tue 00:15 UTC; return next-day timestamp
-    const next = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().split('T')[0];
-    return `${next}T00:15:00Z`;
-  }
-  if (dow === 4) {
-    // TNF — 8:20pm Thu ET = Fri 00:20 UTC
-    const next = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().split('T')[0];
-    return `${next}T00:20:00Z`;
-  }
-  // Wed opener or other special games — also shift to next-day midnight UTC
-  const next = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().split('T')[0];
-  return `${next}T00:20:00Z`;
+function inferKickoff(displayDate) {
+  // Parses display dates like 'Wed 9/9', 'Sun 9/13', 'Thu 12/31', 'Sun 1/10'.
+  // Months 1–2 are assumed to be 2027 (Jan/Feb); all others are 2026.
+  // Only game 1's exact kickoff matters for the lock — that's in KNOWN_KICKOFFS.
+  const match = displayDate.match(/^(\w{3})\s+(\d+)\/(\d+)$/);
+  if (!match) return null;
+  const [, dow, mo, dy] = match;
+  const month = parseInt(mo, 10);
+  const day   = parseInt(dy, 10);
+  const year  = month <= 2 ? 2027 : 2026;
+
+  const dateUTC = new Date(Date.UTC(year, month - 1, day));
+  const dateStr = dateUTC.toISOString().split('T')[0]; // YYYY-MM-DD
+  const nextStr = new Date(Date.UTC(year, month - 1, day + 1)).toISOString().split('T')[0];
+
+  // Standard prime-time windows (all approximate — only game 1 needs to be exact):
+  //   Sun 1pm ET  → 18:00 UTC (EST) / 17:00 UTC (EDT) — use 18:00 as safe default
+  //   Thu/Wed/Wed-opener 8:20pm ET → next-day 00:20 UTC
+  //   Mon 8:15pm ET → next-day 00:15 UTC
+  //   Fri (Black Friday / Christmas) 3pm ET → 20:00 UTC
+  //   Sat 1pm ET → 18:00 UTC
+  if (dow === 'Sun') return `${dateStr}T18:00:00Z`;
+  if (dow === 'Mon') return `${nextStr}T00:15:00Z`;
+  if (dow === 'Thu' || dow === 'Wed') return `${nextStr}T00:20:00Z`;
+  if (dow === 'Fri') return `${dateStr}T20:00:00Z`;
+  if (dow === 'Sat') return `${dateStr}T18:00:00Z`;
+  return `${dateStr}T18:00:00Z`;
 }
 
 async function seed() {
