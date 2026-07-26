@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
 
+// ── team metadata ───────────────────────────────────────────────────────────
+
 const TEAM_NAMES = {
   BUF: 'Bills',    MIA: 'Dolphins', NE:  'Patriots', NYJ: 'Jets',
   BAL: 'Ravens',   CIN: 'Bengals',  CLE: 'Browns',   PIT: 'Steelers',
@@ -49,21 +51,125 @@ const TEAM_COLORS = {
   SEA: { p: '#002244', s: '#69BE28' },
 };
 
+const DIVISIONS = {
+  'AFC East':  ['BUF', 'MIA', 'NE',  'NYJ'],
+  'AFC North': ['BAL', 'CIN', 'CLE', 'PIT'],
+  'AFC South': ['HOU', 'IND', 'JAX', 'TEN'],
+  'AFC West':  ['DEN', 'KC',  'LV',  'LAC'],
+  'NFC East':  ['DAL', 'NYG', 'PHI', 'WAS'],
+  'NFC North': ['CHI', 'DET', 'GB',  'MIN'],
+  'NFC South': ['ATL', 'CAR', 'NO',  'TB' ],
+  'NFC West':  ['ARI', 'LAR', 'SF',  'SEA'],
+};
+
+// Reverse map: team → division name
+const TEAM_DIV = {};
+for (const [div, teams] of Object.entries(DIVISIONS)) {
+  for (const t of teams) TEAM_DIV[t] = div;
+}
+
+const CONFERENCE_DIVS = {
+  AFC: ['AFC East', 'AFC North', 'AFC South', 'AFC West'],
+  NFC: ['NFC East', 'NFC North', 'NFC South', 'NFC West'],
+};
+
 // Pentagon shield: flat top, pointed bottom
 const SHIELD = 'polygon(0 0, 100% 0, 100% 78%, 50% 100%, 0 78%)';
 
+// ── standings computation ───────────────────────────────────────────────────
+
+function buildRecords(games, picks) {
+  const rec = {};
+  for (const teams of Object.values(DIVISIONS))
+    for (const t of teams) rec[t] = { wins: 0, losses: 0 };
+
+  for (const game of games) {
+    const side = picks[game.id];
+    if (!side) continue;
+    const winner = side === 'home' ? game.home_team : game.away_team;
+    const loser  = side === 'home' ? game.away_team : game.home_team;
+    if (rec[winner]) rec[winner].wins++;
+    if (rec[loser])  rec[loser].losses++;
+  }
+  return rec;
+}
+
+function winPct(rec) {
+  const g = rec.wins + rec.losses;
+  return g > 0 ? rec.wins / g : 0;
+}
+
+function pctStr(rec) {
+  const g = rec.wins + rec.losses;
+  if (g === 0) return '—';
+  return (rec.wins / g).toFixed(3).replace(/^0/, '');
+}
+
+function headToHead(a, b, games, picks) {
+  let aW = 0, bW = 0;
+  for (const game of games) {
+    const involves = (game.home_team === a && game.away_team === b)
+                  || (game.home_team === b && game.away_team === a);
+    if (!involves) continue;
+    const side = picks[game.id];
+    if (!side) continue;
+    const winner = side === 'home' ? game.home_team : game.away_team;
+    if (winner === a) aW++; else bW++;
+  }
+  return aW > bW ? -1 : bW > aW ? 1 : 0; // -1 = a wins h2h
+}
+
+function makeCmp(records, games, picks) {
+  return (a, b) => {
+    const pA = winPct(records[a] ?? { wins: 0, losses: 0 });
+    const pB = winPct(records[b] ?? { wins: 0, losses: 0 });
+    if (Math.abs(pA - pB) > 1e-9) return pB - pA;
+    const h2h = headToHead(a, b, games, picks);
+    if (h2h !== 0) return h2h;
+    return (TEAM_NAMES[a] ?? a).localeCompare(TEAM_NAMES[b] ?? b);
+  };
+}
+
+function computeStandings(games, picks) {
+  const records = buildRecords(games, picks);
+  const cmp     = makeCmp(records, games, picks);
+
+  // Sort each division; first place in each is the div winner
+  const sortedDivs = {};
+  for (const [div, teams] of Object.entries(DIVISIONS))
+    sortedDivs[div] = [...teams].sort(cmp);
+
+  const result = {};
+  for (const [conf, divNames] of Object.entries(CONFERENCE_DIVS)) {
+    const divWinners  = divNames.map(d => sortedDivs[d][0]);
+    const seeds1to4   = [...divWinners].sort(cmp);
+    const nonWinners  = divNames.flatMap(d => sortedDivs[d].slice(1)).sort(cmp);
+    const wildCards   = nonWinners.slice(0, 3);  // seeds 5–7
+    const eliminated  = nonWinners.slice(3);
+
+    result[conf] = {
+      seeds: [...seeds1to4, ...wildCards],
+      eliminated,
+      sortedDivs: Object.fromEntries(divNames.map(d => [d, sortedDivs[d]])),
+      records,
+    };
+  }
+  return result;
+}
+
+// ── components ──────────────────────────────────────────────────────────────
+
 function TeamBadge({ abbr, side, pick, isFinal, isLive, winner, onPick, locked, isSubmitting }) {
   const c = TEAM_COLORS[abbr] ?? { p: '#334155', s: '#64748B' };
-  const chosen     = pick === side;
+  const chosen      = pick === side;
   const otherChosen = !!(pick && pick !== side);
-  const isWinner   = isFinal && winner === side;
-  const isCorrect  = chosen && isWinner;
-  const isWrong    = chosen && isFinal && !isWinner;
-  const clickable  = !locked && !isFinal && !isLive && !isSubmitting;
+  const isWinner    = isFinal && winner === side;
+  const isCorrect   = chosen && isWinner;
+  const isWrong     = chosen && isFinal && !isWinner;
+  const clickable   = !locked && !isFinal && !isLive && !isSubmitting;
 
-  // Use drop-shadow so the glow follows the shield clip-path
   let filter = 'none';
-  if (chosen)       filter = `drop-shadow(0 0 12px ${c.p}cc) drop-shadow(0 0 5px ${c.p}88)`;
+  if (chosen)           filter = `drop-shadow(0 0 12px ${c.p}cc) drop-shadow(0 0 5px ${c.p}88)`;
   else if (otherChosen) filter = 'grayscale(0.65) brightness(0.5)';
 
   return (
@@ -72,49 +178,46 @@ function TeamBadge({ abbr, side, pick, isFinal, isLive, winner, onPick, locked, 
       disabled={!clickable}
       className="relative flex-shrink-0 select-none"
       style={{
-        width: 64, height: 80,
-        filter,
+        width: 64, height: 80, filter,
         transform: chosen ? 'scale(1.1)' : otherChosen ? 'scale(0.9)' : 'scale(1)',
         transition: 'transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.22s ease',
         cursor: clickable ? 'pointer' : 'default',
       }}
     >
-      {/* Secondary-color outer shield (acts as border) */}
-      <div aria-hidden="true" style={{
-        position: 'absolute', inset: 0,
-        background: isCorrect ? '#16a34a' : isWrong ? '#dc2626' : c.s,
-        clipPath: SHIELD,
-      }} />
-      {/* Primary-color inner shield */}
-      <div aria-hidden="true" style={{
-        position: 'absolute', inset: 3,
-        background: c.p,
-        clipPath: SHIELD,
-      }} />
-      {/* Abbreviation */}
-      <span
-        className="absolute inset-0 flex items-center justify-center z-10 text-white font-black"
-        style={{ fontSize: 13, letterSpacing: '0.1em', textShadow: '0 1px 4px rgba(0,0,0,0.8)', paddingBottom: 12 }}
-      >
+      <div aria-hidden="true" style={{ position: 'absolute', inset: 0, background: isCorrect ? '#16a34a' : isWrong ? '#dc2626' : c.s, clipPath: SHIELD }} />
+      <div aria-hidden="true" style={{ position: 'absolute', inset: 3, background: c.p, clipPath: SHIELD }} />
+      <span className="absolute inset-0 flex items-center justify-center z-10 text-white font-black"
+        style={{ fontSize: 13, letterSpacing: '0.1em', textShadow: '0 1px 4px rgba(0,0,0,0.8)', paddingBottom: 12 }}>
         {abbr}
       </span>
-      {/* Grade overlay on chosen badge */}
       {isFinal && chosen && (
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 z-20 flex items-center justify-center"
-          style={{ background: 'rgba(0,0,0,0.42)', clipPath: SHIELD }}
-        >
-          <span style={{
-            fontSize: 22, fontWeight: 900, paddingBottom: 12,
-            color: isCorrect ? '#86efac' : '#fca5a5',
-            textShadow: '0 1px 4px rgba(0,0,0,0.6)',
-          }}>
+        <div aria-hidden="true" className="absolute inset-0 z-20 flex items-center justify-center"
+          style={{ background: 'rgba(0,0,0,0.42)', clipPath: SHIELD }}>
+          <span style={{ fontSize: 22, fontWeight: 900, paddingBottom: 12, color: isCorrect ? '#86efac' : '#fca5a5', textShadow: '0 1px 4px rgba(0,0,0,0.6)' }}>
             {isCorrect ? '✓' : '✗'}
           </span>
         </div>
       )}
     </button>
+  );
+}
+
+// Static (non-interactive) shield chip for the standings view
+function TeamChip({ abbr, dim = [40, 50] }) {
+  const c = TEAM_COLORS[abbr] ?? { p: '#334155', s: '#64748B' };
+  const [w, h] = dim;
+  const fontSize  = w <= 30 ? 7  : 9;
+  const pb        = w <= 30 ? 6  : 8;
+  const border    = w <= 30 ? 1.5 : 2;
+  return (
+    <div className="relative flex-shrink-0" style={{ width: w, height: h }}>
+      <div style={{ position: 'absolute', inset: 0,      background: c.s, clipPath: SHIELD }} />
+      <div style={{ position: 'absolute', inset: border, background: c.p, clipPath: SHIELD }} />
+      <span className="absolute inset-0 flex items-center justify-center text-white font-black z-10"
+        style={{ fontSize, letterSpacing: '0.08em', textShadow: '0 1px 3px rgba(0,0,0,0.8)', paddingBottom: pb }}>
+        {abbr}
+      </span>
+    </div>
   );
 }
 
@@ -127,6 +230,8 @@ function kickoffLabel(isoStr) {
   });
 }
 
+// ── page ────────────────────────────────────────────────────────────────────
+
 export default function PicksPage() {
   const [user, setUser]                 = useState(null);
   const [loading, setLoading]           = useState(true);
@@ -135,6 +240,7 @@ export default function PicksPage() {
   const [activeWeek, setActiveWeek]     = useState(1);
   const [submitting, setSubmitting]     = useState(null);
   const [seasonLocked, setSeasonLocked] = useState(false);
+  const [viewMode, setViewMode]         = useState('schedule');
   const weekTabsRef = useRef(null);
 
   useEffect(() => {
@@ -199,24 +305,27 @@ export default function PicksPage() {
     setSubmitting(null);
   }
 
+  // ── derived ──────────────────────────────────────────────────────────────
+
   const weeks = [...new Set(games.map(g => g.week))].sort((a, b) => a - b);
   const weekGames = games.filter(g => g.week === activeWeek).sort((a, b) => {
     const ta = a.kickoff_at ? new Date(a.kickoff_at).getTime() : Infinity;
     const tb = b.kickoff_at ? new Date(b.kickoff_at).getTime() : Infinity;
     return ta - tb;
   });
-
   const weekPicksMade = weekGames.filter(g => picks[g.id]).length;
-
-  // Completion ratio per week — drives the mini progress bars in the tab strip
-  const weekProgress = Object.fromEntries(weeks.map(w => {
+  const weekProgress  = Object.fromEntries(weeks.map(w => {
     const wg = games.filter(g => g.week === w);
     return [w, wg.length > 0 ? wg.filter(g => picks[g.id]).length / wg.length : 0];
   }));
 
-  const finalGames  = games.filter(g => g.status === 'final' && picks[g.id]);
-  const correct     = finalGames.filter(g => picks[g.id] === g.winner).length;
-  const totalPicks  = Object.keys(picks).length;
+  const finalGames = games.filter(g => g.status === 'final' && picks[g.id]);
+  const correct    = finalGames.filter(g => picks[g.id] === g.winner).length;
+  const totalPicks = Object.keys(picks).length;
+
+  const standings = games.length > 0 ? computeStandings(games, picks) : null;
+
+  // ── render ───────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -261,149 +370,243 @@ export default function PicksPage() {
           <div className="text-center py-20 text-gray-400">No games scheduled yet. Check back soon.</div>
         ) : (
           <>
-            {/* Week tab strip — W1…W18 with mini progress bars */}
-            <div ref={weekTabsRef} className="flex gap-1.5 mb-5 overflow-x-auto pb-1">
-              {weeks.map(w => {
-                const active = activeWeek === w;
-                const pct    = weekProgress[w] ?? 0;
-                return (
-                  <button
-                    key={w}
-                    onClick={() => setActiveWeek(w)}
-                    className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors whitespace-nowrap shrink-0 ${
-                      active
-                        ? 'bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white'
-                        : 'bg-white/60 backdrop-blur-sm text-gray-500 hover:bg-white/80 border border-white/70'
-                    }`}
-                  >
-                    <span className="text-[11px] font-bold leading-none">W{w}</span>
-                    {/* Mini completion bar */}
-                    <div
-                      className="w-7 rounded-full overflow-hidden"
-                      style={{
-                        height: 3,
-                        background: active ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.08)',
-                      }}
-                    >
-                      <div
-                        style={{
-                          height: '100%',
-                          width: `${Math.round(pct * 100)}%`,
-                          background: active ? '#fff' : '#2563EB',
-                          borderRadius: 9999,
-                          transition: 'width 0.5s ease',
-                        }}
-                      />
-                    </div>
-                  </button>
-                );
-              })}
+            {/* View toggle */}
+            <div className="flex gap-2 mb-5">
+              {[['schedule', 'Schedule'], ['standings', 'Standings']].map(([mode, label]) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                    viewMode === mode
+                      ? 'bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white'
+                      : 'bg-white/60 backdrop-blur-sm text-gray-500 hover:bg-white/80 border border-white/70'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
 
-            {/* Week-level progress bar */}
-            <div className="mb-5">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">
-                  Week {activeWeek}
-                </span>
-                <span className="text-[11px] text-gray-400 tabular-nums">
-                  {weekPicksMade} / {weekGames.length} picked
-                </span>
-              </div>
-              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(0,0,0,0.07)' }}>
-                <div
-                  className="h-full rounded-full transition-all duration-700"
-                  style={{
-                    width: weekGames.length > 0 ? `${(weekPicksMade / weekGames.length) * 100}%` : '0%',
-                    background: 'linear-gradient(to right, #2563EB, #1E40AF)',
-                  }}
-                />
-              </div>
-            </div>
+            {/* ── Schedule view ───────────────────────────────────────────── */}
+            {viewMode === 'schedule' && (
+              <>
+                {/* Week tab strip */}
+                <div ref={weekTabsRef} className="flex gap-1.5 mb-5 overflow-x-auto pb-1">
+                  {weeks.map(w => {
+                    const active = activeWeek === w;
+                    const pct    = weekProgress[w] ?? 0;
+                    return (
+                      <button
+                        key={w}
+                        onClick={() => setActiveWeek(w)}
+                        className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors whitespace-nowrap shrink-0 ${
+                          active
+                            ? 'bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white'
+                            : 'bg-white/60 backdrop-blur-sm text-gray-500 hover:bg-white/80 border border-white/70'
+                        }`}
+                      >
+                        <span className="text-[11px] font-bold leading-none">W{w}</span>
+                        <div className="w-7 rounded-full overflow-hidden" style={{ height: 3, background: active ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.08)' }}>
+                          <div style={{ height: '100%', width: `${Math.round(pct * 100)}%`, background: active ? '#fff' : '#2563EB', borderRadius: 9999, transition: 'width 0.5s ease' }} />
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
 
-            {/* Game cards */}
-            <div className="flex flex-col gap-3">
-              {weekGames.length === 0 ? (
-                <p className="text-gray-400 text-sm py-6 text-center">No games scheduled for this week yet.</p>
-              ) : weekGames.map(game => {
-                const pick       = picks[game.id];
-                const isFinal    = game.status === 'final';
-                const isLive     = game.status === 'in_progress';
-                const isSub      = submitting === game.id;
-                const isCorrect  = isFinal && pick && pick === game.winner;
-                const isWrong    = isFinal && pick && pick !== game.winner;
-
-                return (
-                  <div
-                    key={game.id}
-                    className={`bg-white/60 backdrop-blur-md rounded-xl border shadow-lg transition-colors ${
-                      isCorrect ? 'border-green-200 bg-green-50/40' :
-                      isWrong   ? 'border-red-100 bg-red-50/30'     :
-                                  'border-white/70'
-                    }`}
-                  >
-                    {/* Kickoff + score/status */}
-                    <div className="flex items-center justify-between px-4 pt-3.5 pb-0">
-                      <p className="text-[11px] text-gray-400">{kickoffLabel(game.kickoff_at)}</p>
-                      {isFinal && (
-                        <span className="text-[11px] font-semibold text-gray-500 tabular-nums bg-gray-100 rounded px-2 py-0.5">
-                          {game.away_score}–{game.home_score} F
-                        </span>
-                      )}
-                      {isLive && (
-                        <span className="text-[11px] font-semibold text-green-600 bg-green-50 border border-green-200 rounded px-2 py-0.5">
-                          LIVE {game.away_score ?? '–'}–{game.home_score ?? '–'}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Badge row — away · vs · home */}
-                    <div className="flex items-start justify-center gap-5 px-4 pt-4 pb-4">
-
-                      {/* Away */}
-                      <div className="flex flex-col items-center gap-1.5">
-                        <TeamBadge
-                          abbr={game.away_team} side="away"
-                          pick={pick} isFinal={isFinal} isLive={isLive}
-                          winner={game.winner}
-                          onPick={() => submitPick(game.id, 'away')}
-                          locked={seasonLocked} isSubmitting={isSub}
-                        />
-                        <span className="text-[11px] text-gray-500 font-medium text-center w-16 leading-tight">
-                          {TEAM_NAMES[game.away_team] ?? game.away_team}
-                        </span>
-                      </div>
-
-                      {/* vs badge — mt-[29px] centers it on the 80px shield */}
-                      <div className="flex flex-col items-center" style={{ marginTop: 29 }}>
-                        <span
-                          className="font-black text-gray-400 bg-gray-100 rounded-md uppercase tracking-widest"
-                          style={{ fontSize: 9, padding: '3px 6px' }}
-                        >
-                          vs
-                        </span>
-                        <span className="text-gray-300 font-medium" style={{ fontSize: 8, marginTop: 2 }}>at</span>
-                      </div>
-
-                      {/* Home */}
-                      <div className="flex flex-col items-center gap-1.5">
-                        <TeamBadge
-                          abbr={game.home_team} side="home"
-                          pick={pick} isFinal={isFinal} isLive={isLive}
-                          winner={game.winner}
-                          onPick={() => submitPick(game.id, 'home')}
-                          locked={seasonLocked} isSubmitting={isSub}
-                        />
-                        <span className="text-[11px] text-gray-500 font-medium text-center w-16 leading-tight">
-                          {TEAM_NAMES[game.home_team] ?? game.home_team}
-                        </span>
-                      </div>
-
-                    </div>
+                {/* Week progress bar */}
+                <div className="mb-5">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">Week {activeWeek}</span>
+                    <span className="text-[11px] text-gray-400 tabular-nums">{weekPicksMade} / {weekGames.length} picked</span>
                   </div>
-                );
-              })}
-            </div>
+                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(0,0,0,0.07)' }}>
+                    <div className="h-full rounded-full transition-all duration-700"
+                      style={{ width: weekGames.length > 0 ? `${(weekPicksMade / weekGames.length) * 100}%` : '0%', background: 'linear-gradient(to right, #2563EB, #1E40AF)' }} />
+                  </div>
+                </div>
+
+                {/* Game cards */}
+                <div className="flex flex-col gap-3">
+                  {weekGames.length === 0 ? (
+                    <p className="text-gray-400 text-sm py-6 text-center">No games scheduled for this week yet.</p>
+                  ) : weekGames.map(game => {
+                    const pick      = picks[game.id];
+                    const isFinal   = game.status === 'final';
+                    const isLive    = game.status === 'in_progress';
+                    const isSub     = submitting === game.id;
+                    const isCorrect = isFinal && pick && pick === game.winner;
+                    const isWrong   = isFinal && pick && pick !== game.winner;
+
+                    return (
+                      <div key={game.id}
+                        className={`bg-white/60 backdrop-blur-md rounded-xl border shadow-lg transition-colors ${
+                          isCorrect ? 'border-green-200 bg-green-50/40' :
+                          isWrong   ? 'border-red-100 bg-red-50/30'     :
+                                      'border-white/70'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between px-4 pt-3.5 pb-0">
+                          <p className="text-[11px] text-gray-400">{kickoffLabel(game.kickoff_at)}</p>
+                          {isFinal && (
+                            <span className="text-[11px] font-semibold text-gray-500 tabular-nums bg-gray-100 rounded px-2 py-0.5">
+                              {game.away_score}–{game.home_score} F
+                            </span>
+                          )}
+                          {isLive && (
+                            <span className="text-[11px] font-semibold text-green-600 bg-green-50 border border-green-200 rounded px-2 py-0.5">
+                              LIVE {game.away_score ?? '–'}–{game.home_score ?? '–'}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-start justify-center gap-5 px-4 pt-4 pb-4">
+                          <div className="flex flex-col items-center gap-1.5">
+                            <TeamBadge abbr={game.away_team} side="away" pick={pick} isFinal={isFinal} isLive={isLive}
+                              winner={game.winner} onPick={() => submitPick(game.id, 'away')} locked={seasonLocked} isSubmitting={isSub} />
+                            <span className="text-[11px] text-gray-500 font-medium text-center w-16 leading-tight">
+                              {TEAM_NAMES[game.away_team] ?? game.away_team}
+                            </span>
+                          </div>
+
+                          <div className="flex flex-col items-center" style={{ marginTop: 29 }}>
+                            <span className="font-black text-gray-400 bg-gray-100 rounded-md uppercase tracking-widest" style={{ fontSize: 9, padding: '3px 6px' }}>vs</span>
+                            <span className="text-gray-300 font-medium" style={{ fontSize: 8, marginTop: 2 }}>at</span>
+                          </div>
+
+                          <div className="flex flex-col items-center gap-1.5">
+                            <TeamBadge abbr={game.home_team} side="home" pick={pick} isFinal={isFinal} isLive={isLive}
+                              winner={game.winner} onPick={() => submitPick(game.id, 'home')} locked={seasonLocked} isSubmitting={isSub} />
+                            <span className="text-[11px] text-gray-500 font-medium text-center w-16 leading-tight">
+                              {TEAM_NAMES[game.home_team] ?? game.home_team}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* ── Standings view ──────────────────────────────────────────── */}
+            {viewMode === 'standings' && standings && (
+              <>
+                <p className="text-[11px] text-gray-400 mb-4">
+                  Based on your picks — projected record counts every game you've picked, played or not.
+                  Ties broken by head-to-head result between tied teams, then alphabetically.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {['AFC', 'NFC'].map(conf => {
+                    const { seeds, eliminated, sortedDivs, records } = standings[conf];
+                    return (
+                      <div key={conf} className="flex flex-col gap-3">
+
+                        {/* Playoff picture card */}
+                        <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden">
+                          <div className="px-4 py-3 border-b border-gray-100/80 bg-white/40">
+                            <h3 className="text-sm font-bold text-[#0F172A]">{conf} Playoff Picture</h3>
+                          </div>
+
+                          {/* Seeds 1–4: division winners */}
+                          <div className="divide-y divide-gray-100/60">
+                            {seeds.slice(0, 4).map((team, i) => {
+                              const rec      = records[team];
+                              const divShort = (TEAM_DIV[team] ?? '').replace(`${conf} `, '');
+                              return (
+                                <div key={team} className="flex items-center gap-3 px-4 py-2.5 bg-blue-50/20">
+                                  <span className="text-sm font-black text-[#2563EB] w-4 text-center shrink-0">{i + 1}</span>
+                                  <TeamChip abbr={team} />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-[13px] font-semibold text-[#0F172A] truncate">{TEAM_NAMES[team]}</p>
+                                    <p className="text-[10px] text-[#2563EB] font-semibold">{divShort} Div</p>
+                                  </div>
+                                  <span className="text-sm font-bold text-[#0F172A] tabular-nums shrink-0">{rec.wins}–{rec.losses}</span>
+                                </div>
+                              );
+                            })}
+
+                            {/* Wild card divider */}
+                            <div className="px-4 py-1.5 bg-gray-50/70 flex items-center gap-2">
+                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Wild Cards</span>
+                            </div>
+
+                            {/* Seeds 5–7: wild cards */}
+                            {seeds.slice(4).map((team, i) => {
+                              const rec = records[team];
+                              return (
+                                <div key={team} className="flex items-center gap-3 px-4 py-2.5">
+                                  <span className="text-sm font-semibold text-gray-400 w-4 text-center shrink-0">{i + 5}</span>
+                                  <TeamChip abbr={team} />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-[13px] font-semibold text-[#0F172A] truncate">{TEAM_NAMES[team]}</p>
+                                  </div>
+                                  <span className="text-sm font-bold text-[#0F172A] tabular-nums shrink-0">{rec.wins}–{rec.losses}</span>
+                                </div>
+                              );
+                            })}
+
+                            {/* Out of playoffs */}
+                            <div className="px-4 py-1.5 bg-gray-50/70">
+                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Out of Playoffs</span>
+                            </div>
+                            <div className="flex flex-wrap gap-x-3 gap-y-2 px-4 py-3">
+                              {eliminated.map(team => {
+                                const rec = records[team];
+                                return (
+                                  <div key={team} className="flex items-center gap-1.5">
+                                    <div className="relative flex-shrink-0 opacity-50" style={{ width: 28, height: 35 }}>
+                                      <div style={{ position: 'absolute', inset: 0,   background: TEAM_COLORS[team]?.s ?? '#94A3B8', clipPath: SHIELD }} />
+                                      <div style={{ position: 'absolute', inset: 1.5, background: TEAM_COLORS[team]?.p ?? '#334155', clipPath: SHIELD }} />
+                                      <span className="absolute inset-0 flex items-center justify-center text-white font-black z-10"
+                                        style={{ fontSize: 7, textShadow: '0 1px 2px rgba(0,0,0,0.8)', paddingBottom: 6 }}>
+                                        {team}
+                                      </span>
+                                    </div>
+                                    <span className="text-[10px] text-gray-400 tabular-nums">{rec.wins}–{rec.losses}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Division standings cards */}
+                        {Object.entries(sortedDivs).map(([divName, teams]) => (
+                          <div key={divName} className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden">
+                            <div className="px-4 py-2.5 border-b border-gray-100/80 bg-white/40">
+                              <h4 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">{divName}</h4>
+                            </div>
+                            <div className="divide-y divide-gray-100/60">
+                              {teams.map((team, rank) => {
+                                const rec = records[team];
+                                return (
+                                  <div key={team} className={`flex items-center gap-3 px-4 py-2 ${rank === 0 ? 'bg-blue-50/20' : ''}`}>
+                                    <span className={`text-xs font-bold w-3 text-center shrink-0 ${rank === 0 ? 'text-[#2563EB]' : 'text-gray-300'}`}>
+                                      {rank + 1}
+                                    </span>
+                                    <TeamChip abbr={team} dim={[36, 45]} />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-xs font-semibold text-[#0F172A] truncate">{TEAM_NAMES[team]}</p>
+                                    </div>
+                                    <div className="text-right shrink-0">
+                                      <p className="text-xs font-bold text-[#0F172A] tabular-nums">{rec.wins}–{rec.losses}</p>
+                                      <p className="text-[10px] text-gray-400 tabular-nums">{pctStr(rec)}</p>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </>
         )}
       </main>
