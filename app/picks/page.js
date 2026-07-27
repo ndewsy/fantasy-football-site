@@ -241,6 +241,7 @@ export default function PicksPage() {
   const [submitting, setSubmitting]     = useState(null);
   const [seasonLocked, setSeasonLocked] = useState(false);
   const [viewMode, setViewMode]         = useState('schedule');
+  const [selectedTeam, setSelectedTeam] = useState(null);
   const weekTabsRef = useRef(null);
 
   useEffect(() => {
@@ -325,6 +326,12 @@ export default function PicksPage() {
 
   const standings = games.length > 0 ? computeStandings(games, picks) : null;
 
+  const teamGames = selectedTeam
+    ? games
+        .filter(g => g.home_team === selectedTeam || g.away_team === selectedTeam)
+        .sort((a, b) => a.week - b.week)
+    : [];
+
   // ── render ───────────────────────────────────────────────────────────────
 
   return (
@@ -372,7 +379,7 @@ export default function PicksPage() {
           <>
             {/* View toggle */}
             <div className="flex gap-2 mb-5">
-              {[['schedule', 'Schedule'], ['standings', 'Standings']].map(([mode, label]) => (
+              {[['schedule', 'By Week'], ['byteam', 'By Team'], ['standings', 'Standings']].map(([mode, label]) => (
                 <button
                   key={mode}
                   onClick={() => setViewMode(mode)}
@@ -486,6 +493,140 @@ export default function PicksPage() {
                     );
                   })}
                 </div>
+              </>
+            )}
+
+            {/* ── By Team view ────────────────────────────────────────────── */}
+            {viewMode === 'byteam' && (
+              <>
+                {/* Team selector — 8 division rows */}
+                <div className="mb-5 bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden">
+                  <div className="px-4 py-2.5 border-b border-gray-100/80 bg-white/40">
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Select a team</p>
+                  </div>
+                  <div className="p-3 flex flex-col gap-2">
+                    {Object.entries(DIVISIONS).map(([div, teams]) => (
+                      <div key={div} className="flex items-center gap-2">
+                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wide shrink-0 text-right leading-snug"
+                          style={{ width: 58 }}>
+                          {div.replace('AFC ', '').replace('NFC ', '')}<br />
+                          <span className="text-gray-300">{div.startsWith('AFC') ? 'AFC' : 'NFC'}</span>
+                        </span>
+                        <div className="flex gap-1.5">
+                          {teams.map(abbr => {
+                            const c   = TEAM_COLORS[abbr] ?? { p: '#334155', s: '#64748B' };
+                            const sel = selectedTeam === abbr;
+                            return (
+                              <button
+                                key={abbr}
+                                onClick={() => setSelectedTeam(sel ? null : abbr)}
+                                className="relative flex-shrink-0"
+                                style={{
+                                  width: 40, height: 50,
+                                  filter: sel ? `drop-shadow(0 0 10px ${c.p}cc)` : 'none',
+                                  transform: sel ? 'scale(1.1)' : 'scale(1)',
+                                  transition: 'transform 0.2s ease, filter 0.2s ease',
+                                }}
+                              >
+                                <div style={{ position: 'absolute', inset: 0,   background: sel ? c.s : '#D1D5DB', clipPath: SHIELD }} />
+                                <div style={{ position: 'absolute', inset: 2.5, background: sel ? c.p : '#9CA3AF', clipPath: SHIELD }} />
+                                <span className="absolute inset-0 flex items-center justify-center text-white font-black z-10"
+                                  style={{ fontSize: 8.5, letterSpacing: '0.08em', textShadow: '0 1px 3px rgba(0,0,0,0.8)', paddingBottom: 8 }}>
+                                  {abbr}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {!selectedTeam ? (
+                  <p className="text-center text-gray-400 text-sm py-6">Select a team above to see their schedule.</p>
+                ) : (
+                  <>
+                    {/* Team header */}
+                    <div className="flex items-center gap-3 mb-4">
+                      <TeamChip abbr={selectedTeam} dim={[48, 60]} />
+                      <div>
+                        <h2 className="text-lg font-bold text-[#0F172A]">{TEAM_NAMES[selectedTeam]}</h2>
+                        <p className="text-xs text-gray-400">{TEAM_DIV[selectedTeam]}</p>
+                      </div>
+                      <div className="ml-auto text-right shrink-0">
+                        <p className="text-[11px] text-gray-400">Picked</p>
+                        <p className="text-sm font-bold text-[#0F172A] tabular-nums">
+                          {teamGames.filter(g => picks[g.id]).length}
+                          <span className="font-normal text-gray-400">/{teamGames.length}</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Game cards — identical to week view, with week chip in header */}
+                    <div className="flex flex-col gap-3">
+                      {teamGames.map(game => {
+                        const pick      = picks[game.id];
+                        const isFinal   = game.status === 'final';
+                        const isLive    = game.status === 'in_progress';
+                        const isSub     = submitting === game.id;
+                        const isCorrect = isFinal && pick && pick === game.winner;
+                        const isWrong   = isFinal && pick && pick !== game.winner;
+                        return (
+                          <div key={game.id}
+                            className={`bg-white/60 backdrop-blur-md rounded-xl border shadow-lg transition-colors ${
+                              isCorrect ? 'border-green-200 bg-green-50/40' :
+                              isWrong   ? 'border-red-100 bg-red-50/30'     :
+                                          'border-white/70'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between px-4 pt-3.5 pb-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-bold text-[#2563EB] bg-blue-50 border border-blue-100 rounded px-1.5 py-0.5">
+                                  W{game.week}
+                                </span>
+                                <p className="text-[11px] text-gray-400">{kickoffLabel(game.kickoff_at)}</p>
+                              </div>
+                              {isFinal && (
+                                <span className="text-[11px] font-semibold text-gray-500 tabular-nums bg-gray-100 rounded px-2 py-0.5">
+                                  {game.away_score}–{game.home_score} F
+                                </span>
+                              )}
+                              {isLive && (
+                                <span className="text-[11px] font-semibold text-green-600 bg-green-50 border border-green-200 rounded px-2 py-0.5">
+                                  LIVE {game.away_score ?? '–'}–{game.home_score ?? '–'}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-start justify-center gap-5 px-4 pt-4 pb-4">
+                              <div className="flex flex-col items-center gap-1.5">
+                                <TeamBadge abbr={game.away_team} side="away" pick={pick} isFinal={isFinal} isLive={isLive}
+                                  winner={game.winner} onPick={() => submitPick(game.id, 'away')} locked={seasonLocked} isSubmitting={isSub} />
+                                <span className="text-[11px] text-gray-500 font-medium text-center w-16 leading-tight">
+                                  {TEAM_NAMES[game.away_team] ?? game.away_team}
+                                </span>
+                              </div>
+
+                              <div className="flex flex-col items-center" style={{ marginTop: 29 }}>
+                                <span className="font-black text-gray-400 bg-gray-100 rounded-md uppercase tracking-widest" style={{ fontSize: 9, padding: '3px 6px' }}>vs</span>
+                                <span className="text-gray-300 font-medium" style={{ fontSize: 8, marginTop: 2 }}>at</span>
+                              </div>
+
+                              <div className="flex flex-col items-center gap-1.5">
+                                <TeamBadge abbr={game.home_team} side="home" pick={pick} isFinal={isFinal} isLive={isLive}
+                                  winner={game.winner} onPick={() => submitPick(game.id, 'home')} locked={seasonLocked} isSubmitting={isSub} />
+                                <span className="text-[11px] text-gray-500 font-medium text-center w-16 leading-tight">
+                                  {TEAM_NAMES[game.home_team] ?? game.home_team}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
               </>
             )}
 
