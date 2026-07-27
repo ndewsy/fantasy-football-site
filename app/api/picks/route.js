@@ -10,17 +10,18 @@ async function getUser(request) {
   return error ? null : user;
 }
 
-// GET — returns all games + the authenticated user's picks
+// GET — returns all games; adds the user's picks if authenticated
 export async function GET(request) {
   const user = await getUser(request);
-  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const [{ data: games, error: gErr }, { data: picks, error: pErr }] = await Promise.all([
-    sb().from('season_games').select('*').order('week').order('kickoff_at'),
-    sb().from('season_picks').select('game_id, pick').eq('user_id', user.id),
-  ]);
-
+  const { data: games, error: gErr } = await sb()
+    .from('season_games').select('*').order('week').order('kickoff_at');
   if (gErr) return Response.json({ error: gErr.message }, { status: 500 });
+
+  if (!user) return Response.json({ games: games ?? [], picks: [] });
+
+  const { data: picks, error: pErr } = await sb()
+    .from('season_picks').select('game_id, pick').eq('user_id', user.id);
   if (pErr) return Response.json({ error: pErr.message }, { status: 500 });
 
   return Response.json({ games: games ?? [], picks: picks ?? [] });

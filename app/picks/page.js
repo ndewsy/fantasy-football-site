@@ -230,6 +230,121 @@ function kickoffLabel(isoStr) {
   });
 }
 
+// ── signup modal ─────────────────────────────────────────────────────────────
+
+function SignupModal({ onClose }) {
+  const [mode, setMode]         = useState('signup');
+  const [email, setEmail]       = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [message, setMessage]   = useState('');
+  const [done, setDone]         = useState(false);
+
+  async function handleSubmit() {
+    if (!email || !password) return;
+    setLoading(true);
+    setMessage('');
+    const supabase = createClient();
+    if (mode === 'signup') {
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) setMessage(error.message);
+      else setDone(true);
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) setMessage(error.message);
+      else window.location.reload();
+    }
+    setLoading(false);
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6 relative">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+          aria-label="Close"
+        >
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+            <line x1="4" y1="4" x2="16" y2="16" /><line x1="16" y1="4" x2="4" y2="16" />
+          </svg>
+        </button>
+
+        {done ? (
+          <div className="text-center py-2">
+            <p className="text-4xl mb-3">📬</p>
+            <h2 className="text-lg font-bold text-[#0F172A] mb-2">Check your email</h2>
+            <p className="text-sm text-gray-500 max-w-xs mx-auto">
+              We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account, then come back to make your picks.
+            </p>
+            <button onClick={onClose} className="mt-6 text-sm text-blue-600 hover:text-blue-700 font-medium">
+              Got it, close
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="mb-5 pr-6">
+              <h2 className="text-xl font-bold text-[#0F172A]">
+                {mode === 'signup' ? 'Make your picks — it\'s free' : 'Welcome back'}
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">
+                {mode === 'signup'
+                  ? 'Create a free account to pick every 2026 NFL game.'
+                  : 'Sign in to view and edit your picks.'}
+              </p>
+            </div>
+
+            <div className="mb-3">
+              <label className="block text-xs text-gray-500 mb-1.5">Email</label>
+              <input
+                type="email" value={email} onChange={e => setEmail(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-[#0F172A] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                placeholder="you@example.com" autoFocus
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-xs text-gray-500 mb-1.5">Password</label>
+              <input
+                type="password" value={password} onChange={e => setPassword(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-[#0F172A] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                placeholder="••••••••"
+              />
+            </div>
+
+            {message && (
+              <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">{message}</div>
+            )}
+
+            <button
+              onClick={handleSubmit}
+              disabled={loading || !email || !password}
+              className="w-full bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold py-2.5 rounded-xl transition-all disabled:opacity-50 text-sm"
+            >
+              {loading ? 'Loading…' : mode === 'signup' ? 'Create Free Account' : 'Sign In'}
+            </button>
+
+            <p className="text-center text-xs text-gray-500 mt-4">
+              {mode === 'signup' ? 'Already have an account?' : "Don't have an account?"}{' '}
+              <button
+                onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setMessage(''); }}
+                className="text-blue-600 hover:text-blue-700 font-medium"
+              >
+                {mode === 'signup' ? 'Sign in' : 'Sign up'}
+              </button>
+            </p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── page ────────────────────────────────────────────────────────────────────
 
 export default function PicksPage() {
@@ -240,21 +355,23 @@ export default function PicksPage() {
   const [activeWeek, setActiveWeek]     = useState(1);
   const [submitting, setSubmitting]     = useState(null);
   const [seasonLocked, setSeasonLocked] = useState(false);
-  const [viewMode, setViewMode]         = useState('schedule');
-  const [selectedTeam, setSelectedTeam] = useState(null);
+  const [viewMode, setViewMode]           = useState('schedule');
+  const [selectedTeam, setSelectedTeam]   = useState(null);
+  const [showSignupModal, setShowSignupModal] = useState(false);
   const weekTabsRef = useRef(null);
 
   useEffect(() => {
     async function load() {
       const supabase = createClient();
       const { data: { user: u } } = await supabase.auth.getUser();
-      if (!u) { window.location.href = '/login'; return; }
-      setUser(u);
+      setUser(u ?? null);
 
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/picks', {
-        headers: { Authorization: `Bearer ${session?.access_token}` },
-      });
+      const fetchHeaders = {};
+      if (u) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) fetchHeaders.Authorization = `Bearer ${session.access_token}`;
+      }
+      const res = await fetch('/api/picks', { headers: fetchHeaders });
       if (!res.ok) { setLoading(false); return; }
 
       const { games: g, picks: p } = await res.json();
@@ -285,6 +402,7 @@ export default function PicksPage() {
   }, []);
 
   async function submitPick(gameId, side) {
+    if (!user) { setShowSignupModal(true); return; }
     if (seasonLocked || submitting) return;
     const prev = picks[gameId];
     setPicks(p => ({ ...p, [gameId]: side }));
@@ -751,6 +869,8 @@ export default function PicksPage() {
           </>
         )}
       </main>
+
+      {showSignupModal && <SignupModal onClose={() => setShowSignupModal(false)} />}
     </div>
   );
 }
