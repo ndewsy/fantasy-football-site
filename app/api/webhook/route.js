@@ -20,15 +20,22 @@ export async function POST(request) {
     const session = event.data.object;
     const userId = session.metadata?.user_id;
     if (userId) {
-      await supabase().from('subscriptions').upsert({
-        user_id: userId,
-        status: 'active',
-        stripe_customer_id: session.customer,
-        included_creator: session.metadata?.included_creator || null,
-        add_on_creators: session.metadata?.add_ons
-          ? session.metadata.add_ons.split(',').filter(Boolean)
-          : [],
-      });
+      const planType = session.metadata?.plan_type === 'flat_access' ? 'flat_access' : 'legacy';
+      const referralCreatorId = session.metadata?.referral_creator_id || null;
+      await supabase().from('subscriptions').upsert(
+        {
+          user_id: userId,
+          status: 'active',
+          stripe_customer_id: session.customer,
+          plan_type: planType,
+          referral_creator_id: planType === 'flat_access' ? referralCreatorId : null,
+          included_creator: planType === 'flat_access' ? null : (session.metadata?.included_creator || null),
+          add_on_creators: planType === 'flat_access'
+            ? []
+            : (session.metadata?.add_ons ? session.metadata.add_ons.split(',').filter(Boolean) : []),
+        },
+        { onConflict: 'user_id' }
+      );
     }
   }
 

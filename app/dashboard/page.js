@@ -105,6 +105,8 @@ export default function DashboardPage() {
   const [adminPosts, setAdminPosts] = useState([]);
   const [adminSubCount, setAdminSubCount] = useState(0);
   const [roleUpdating, setRoleUpdating] = useState(null);
+  const [referralCodeSaving, setReferralCodeSaving] = useState(null);
+  const [referralCodeErrors, setReferralCodeErrors] = useState({});
 
   // Revenue & Payouts state
   const [revenueSubscriptions, setRevenueSubscriptions] = useState([]);
@@ -138,6 +140,7 @@ export default function DashboardPage() {
   // Creator earnings state
   const [creatorSubs, setCreatorSubs] = useState([]);
   const [creatorPayouts, setCreatorPayouts] = useState([]);
+  const [creatorActiveCreatorIds, setCreatorActiveCreatorIds] = useState([]);
 
   // Creator analytics state
   const [analyticsPageViews, setAnalyticsPageViews] = useState([]);
@@ -297,15 +300,17 @@ export default function DashboardPage() {
         const twoWeeksAgo = new Date();
         twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
 
-        const [creatorSubsRes, { data: myPayouts }, { data: pageViewData }, { data: playerClickData }] = await Promise.all([
+        const [creatorSubsRes, { data: myPayouts }, { data: pageViewData }, { data: playerClickData }, activeCreatorsRes] = await Promise.all([
           fetch('/api/subscriptions', { headers: { Authorization: `Bearer ${token}` } }),
           supabase.from("payouts").select("*").eq("creator_id", prof.creator_id).order("created_at", { ascending: false }),
           supabase.from("events").select("created_at").eq("creator_id", prof.creator_id).eq("event_type", "page_view").gte("created_at", twoWeeksAgo.toISOString()),
           supabase.from("events").select("player_id").eq("creator_id", prof.creator_id).eq("event_type", "player_click").not("player_id", "is", null),
+          fetch('/api/creators/active').then(r => r.ok ? r.json() : { creators: [] }).catch(() => ({ creators: [] })),
         ]);
         const { subscriptions: creatorSubsData } = creatorSubsRes.ok ? await creatorSubsRes.json() : { subscriptions: [] };
         setCreatorSubs(creatorSubsData || []);
         setCreatorPayouts(myPayouts || []);
+        setCreatorActiveCreatorIds((activeCreatorsRes.creators || []).map(c => c.creator_id));
         setAnalyticsPageViews(pageViewData || []);
         setAnalyticsPlayerClicks(playerClickData || []);
       }
@@ -388,6 +393,27 @@ export default function DashboardPage() {
       prev.map(p => p.id === profileId ? { ...p, creator_id: newCreatorId || null } : p)
     );
     setRoleUpdating(null);
+  }
+
+  async function updateReferralCode(profileId, newCode) {
+    setReferralCodeSaving(profileId);
+    setReferralCodeErrors(prev => ({ ...prev, [profileId]: "" }));
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch('/api/profiles', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+      body: JSON.stringify({ profileId, referral_code: newCode }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (res.ok) {
+      setAdminProfiles(prev =>
+        prev.map(p => p.id === profileId ? { ...p, referral_code: body.profile?.referral_code ?? null } : p)
+      );
+    } else {
+      setReferralCodeErrors(prev => ({ ...prev, [profileId]: body.error || "Failed to save" }));
+    }
+    setReferralCodeSaving(null);
   }
 
   function findNearDuplicates(name) {
@@ -1100,13 +1126,33 @@ export default function DashboardPage() {
     : currentPlayers;
 
   // Revenue computation
+  // Active creators for flat_access attribution — derived live from profiles so a new
+  // creator joining automatically factors into the no-code split without a manual step.
+  const activeCreatorIds = adminProfiles.filter(p => p.is_creator && p.creator_id).map(p => p.creator_id);
   let totalRevenue = 0;
   const creatorBreakdown = {};
+  const ensureBreakdown = (id) => {
+    if (!creatorBreakdown[id]) creatorBreakdown[id] = { included: 0, addons: 0, flatCoded: 0, flatSplitShare: 0 };
+    return creatorBreakdown[id];
+  };
   for (const sub of revenueSubscriptions) {
+    if (sub.plan_type === "flat_access") {
+      totalRevenue += 10;
+      if (sub.referral_creator_id && activeCreatorIds.includes(sub.referral_creator_id)) {
+        // Coded signup: 80% to the coded creator. The remaining 20% is platform
+        // revenue, same convention as the legacy included/add-on split below.
+        ensureBreakdown(sub.referral_creator_id).flatCoded++;
+      } else if (activeCreatorIds.length > 0) {
+        // No code (or code didn't match a currently-active creator): the full $10
+        // splits evenly across whichever creators are active right now — recomputed
+        // on every render, so it reflects the roster at payment time, not signup time.
+        activeCreatorIds.forEach(id => { ensureBreakdown(id).flatSplitShare += 1 / activeCreatorIds.length; });
+      }
+      continue;
+    }
     totalRevenue += 10;
     if (sub.included_creator) {
-      if (!creatorBreakdown[sub.included_creator]) creatorBreakdown[sub.included_creator] = { included: 0, addons: 0 };
-      creatorBreakdown[sub.included_creator].included++;
+      ensureBreakdown(sub.included_creator).included++;
     }
     if (sub.add_on_creators) {
       const addOns = Array.isArray(sub.add_on_creators)
@@ -1114,12 +1160,23 @@ export default function DashboardPage() {
         : sub.add_on_creators.split(",").filter(Boolean);
       addOns.forEach(id => {
         totalRevenue += 5;
-        if (!creatorBreakdown[id]) creatorBreakdown[id] = { included: 0, addons: 0 };
-        creatorBreakdown[id].addons++;
+        ensureBreakdown(id).addons++;
       });
     }
   }
-  const platformRevenue = totalRevenue * 0.2;
+  // Per-creator earnings: legacy 80% of included/add-on revenue, flat-access coded
+  // subs at 80% of $10, flat-access no-code subs at 100% of their even split share
+  // (the no-code case has no platform cut — the full $10 is redistributed).
+  let creatorPayoutTotal = 0;
+  for (const id in creatorBreakdown) {
+    const d = creatorBreakdown[id];
+    d.earnings = d.included * 8 + d.addons * 4 + d.flatCoded * 8 + d.flatSplitShare * 10;
+    creatorPayoutTotal += d.earnings;
+  }
+  // Platform revenue is whatever's left after creator payouts, rather than a blanket
+  // 20% of totalRevenue — that blanket formula would overcount the platform's cut on
+  // no-code flat_access subs, which pay creators 100% with no platform share.
+  const platformRevenue = totalRevenue - creatorPayoutTotal;
   const currentPeriod = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
   return (
@@ -1222,6 +1279,7 @@ export default function DashboardPage() {
                     <th className="text-left px-4 py-3">Change Role</th>
                     <th className="text-left px-4 py-3">Creator?</th>
                     <th className="text-left px-4 py-3">Creator ID</th>
+                    <th className="text-left px-4 py-3">Referral Code</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1284,11 +1342,34 @@ export default function DashboardPage() {
                           <span className="text-gray-400 text-sm">—</span>
                         )}
                       </td>
+                      <td className="px-4 py-3">
+                        {p.is_creator ? (
+                          <div>
+                            <input
+                              type="text"
+                              key={p.id}
+                              defaultValue={p.referral_code || ""}
+                              disabled={referralCodeSaving === p.id}
+                              onBlur={(e) => {
+                                const val = e.target.value.trim();
+                                if (val !== (p.referral_code || "")) updateReferralCode(p.id, val);
+                              }}
+                              placeholder="e.g. HUDDLE"
+                              className="bg-gray-50 border border-gray-200 rounded px-2 py-1 text-sm text-[#0F172A] focus:outline-none focus:border-blue-500 disabled:opacity-50 w-28"
+                            />
+                            {referralCodeErrors[p.id] && (
+                              <p className="text-red-500 text-xs mt-1">{referralCodeErrors[p.id]}</p>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-sm">—</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                   {adminProfiles.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-gray-400 text-sm">No profiles found.</td>
+                      <td colSpan={6} className="px-4 py-8 text-center text-gray-400 text-sm">No profiles found.</td>
                     </tr>
                   )}
                 </tbody>
@@ -1324,8 +1405,8 @@ export default function DashboardPage() {
             <div className="grid grid-cols-3 gap-4 mb-8">
               {[
                 { label: "Total Monthly Revenue", value: `$${totalRevenue.toLocaleString()}`, sub: `${revenueSubscriptions.length} active subscribers` },
-                { label: "Platform Revenue (20%)", value: `$${platformRevenue.toLocaleString()}`, sub: "after creator payouts" },
-                { label: "Creator Payouts (80%)", value: `$${(totalRevenue - platformRevenue).toLocaleString()}`, sub: "owed to creators" },
+                { label: "Platform Revenue", value: `$${platformRevenue.toLocaleString()}`, sub: "after creator payouts" },
+                { label: "Creator Payouts", value: `$${creatorPayoutTotal.toLocaleString()}`, sub: "owed to creators" },
               ].map(({ label, value, sub }) => (
                 <div key={label} className="bg-white/70 backdrop-blur-md border border-white/80 shadow-lg rounded-xl p-5">
                   <p className="text-2xl font-bold text-blue-600">{value}</p>
@@ -1343,14 +1424,16 @@ export default function DashboardPage() {
                     <th className="text-left px-4 py-3">Creator</th>
                     <th className="text-left px-4 py-3">Included subs</th>
                     <th className="text-left px-4 py-3">Add-on subs</th>
+                    <th className="text-left px-4 py-3">Flat (coded)</th>
+                    <th className="text-left px-4 py-3">Flat (split)</th>
                     <th className="text-left px-4 py-3">Monthly earnings</th>
                     <th className="text-left px-4 py-3">Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {CREATOR_IDS.map(creatorId => {
-                    const data = creatorBreakdown[creatorId] || { included: 0, addons: 0 };
-                    const earnings = data.included * 8 + data.addons * 4;
+                  {activeCreatorIds.map(creatorId => {
+                    const data = creatorBreakdown[creatorId] || { included: 0, addons: 0, flatCoded: 0, flatSplitShare: 0, earnings: 0 };
+                    const earnings = data.earnings || 0;
                     const payout = payouts.find(p => p.creator_id === creatorId && p.period === currentPeriod);
                     const isSaving = payoutSaving === creatorId;
                     return (
@@ -1367,8 +1450,16 @@ export default function DashboardPage() {
                           <span className="text-gray-400 text-xs ml-1">× $4</span>
                         </td>
                         <td className="px-4 py-4">
+                          <span className="font-mono">{data.flatCoded}</span>
+                          <span className="text-gray-400 text-xs ml-1">× $8</span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className="font-mono">{data.flatSplitShare.toFixed(2)}</span>
+                          <span className="text-gray-400 text-xs ml-1">× $10</span>
+                        </td>
+                        <td className="px-4 py-4">
                           <span className={`text-lg font-bold ${earnings > 0 ? "text-blue-600" : "text-gray-300"}`}>
-                            ${earnings}
+                            ${earnings.toFixed(2)}
                           </span>
                         </td>
                         <td className="px-4 py-4">
@@ -2627,15 +2718,20 @@ export default function DashboardPage() {
 
         {/* ── My Earnings Tab ── */}
         {tab === "earnings" && (() => {
-          const includedCount = creatorSubs.filter(s => s.included_creator === profile.creator_id).length;
+          const includedCount = creatorSubs.filter(s => s.plan_type !== "flat_access" && s.included_creator === profile.creator_id).length;
           const addonCount = creatorSubs.filter(s => {
-            if (!s.add_on_creators) return false;
+            if (s.plan_type === "flat_access" || !s.add_on_creators) return false;
             const addons = Array.isArray(s.add_on_creators)
               ? s.add_on_creators
               : s.add_on_creators.split(",").filter(Boolean);
             return addons.includes(profile.creator_id);
           }).length;
-          const monthlyTotal = includedCount * 8 + addonCount * 4;
+          const flatCodedCount = creatorSubs.filter(s => s.plan_type === "flat_access" && s.referral_creator_id === profile.creator_id).length;
+          const isCurrentlyActiveCreator = creatorActiveCreatorIds.includes(profile.creator_id);
+          const flatSplitShare = isCurrentlyActiveCreator && creatorActiveCreatorIds.length > 0
+            ? creatorSubs.filter(s => s.plan_type === "flat_access" && (!s.referral_creator_id || !creatorActiveCreatorIds.includes(s.referral_creator_id))).length / creatorActiveCreatorIds.length
+            : 0;
+          const monthlyTotal = includedCount * 8 + addonCount * 4 + flatCodedCount * 8 + flatSplitShare * 10;
           const paidPayouts = creatorPayouts.filter(p => p.paid);
 
           return (
@@ -2686,11 +2782,23 @@ export default function DashboardPage() {
                       <td className="px-4 py-3 text-gray-500">$4/mo</td>
                       <td className="px-4 py-3 text-blue-600 font-semibold">${addonCount * 4}</td>
                     </tr>
+                    <tr className="border-b border-gray-100">
+                      <td className="px-4 py-3 font-medium">Full access — your code</td>
+                      <td className="px-4 py-3 font-mono">{flatCodedCount}</td>
+                      <td className="px-4 py-3 text-gray-500">$8/mo</td>
+                      <td className="px-4 py-3 text-blue-600 font-semibold">${flatCodedCount * 8}</td>
+                    </tr>
+                    <tr className="border-b border-gray-100">
+                      <td className="px-4 py-3 font-medium">Full access — even split</td>
+                      <td className="px-4 py-3 font-mono">{flatSplitShare.toFixed(2)} shares</td>
+                      <td className="px-4 py-3 text-gray-500">$10/mo</td>
+                      <td className="px-4 py-3 text-blue-600 font-semibold">${(flatSplitShare * 10).toFixed(2)}</td>
+                    </tr>
                     <tr className="bg-gray-50">
                       <td className="px-4 py-3 font-bold">Total</td>
-                      <td className="px-4 py-3 font-mono">{includedCount + addonCount}</td>
                       <td className="px-4 py-3 text-gray-500">—</td>
-                      <td className="px-4 py-3 text-blue-600 font-bold text-lg">${monthlyTotal}</td>
+                      <td className="px-4 py-3 text-gray-500">—</td>
+                      <td className="px-4 py-3 text-blue-600 font-bold text-lg">${monthlyTotal.toFixed(2)}</td>
                     </tr>
                   </tbody>
                 </table>

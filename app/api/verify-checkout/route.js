@@ -70,21 +70,21 @@ export async function POST(request) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const includedCreator = stripeSession.metadata?.included_creator || '';
-    const addOns = stripeSession.metadata?.add_ons
-      ? stripeSession.metadata.add_ons.split(',').filter(Boolean)
-      : [];
+    const planType = stripeSession.metadata?.plan_type === 'flat_access' ? 'flat_access' : 'legacy';
+    const referralCreatorId = stripeSession.metadata?.referral_creator_id || null;
 
     const stripeCustomerId = stripeSession.customer || null;
-    console.log('[/api/verify-checkout] Upserting subscription:', { user_id: user.id, includedCreator, addOns, stripeCustomerId });
+    console.log('[/api/verify-checkout] Upserting subscription:', { user_id: user.id, planType, referralCreatorId, stripeCustomerId });
 
     const { error } = await supabase().from('subscriptions').upsert(
       {
         user_id: user.id,
         status: 'active',
         stripe_customer_id: stripeCustomerId,
-        included_creator: includedCreator,
-        add_on_creators: addOns,
+        plan_type: planType,
+        referral_creator_id: planType === 'flat_access' ? referralCreatorId : null,
+        included_creator: null,
+        add_on_creators: [],
       },
       { onConflict: 'user_id' }
     );

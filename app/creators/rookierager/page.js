@@ -13,6 +13,7 @@ export default function DynastyDavePage() {
   const [rankingsUpdatedAt, setRankingsUpdatedAt] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isDashboardUser, setIsDashboardUser] = useState(false);
+  const [activeCreatorIds, setActiveCreatorIds] = useState([]);
 
   useEffect(() => {
     async function load() {
@@ -20,7 +21,7 @@ export default function DynastyDavePage() {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
 
-      const [subResult, postsResult, profileResult, rankingsResult, ownProfileResult] = await Promise.all([
+      const [subResult, postsResult, profileResult, rankingsResult, ownProfileResult, activeCreatorsResult] = await Promise.all([
         user
           ? supabase.from("subscriptions").select("*").eq("user_id", user.id).maybeSingle()
           : Promise.resolve({ data: null }),
@@ -30,6 +31,7 @@ export default function DynastyDavePage() {
         user
           ? supabase.from("profiles").select("role, is_creator").eq("id", user.id).maybeSingle()
           : Promise.resolve({ data: null }),
+        fetch("/api/creators/active").then((r) => r.ok ? r.json() : { creators: [] }).catch(() => ({ creators: [] })),
       ]);
 
       setSubscription(subResult.data);
@@ -37,13 +39,19 @@ export default function DynastyDavePage() {
       setCreatorProfile(profileResult.data || null);
       setRankingsUpdatedAt(rankingsResult.data?.updated_at || null);
       setIsDashboardUser(!!(ownProfileResult.data && (ownProfileResult.data.role === "admin" || ownProfileResult.data.is_creator)));
+      setActiveCreatorIds((activeCreatorsResult.creators || []).map((c) => c.creator_id));
       supabase.from("events").insert({ event_type: "page_view", creator_id: "rookierager", user_id: user?.id ?? null }).then(() => {}).catch(() => {});
       setLoading(false);
     }
     load();
   }, []);
 
-  const isSubscribed = !!subscription || isDashboardUser;
+  const isFlatAccessGranted = subscription?.plan_type === "flat_access"
+    && subscription?.status === "active"
+    && activeCreatorIds.includes("rookierager");
+  const isSubscribed = isDashboardUser
+    || (!!subscription && subscription.plan_type !== "flat_access")
+    || isFlatAccessGranted;
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading...</div>;
 

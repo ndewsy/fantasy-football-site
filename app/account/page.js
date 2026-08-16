@@ -188,23 +188,30 @@ export default function AccountPage() {
                 </span>
               </div>
 
-              {/* Included community */}
-              <div className="flex items-center justify-between">
-                <span className="text-gray-500 text-sm">Included community</span>
-                {includedCreator && CREATOR_INFO[includedCreator] ? (
-                  <a
-                    href={CREATOR_INFO[includedCreator].path}
-                    className="font-medium text-blue-600 hover:text-blue-700 transition-colors"
-                  >
-                    {CREATOR_INFO[includedCreator].name} →
-                  </a>
-                ) : (
-                  <span className="font-medium text-gray-700">{includedCreator || "—"}</span>
-                )}
-              </div>
+              {/* Community access */}
+              {subscription?.plan_type === "flat_access" ? (
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-500 text-sm">Community access</span>
+                  <span className="font-medium text-blue-600">All creator communities</span>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-500 text-sm">Included community</span>
+                  {includedCreator && CREATOR_INFO[includedCreator] ? (
+                    <a
+                      href={CREATOR_INFO[includedCreator].path}
+                      className="font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                    >
+                      {CREATOR_INFO[includedCreator].name} →
+                    </a>
+                  ) : (
+                    <span className="font-medium text-gray-700">{includedCreator || "—"}</span>
+                  )}
+                </div>
+              )}
 
               {/* Add-on communities */}
-              {addOns.length > 0 && (
+              {subscription?.plan_type !== "flat_access" && addOns.length > 0 && (
                 <div className="flex items-start justify-between gap-4">
                   <span className="text-gray-500 text-sm shrink-0 pt-0.5">Add-on communities</span>
                   <div className="flex flex-col items-end gap-1.5">
