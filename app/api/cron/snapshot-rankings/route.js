@@ -44,5 +44,35 @@ export async function GET(request) {
   }
 
   console.log(`[snapshot-rankings] inserted ${snapshots.length} snapshots for ${today}`);
-  return Response.json({ ok: true, inserted: snapshots.length });
+
+  // Same daily job also records each player's current adp_rank, so ADP movement
+  // (risers/fallers) can be computed against yesterday's snapshot once history exists.
+  const { data: playersWithAdp, error: playersError } = await supabase()
+    .from('players')
+    .select('id, adp_rank')
+    .not('adp_rank', 'is', null);
+
+  let adpInserted = 0;
+  if (playersError) {
+    console.error('[snapshot-rankings] players fetch failed:', playersError);
+  } else {
+    const adpSnapshots = (playersWithAdp || []).map(p => ({
+      player_id: p.id,
+      adp_rank: p.adp_rank,
+      snapshot_date: today,
+    }));
+    if (adpSnapshots.length > 0) {
+      const { error: adpUpsertError } = await supabase()
+        .from('player_adp_history')
+        .upsert(adpSnapshots, { onConflict: 'player_id,snapshot_date', ignoreDuplicates: true });
+      if (adpUpsertError) {
+        console.error('[snapshot-rankings] adp upsert failed:', adpUpsertError);
+      } else {
+        adpInserted = adpSnapshots.length;
+      }
+    }
+  }
+
+  console.log(`[snapshot-rankings] inserted ${adpInserted} adp snapshots for ${today}`);
+  return Response.json({ ok: true, inserted: snapshots.length, adpInserted });
 }

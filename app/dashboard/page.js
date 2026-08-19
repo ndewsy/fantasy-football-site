@@ -6,6 +6,7 @@ import NavBar from "@/app/components/NavBar";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import CreatorAvatar from "@/app/components/CreatorAvatar";
+import PlayerHeadshot from "@/app/components/PlayerHeadshot";
 import Cropper from "react-easy-crop";
 
 const FORMATS = ["Dynasty SF", "Dynasty 1QB", "Redraft 1QB", "Redraft SF"];
@@ -223,12 +224,12 @@ export default function DashboardPage() {
           fetch(`/api/rankings?creator_id=${encodeURIComponent(prof.creator_id)}`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          supabase.from("players").select("id, name, position, team").order("adp_rank"),
+          supabase.from("players").select("id, name, position, team, sleeper_id, espn_id").order("adp_rank"),
         ]);
 
         const { rankings: savedRankings } = rankingsRes.ok ? await rankingsRes.json() : { rankings: [] };
 
-        const pool = (poolData || []).map(p => ({ id: p.id, name: p.name, pos: p.position, team: p.team || "FA" }));
+        const pool = (poolData || []).map(p => ({ id: p.id, name: p.name, pos: p.position, team: p.team || "FA", sleeper_id: p.sleeper_id, espn_id: p.espn_id }));
         const byId = Object.fromEntries(pool.map(p => [p.id, p]));
         setPlayerPool(pool);
         setPlayersById(byId);
@@ -484,7 +485,7 @@ export default function DashboardPage() {
     const supabase = createClient();
     const { data } = await supabase
       .from('players')
-      .select('id, name, position, team, status, source, last_synced_at, sleeper_id')
+      .select('id, name, position, team, status, source, last_synced_at, sleeper_id, espn_id')
       .order('position').order('name');
     setPlayerDbList(data || []);
     setPlayerDbLoading(false);
@@ -1800,7 +1801,12 @@ export default function DashboardPage() {
                     <tbody>
                       {filtered.map(p => (
                         <tr key={p.id} className="border-b border-gray-50 hover:bg-white/50">
-                          <td className="px-4 py-2.5 font-medium text-[#0F172A]">{p.name}</td>
+                          <td className="px-4 py-2.5 font-medium text-[#0F172A]">
+                            <div className="flex items-center gap-2">
+                              <PlayerHeadshot espnId={p.espn_id} sleeperId={p.sleeper_id} name={p.name} size="xs" />
+                              {p.name}
+                            </div>
+                          </td>
                           <td className="px-4 py-2.5">
                             <span className={`px-1.5 py-0.5 rounded text-xs font-semibold ${posColors[p.position] || 'bg-gray-100 text-gray-500'}`}>
                               {p.position}
@@ -1975,7 +1981,12 @@ export default function DashboardPage() {
                         className={`group border-b border-gray-100 last:border-0 transition-colors ${selectedPlayers.has(player.name) ? "bg-blue-50" : "hover:bg-gray-50"}`}
                         onClick={(e) => { e.stopPropagation(); handlePlayerClick(e, player.name, "unranked", unrankedPlayers); }}
                       >
-                        <td className="px-4 py-2.5 font-medium text-sm">{player.name}</td>
+                        <td className="px-4 py-2.5 font-medium text-sm">
+                          <div className="flex items-center gap-2">
+                            <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="xs" />
+                            {player.name}
+                          </div>
+                        </td>
                         <td className="px-4 py-2.5">
                           <span className={`px-1.5 py-0.5 rounded text-xs font-semibold ${posColors[player.pos] || "bg-gray-100 text-gray-500"}`}>{player.pos}</span>
                         </td>
@@ -2026,6 +2037,7 @@ export default function DashboardPage() {
                           onClick={() => addPlayer(p)}
                           className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50 transition-colors text-left border-b border-gray-50 last:border-0"
                         >
+                          <PlayerHeadshot espnId={p.espn_id} sleeperId={p.sleeper_id} name={p.name} size="xs" />
                           <span className={`px-1.5 py-0.5 rounded text-xs font-semibold ${posColors[p.pos] || "bg-gray-100 text-gray-500"}`}>{p.pos}</span>
                           <span className="font-medium text-sm">{p.name}</span>
                           <span className="text-gray-400 text-xs ml-auto">{p.team}</span>
@@ -2153,7 +2165,12 @@ export default function DashboardPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3 font-medium">{player.name}</td>
+                        <td className="px-4 py-3 font-medium">
+                          <div className="flex items-center gap-2">
+                            <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="xs" />
+                            {player.name}
+                          </div>
+                        </td>
                         <td className="px-4 py-3">
                           <span className={`px-2 py-0.5 rounded text-xs font-semibold ${posColors[player.pos] || "bg-gray-100 text-gray-500"}`}>
                             {rankingsPosRanks[player.name]}

@@ -2,6 +2,8 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
+import PlayerHeadshot from "@/app/components/PlayerHeadshot";
+import AdpMovementWidget from "@/app/components/AdpMovementWidget";
 
 const FORMATS = ["Dynasty SF", "Dynasty 1QB", "Redraft 1QB", "Redraft SF"];
 
@@ -109,9 +111,9 @@ export default function Home() {
       const supabase = createClient();
       const { data } = await supabase
         .from("players")
-        .select("id, name, position, team")
+        .select("id, name, position, team, sleeper_id, espn_id")
         .order("adp_rank");
-      setPlayerPool((data || []).map(p => ({ id: p.id, name: p.name, pos: p.position, team: p.team || "FA" })));
+      setPlayerPool((data || []).map(p => ({ id: p.id, name: p.name, pos: p.position, team: p.team || "FA", sleeper_id: p.sleeper_id, espn_id: p.espn_id })));
       setPoolLoaded(true);
     }
     loadPool();
@@ -550,7 +552,13 @@ export default function Home() {
       )}
 
       {/* Rankings Section */}
-      <div ref={rankingsRef} className="max-w-5xl mx-auto px-6 pt-6 pb-20">
+      <div className="max-w-6xl mx-auto px-6 pt-6 pb-20 flex flex-col lg:flex-row gap-6 items-start">
+
+        <aside className="w-full lg:w-72 lg:shrink-0 lg:sticky lg:top-6 order-2 lg:order-1">
+          <AdpMovementWidget />
+        </aside>
+
+        <div ref={rankingsRef} className="flex-1 min-w-0 order-1 lg:order-2">
 
         {/* Format tabs */}
         <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
@@ -741,7 +749,8 @@ export default function Home() {
                         <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4 text-gray-400 font-mono text-sm">{rank}{(() => { const m = movementCache[activeFormat]?.[activeCreator]?.[player.name]; if (!m) return null; return <span className={`ml-1.5 text-xs font-semibold ${m > 0 ? "text-green-600" : "text-red-500"}`}>{m > 0 ? "▲" : "▼"}{Math.abs(m)}</span>; })()}</td>
                           <td className="px-6 py-4 font-medium">
-                            <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors">
+                            <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-2.5">
+                              <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="sm" />
                               {player.name}
                             </span>
                           </td>
@@ -786,7 +795,8 @@ export default function Home() {
                           <tr className="border-b border-gray-100">
                             <td className="px-6 py-4 text-gray-400 font-mono text-sm">{rank}{(() => { const m = movementCache[activeFormat]?.[activeCreator]?.[player.name]; if (!m) return null; return <span className={`ml-1.5 text-xs font-semibold ${m > 0 ? "text-green-600" : "text-red-500"}`}>{m > 0 ? "▲" : "▼"}{Math.abs(m)}</span>; })()}</td>
                             <td className="px-6 py-4 font-medium">
-                              <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors">
+                              <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-2.5">
+                                <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="sm" />
                                 {player.name}
                               </span>
                             </td>
@@ -844,7 +854,8 @@ export default function Home() {
                         <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4 text-gray-400 font-mono text-sm">{rank}{(() => { const m = movementCache[activeFormat]?.[activeCreator]?.[player.name]; if (!m) return null; return <span className={`ml-1.5 text-xs font-semibold ${m > 0 ? "text-green-600" : "text-red-500"}`}>{m > 0 ? "▲" : "▼"}{Math.abs(m)}</span>; })()}</td>
                           <td className="px-6 py-4 font-medium">
-                            <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors">
+                            <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-2.5">
+                              <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="sm" />
                               {player.name}
                             </span>
                           </td>
@@ -910,6 +921,7 @@ export default function Home() {
           </div>
         )}
 
+        </div>
       </div>
 
       {/* Player profile modal */}
