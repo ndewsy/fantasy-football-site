@@ -59,7 +59,7 @@ export default function RedraftKingPage() {
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading...</div>;
 
   return (
-    <main className="min-h-screen text-[#0F172A]">
+    <main className="min-h-screen text-[#0F172A] lg:pl-56">
       <NavBar activePath="/creators/ffhuddle" />
 
       <div className="max-w-5xl mx-auto px-6 py-12">

@@ -453,7 +453,7 @@ export default function PicksPage() {
   // ── render ───────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col lg:pl-56">
       <NavBar activePath="/picks" />
 
       <main className="flex-1 max-w-3xl mx-auto w-full px-4 py-8">

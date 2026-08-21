@@ -1204,7 +1204,7 @@ export default function DashboardPage() {
 
   return (
     <>
-    <main className="min-h-screen text-[#0F172A]">
+    <main className="min-h-screen text-[#0F172A] lg:pl-56">
       <NavBar activePath="/dashboard" />
 
       <div className="max-w-5xl mx-auto px-6 py-10">

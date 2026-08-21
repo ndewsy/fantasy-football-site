@@ -144,7 +144,7 @@ export default function AccountPage() {
     : null;
 
   return (
-    <main className="min-h-screen text-[#0F172A]">
+    <main className="min-h-screen text-[#0F172A] lg:pl-56">
       <NavBar activePath="/account" />
 
       <div className="max-w-2xl mx-auto px-6 py-16">

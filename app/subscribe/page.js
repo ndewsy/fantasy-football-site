@@ -86,7 +86,7 @@ export default function SubscribePage() {
 
   if (!authLoaded) {
     return (
-      <main className="min-h-screen text-[#0F172A]">
+      <main className="min-h-screen text-[#0F172A] lg:pl-56">
         <NavBar activePath="/subscribe" />
         <div className="min-h-[60vh] flex items-center justify-center text-gray-400">Loading...</div>
       </main>
@@ -95,7 +95,7 @@ export default function SubscribePage() {
 
   if (isAdminOrCreator) {
     return (
-      <main className="min-h-screen text-[#0F172A]">
+      <main className="min-h-screen text-[#0F172A] lg:pl-56">
         <NavBar activePath="/subscribe" />
         <div className="max-w-md mx-auto px-6 py-24 text-center">
           <div className="text-5xl mb-6">⭐</div>
@@ -111,7 +111,7 @@ export default function SubscribePage() {
 
   if (isSubscribed) {
     return (
-      <main className="min-h-screen text-[#0F172A]">
+      <main className="min-h-screen text-[#0F172A] lg:pl-56">
         <NavBar activePath="/subscribe" />
         <div className="max-w-md mx-auto px-6 py-24 text-center">
           <div className="text-5xl mb-6">✅</div>
@@ -126,7 +126,7 @@ export default function SubscribePage() {
   }
 
   return (
-    <main className="min-h-screen text-[#0F172A]">
+    <main className="min-h-screen text-[#0F172A] lg:pl-56">
       <NavBar activePath="/subscribe" />
 
       <div className="max-w-2xl mx-auto px-6 py-16">

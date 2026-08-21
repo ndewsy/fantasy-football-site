@@ -402,7 +402,7 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen text-[#0F172A]">
+    <main className="min-h-screen text-[#0F172A] lg:pl-56">
       <NavBar activePath="/" />
 
       {/* Landing page — non-subscribers only */}
@@ -543,13 +543,9 @@ export default function Home() {
       )}
 
       {/* Rankings Section */}
-      <div className="max-w-6xl mx-auto px-6 pt-6 pb-20 flex flex-col lg:flex-row gap-6 items-start">
+      <div className="w-full px-6 lg:px-8 pt-6 pb-20 flex flex-col lg:flex-row gap-6 items-start">
 
-        <aside className="w-full lg:w-72 lg:shrink-0 lg:sticky lg:top-6 order-2 lg:order-1">
-          <AdpMovementWidget />
-        </aside>
-
-        <div ref={rankingsRef} className="flex-1 min-w-0 order-1 lg:order-2">
+        <div ref={rankingsRef} className="flex-1 min-w-0 order-1">
 
         {/* Format tabs */}
         <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
@@ -913,6 +909,11 @@ export default function Home() {
         )}
 
         </div>
+
+        <aside className="w-full lg:w-72 lg:shrink-0 lg:sticky lg:top-6 order-2">
+          <AdpMovementWidget />
+        </aside>
+
       </div>
 
       {/* Player profile modal */}

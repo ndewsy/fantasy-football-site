@@ -28,7 +28,7 @@ export default function CreatorsPage() {
   }, []);
 
   return (
-    <main className="min-h-screen text-[#0F172A]">
+    <main className="min-h-screen text-[#0F172A] lg:pl-56">
       <NavBar activePath="/creators" />
       <div className="max-w-5xl mx-auto px-6 py-16">
         <h2 className="text-4xl font-bold mb-4">Our Creators</h2>

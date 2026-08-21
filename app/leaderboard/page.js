@@ -50,7 +50,7 @@ export default function LeaderboardPage() {
   const pctDisplay = pct => `${(pct * 100).toFixed(1)}%`;
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col lg:pl-56">
       <NavBar activePath="/leaderboard" />
 
       <main className="flex-1 max-w-3xl mx-auto w-full px-4 py-8">
