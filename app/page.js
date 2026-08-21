@@ -441,7 +441,7 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {[
                 { step: "1", title: "Subscribe for $10/mo", desc: "Unlock all rankings across every format — Dynasty SF, Dynasty 1QB, Redraft 1QB, and Redraft SF. Updated weekly." },
-                { step: "2", title: "Choose your creator community", desc: "Join RookieRager or FantasyFootballHuddle. Get access to their expert analysis, rankings, and content all season." },
+                { step: "2", title: "Get every creator community", desc: "RookieRager, FantasyFootballHuddle, and every creator who joins — all included, no extra picks needed." },
                 { step: "3", title: "Dominate your league", desc: "Use the consensus rankings or drill into each creator's individual picks to build your perfect draft strategy." },
               ].map(({ step, title, desc }) => (
                 <div key={step} className="bg-white/70 backdrop-blur-md rounded-xl p-6 border border-white/80 shadow-lg text-center">
@@ -489,21 +489,31 @@ export default function Home() {
           {/* Pricing */}
           <div className="max-w-5xl mx-auto px-6 py-16">
             <h3 className="text-center text-3xl font-bold mb-2 text-[#0F172A]">Simple Pricing</h3>
-            <p className="text-center text-gray-500 mb-10">No tiers, no confusion. One plan with optional add-ons.</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+            <p className="text-center text-gray-500 mb-10">One flat price. No tiers, no add-ons, no per-creator picks.</p>
+            <div className="max-w-md mx-auto">
               <div className="bg-white/70 backdrop-blur-md rounded-xl p-6 border-2 border-blue-500 shadow-lg flex flex-col">
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h4 className="font-bold text-xl text-[#0F172A]">Base Plan</h4>
-                    <p className="text-gray-500 text-xs mt-0.5">Everything you need</p>
+                    <h4 className="font-bold text-xl text-[#0F172A]">Full Access</h4>
+                    <p className="text-gray-500 text-xs mt-0.5">Everything, every creator</p>
                   </div>
                   <div className="text-right">
-                    <span className="text-3xl font-bold text-blue-600">$10</span>
-                    <span className="text-gray-400 text-sm">/mo</span>
+                    {promoActive ? (
+                      <>
+                        <span className="text-lg line-through text-gray-400">$50</span>{" "}
+                        <span className="text-3xl font-bold text-blue-600">$10</span>
+                        <p className="text-gray-400 text-xs">5 months</p>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-3xl font-bold text-blue-600">$10</span>
+                        <span className="text-gray-400 text-sm">/mo</span>
+                      </>
+                    )}
                   </div>
                 </div>
                 <ul className="space-y-2 mb-6 flex-1">
-                  {["All 4 ranking formats", "Consensus rankings from all creators", "Dynasty SF & Dynasty 1QB", "Redraft 1QB & Redraft SF", "1 creator community included", "Rankings updated all season"].map(f => (
+                  {["All 4 ranking formats", "Consensus rankings from all creators", "Dynasty SF & Dynasty 1QB", "Redraft 1QB & Redraft SF", "Every creator community, including new ones as they join", "Rankings updated all season"].map(f => (
                     <li key={f} className="flex items-center gap-2 text-sm text-gray-600">
                       <span className="text-green-500 font-bold shrink-0">✓</span> {f}
                     </li>
@@ -511,28 +521,6 @@ export default function Home() {
                 </ul>
                 <a href="/subscribe" className="block text-center bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold py-3 rounded-xl transition-all">
                   Get Started
-                </a>
-              </div>
-              <div className="bg-white/70 backdrop-blur-md rounded-xl p-6 border border-white/80 shadow-lg flex flex-col">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h4 className="font-bold text-xl text-[#0F172A]">Community Add-on</h4>
-                    <p className="text-gray-500 text-xs mt-0.5">Per extra community</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-3xl font-bold text-blue-600">$5</span>
-                    <span className="text-gray-400 text-sm">/mo</span>
-                  </div>
-                </div>
-                <ul className="space-y-2 mb-6 flex-1">
-                  {["Access an additional creator community", "Creator-specific rankings & analysis", "Posts and content from that creator", "Stack as many as you like"].map(f => (
-                    <li key={f} className="flex items-center gap-2 text-sm text-gray-600">
-                      <span className="text-green-500 font-bold shrink-0">✓</span> {f}
-                    </li>
-                  ))}
-                </ul>
-                <a href="/subscribe" className="block text-center bg-white/60 backdrop-blur-sm border border-white/70 text-[#0F172A] font-bold py-3 rounded-xl hover:bg-white/80 transition-all">
-                  Add to Plan
                 </a>
               </div>
             </div>
