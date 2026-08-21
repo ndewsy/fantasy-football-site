@@ -109,6 +109,11 @@ export default function DashboardPage() {
   const [referralCodeSaving, setReferralCodeSaving] = useState(null);
   const [referralCodeErrors, setReferralCodeErrors] = useState({});
 
+  // Subscribers tab state (admin only)
+  const [subscriberUsers, setSubscriberUsers] = useState([]);
+  const [subscriberUsersLoading, setSubscriberUsersLoading] = useState(false);
+  const [revealedEmails, setRevealedEmails] = useState(new Set());
+
   // Revenue & Payouts state
   const [revenueSubscriptions, setRevenueSubscriptions] = useState([]);
   const [payouts, setPayouts] = useState([]);
@@ -338,6 +343,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (tab === 'playerdb' && profile?.role === 'admin') loadPlayerDb();
+    if (tab === 'subscribers' && profile?.role === 'admin') loadSubscriberUsers();
   }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function updateFeedbackStatus(id, newStatus) {
@@ -478,6 +484,43 @@ export default function DashboardPage() {
     } finally {
       setAdminPlayerSaving(false);
     }
+  }
+
+  async function loadSubscriberUsers() {
+    setSubscriberUsersLoading(true);
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch('/api/admin/users', {
+      headers: { Authorization: `Bearer ${session?.access_token}` },
+    });
+    const body = res.ok ? await res.json() : { users: [] };
+    setSubscriberUsers(body.users || []);
+    setSubscriberUsersLoading(false);
+  }
+
+  function toggleEmailReveal(userId) {
+    setRevealedEmails(prev => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  }
+
+  const PLAN_LABELS = { flat_access: "Full Access", legacy: "Legacy Plan", free_trial: "Free Trial", promo_5mo: "August Promo" };
+
+  function subscriptionPlanLabel(sub) {
+    if (!sub) return "—";
+    return PLAN_LABELS[sub.plan_type] || sub.plan_type;
+  }
+
+  function subscriptionExpiresLabel(sub) {
+    if (!sub) return "—";
+    if (sub.trial_ends_at) {
+      const label = new Date(sub.trial_ends_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+      return sub.status === "expired" ? `Expired ${label}` : label;
+    }
+    return sub.status === "active" ? "Recurring monthly" : "—";
   }
 
   async function loadPlayerDb() {
@@ -1243,7 +1286,7 @@ export default function DashboardPage() {
         {/* Row 1 — Dashboard tabs */}
         <div className="flex gap-1.5 mb-6 overflow-x-auto pb-1">
           {profile.role === "admin" && (
-            [["admin", "Admin Overview"], ["payouts", "Revenue & Payouts"], ["feedback", "Feedback"], ["players", "Add Players"], ["playerdb", "Player Database"]].map(([t, label]) => (
+            [["admin", "Admin Overview"], ["subscribers", "Subscribers"], ["payouts", "Revenue & Payouts"], ["feedback", "Feedback"], ["players", "Add Players"], ["playerdb", "Player Database"]].map(([t, label]) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -1418,6 +1461,70 @@ export default function DashboardPage() {
                   <p className="text-gray-400 text-sm">No posts published yet.</p>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Subscribers Tab ── */}
+        {tab === "subscribers" && (
+          <div>
+            <h2 className="text-lg font-bold mb-3">Subscribers</h2>
+            <p className="text-gray-500 text-sm mb-4">Click a name to reveal their email.</p>
+            <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-white/40 text-gray-500 text-sm">
+                  <tr>
+                    <th className="text-left px-4 py-3">Name</th>
+                    <th className="text-left px-4 py-3">Role</th>
+                    <th className="text-left px-4 py-3">Plan</th>
+                    <th className="text-left px-4 py-3">Status</th>
+                    <th className="text-left px-4 py-3">Expires</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {subscriberUsers.map((u) => (
+                    <tr key={u.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => toggleEmailReveal(u.id)}
+                          className="font-medium text-blue-600 hover:text-blue-700 text-left"
+                        >
+                          {u.display_name || "—"}
+                        </button>
+                        {revealedEmails.has(u.id) && (
+                          <p className="text-xs text-gray-400 mt-0.5 break-all">{u.email || "no email on file"}</p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
+                          u.role === "admin" ? "bg-red-50 text-red-600" : "bg-gray-100 text-gray-500"
+                        }`}>
+                          {u.role}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{subscriptionPlanLabel(u.subscription)}</td>
+                      <td className="px-4 py-3">
+                        {u.subscription ? (
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
+                            u.subscription.status === "active" ? "bg-green-50 text-green-600" : "bg-gray-100 text-gray-500"
+                          }`}>
+                            {u.subscription.status}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 text-sm">No subscription</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{subscriptionExpiresLabel(u.subscription)}</td>
+                    </tr>
+                  ))}
+                  {subscriberUsersLoading && (
+                    <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+                  )}
+                  {!subscriberUsersLoading && subscriberUsers.length === 0 && (
+                    <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">No users found.</td></tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
