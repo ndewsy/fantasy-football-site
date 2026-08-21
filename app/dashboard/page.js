@@ -1489,7 +1489,7 @@ export default function DashboardPage() {
                           onClick={() => toggleEmailReveal(u.id)}
                           className="font-medium text-blue-600 hover:text-blue-700 text-left"
                         >
-                          {u.display_name || "—"}
+                          {u.display_name || "Unnamed user"}
                         </button>
                         {revealedEmails.has(u.id) && (
                           <p className="text-xs text-gray-400 mt-0.5 break-all">{u.email || "no email on file"}</p>

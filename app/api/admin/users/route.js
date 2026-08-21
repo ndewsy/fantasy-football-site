@@ -30,34 +30,42 @@ export async function GET(request) {
     return Response.json({ error: (profilesError || subsError).message }, { status: 500 });
   }
 
-  // Emails live in auth.users, not queryable via the regular client — pull them
-  // through the Admin API instead, paginating in case the user base grows past
-  // a single page.
-  const emailById = {};
+  // auth.users is the source of truth for "every user" — there's no profiles row
+  // for most accounts (nothing in this app creates one on signup), so building the
+  // list from `profiles` would silently drop everyone without one. Pull the full
+  // user list from the Admin API instead and left-join profiles/subscriptions onto it.
+  const authUsers = [];
   let page = 1;
   const perPage = 1000;
   while (true) {
     const { data: pageData, error: listError } = await supabase().auth.admin.listUsers({ page, perPage });
     if (listError) {
       console.error('[/api/admin/users] listUsers failed:', listError);
-      break;
+      return Response.json({ error: listError.message }, { status: 500 });
     }
-    for (const u of pageData.users) emailById[u.id] = u.email;
+    authUsers.push(...pageData.users);
     if (pageData.users.length < perPage) break;
     page++;
   }
 
+  const profileById = Object.fromEntries((profiles || []).map(p => [p.id, p]));
   const subsByUserId = Object.fromEntries((subscriptions || []).map(s => [s.user_id, s]));
 
-  const users = (profiles || []).map(p => ({
-    id: p.id,
-    display_name: p.display_name,
-    email: emailById[p.id] || null,
-    role: p.role,
-    is_creator: p.is_creator,
-    creator_id: p.creator_id,
-    subscription: subsByUserId[p.id] || null,
-  }));
+  const users = authUsers
+    .map(u => {
+      const p = profileById[u.id];
+      return {
+        id: u.id,
+        email: u.email,
+        created_at: u.created_at,
+        display_name: p?.display_name || null,
+        role: p?.role || 'subscriber',
+        is_creator: p?.is_creator || false,
+        creator_id: p?.creator_id || null,
+        subscription: subsByUserId[u.id] || null,
+      };
+    })
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
   return Response.json({ users });
 }
