@@ -3,7 +3,9 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
 import PlayerHeadshot from "@/app/components/PlayerHeadshot";
-import AdpMovementWidget from "@/app/components/AdpMovementWidget";
+import PromoPrice from "@/app/components/PromoPrice";
+import { isPromoActive } from "@/lib/promo";
+import ConsensusMovementWidget from "@/app/components/ConsensusMovementWidget";
 
 const FORMATS = ["Dynasty SF", "Dynasty 1QB", "Redraft 1QB", "Redraft SF"];
 
@@ -74,6 +76,7 @@ function computeConsensus(formatData) {
 }
 
 export default function Home() {
+  const promoActive = isPromoActive();
   const [activeFormat, setActiveFormat] = useState(FORMATS[0]);
   const [activeCreator, setActiveCreator] = useState("consensus");
   const [rankingsCache, setRankingsCache] = useState({});
@@ -419,7 +422,7 @@ export default function Home() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                 <a href="/subscribe" className="w-full sm:w-auto text-center bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold px-8 py-4 rounded-xl text-lg transition-all">
-                  Get Access — $10/mo
+                  {promoActive ? <>Get Access — <PromoPrice /></> : "Get Access — $10/mo"}
                 </a>
                 <button
                   onClick={scrollToRankings}
@@ -555,7 +558,7 @@ export default function Home() {
       <div className="max-w-6xl mx-auto px-6 pt-6 pb-20 flex flex-col lg:flex-row gap-6 items-start">
 
         <aside className="w-full lg:w-72 lg:shrink-0 lg:sticky lg:top-6 order-2 lg:order-1">
-          <AdpMovementWidget />
+          <ConsensusMovementWidget format={activeFormat} />
         </aside>
 
         <div ref={rankingsRef} className="flex-1 min-w-0 order-1 lg:order-2">
@@ -914,7 +917,7 @@ export default function Home() {
                   href="/subscribe"
                   className="pointer-events-auto bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold px-7 py-3 rounded-xl transition-all text-base"
                 >
-                  Subscribe to unlock — $10/mo
+                  {promoActive ? <>Subscribe to unlock — <PromoPrice /></> : "Subscribe to unlock — $10/mo"}
                 </a>
               </div>
             )}

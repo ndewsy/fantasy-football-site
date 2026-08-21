@@ -4,8 +4,11 @@ import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
 import PostCard from "@/app/components/PostCard";
 import CreatorAvatar from "@/app/components/CreatorAvatar";
+import PromoPrice from "@/app/components/PromoPrice";
+import { isPromoActive } from "@/lib/promo";
 
 export default function DynastyDavePage() {
+  const promoActive = isPromoActive();
   const [user, setUser] = useState(null);
   const [subscription, setSubscription] = useState(null);
   const [posts, setPosts] = useState([]);
@@ -76,7 +79,7 @@ export default function DynastyDavePage() {
           {!isSubscribed && (
             <div className="w-full sm:w-auto sm:ml-auto text-center bg-white/70 backdrop-blur-md rounded-xl p-4 border border-white/80 shadow-lg">
               <p className="text-gray-500 text-sm mb-2">Get access</p>
-              <a href="/subscribe" className="bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold px-6 py-2 rounded-lg inline-block transition-all">Subscribe — $10/mo</a>
+              <a href="/subscribe" className="bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold px-6 py-2 rounded-lg inline-block transition-all">{promoActive ? <>Subscribe — <PromoPrice /></> : "Subscribe — $10/mo"}</a>
             </div>
           )}
         </div>

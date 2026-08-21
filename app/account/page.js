@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
+import PromoPrice from "@/app/components/PromoPrice";
+import { isPromoActive } from "@/lib/promo";
 
 const CREATOR_INFO = {
   rookierager:          { name: "RookieRager",            path: "/creators/rookierager" },
@@ -19,6 +21,7 @@ function parseAddOns(raw) {
 
 export default function AccountPage() {
   const router = useRouter();
+  const promoActive = isPromoActive();
   const [user, setUser] = useState(null);
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -180,7 +183,7 @@ export default function AccountPage() {
                 href="/subscribe"
                 className="inline-block bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold px-6 py-3 rounded-xl transition-all"
               >
-                Get Access — $10/mo
+                {promoActive ? <>Get Access — <PromoPrice /></> : "Get Access — $10/mo"}
               </a>
             </div>
           ) : (
@@ -307,7 +310,7 @@ export default function AccountPage() {
                     href="/subscribe"
                     className="mt-2 w-full text-center block bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold py-3 rounded-xl transition-all"
                   >
-                    Upgrade to Premium — $10/mo
+                    {promoActive ? <>Upgrade to Premium — <PromoPrice /></> : "Upgrade to Premium — $10/mo"}
                   </a>
                   <p className="text-gray-400 text-xs text-center -mt-2">
                     Your free trial ends {trialEndsLabel || "soon"} — upgrade anytime to keep your access.
