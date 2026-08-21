@@ -1489,7 +1489,7 @@ export default function DashboardPage() {
                           onClick={() => toggleEmailReveal(u.id)}
                           className="font-medium text-blue-600 hover:text-blue-700 text-left"
                         >
-                          {u.display_name || "Unnamed user"}
+                          {u.display_name || (u.email ? u.email.split("@")[0] : "Unnamed user")}
                         </button>
                         {revealedEmails.has(u.id) && (
                           <p className="text-xs text-gray-400 mt-0.5 break-all">{u.email || "no email on file"}</p>
@@ -1497,7 +1497,7 @@ export default function DashboardPage() {
                       </td>
                       <td className="px-4 py-3">
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
-                          u.role === "admin" ? "bg-red-50 text-red-600" : "bg-gray-100 text-gray-500"
+                          u.role === "admin" ? "bg-red-50 text-red-600" : u.role === "creator" ? "bg-blue-50 text-blue-600" : "bg-gray-100 text-gray-500"
                         }`}>
                           {u.role}
                         </span>
