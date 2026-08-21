@@ -113,6 +113,8 @@ export default function DashboardPage() {
   const [subscriberUsers, setSubscriberUsers] = useState([]);
   const [subscriberUsersLoading, setSubscriberUsersLoading] = useState(false);
   const [revealedEmails, setRevealedEmails] = useState(new Set());
+  const [subscriberCategoryFilters, setSubscriberCategoryFilters] = useState(new Set(["admin", "creator", "paying", "nonpaying"]));
+  const [subscriberSearch, setSubscriberSearch] = useState("");
 
   // Revenue & Payouts state
   const [revenueSubscriptions, setRevenueSubscriptions] = useState([]);
@@ -521,6 +523,24 @@ export default function DashboardPage() {
       return sub.status === "expired" ? `Expired ${label}` : label;
     }
     return sub.status === "active" ? "Recurring monthly" : "—";
+  }
+
+  // Role wins over subscription status for bucketing — admins/creators get free
+  // platform access regardless of any subscription row they happen to have.
+  function subscriberCategory(u) {
+    if (u.role === "admin") return "admin";
+    if (u.role === "creator" || u.is_creator) return "creator";
+    const isPaying = u.subscription?.status === "active" && u.subscription.plan_type !== "free_trial";
+    return isPaying ? "paying" : "nonpaying";
+  }
+
+  function toggleSubscriberCategory(category) {
+    setSubscriberCategoryFilters(prev => {
+      const next = new Set(prev);
+      if (next.has(category)) next.delete(category);
+      else next.add(category);
+      return next;
+    });
   }
 
   async function loadPlayerDb() {
@@ -1466,10 +1486,51 @@ export default function DashboardPage() {
         )}
 
         {/* ── Subscribers Tab ── */}
-        {tab === "subscribers" && (
+        {tab === "subscribers" && (() => {
+          const CATEGORY_LABELS = { admin: "Admin", creator: "Creator", paying: "Paying Subscriber", nonpaying: "Non-Paying Subscriber" };
+          const CATEGORY_ACTIVE_CLASS = {
+            admin: "bg-red-600 text-white",
+            creator: "bg-blue-600 text-white",
+            paying: "bg-green-600 text-white",
+            nonpaying: "bg-gray-500 text-white",
+          };
+          const search = subscriberSearch.trim().toLowerCase();
+          const filteredSubscriberUsers = subscriberUsers.filter(u => {
+            if (!subscriberCategoryFilters.has(subscriberCategory(u))) return false;
+            if (!search) return true;
+            const name = (u.display_name || (u.email ? u.email.split("@")[0] : "")).toLowerCase();
+            const email = (u.email || "").toLowerCase();
+            return name.includes(search) || email.includes(search);
+          });
+
+          return (
           <div>
             <h2 className="text-lg font-bold mb-3">Subscribers</h2>
             <p className="text-gray-500 text-sm mb-4">Click a name to reveal their email.</p>
+
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              {Object.keys(CATEGORY_LABELS).map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => toggleSubscriberCategory(cat)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors shrink-0 ${
+                    subscriberCategoryFilters.has(cat)
+                      ? CATEGORY_ACTIVE_CLASS[cat]
+                      : "bg-white/60 backdrop-blur-sm text-gray-400 border border-white/70"
+                  }`}
+                >
+                  {CATEGORY_LABELS[cat]}
+                </button>
+              ))}
+              <input
+                type="text"
+                placeholder="Search by name or email…"
+                value={subscriberSearch}
+                onChange={e => setSubscriberSearch(e.target.value)}
+                className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-[#0F172A] placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 min-w-52 ml-auto"
+              />
+            </div>
+
             <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden">
               <table className="w-full">
                 <thead className="bg-white/40 text-gray-500 text-sm">
@@ -1482,7 +1543,7 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {subscriberUsers.map((u) => (
+                  {filteredSubscriberUsers.map((u) => (
                     <tr key={u.id} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="px-4 py-3">
                         <button
@@ -1520,14 +1581,17 @@ export default function DashboardPage() {
                   {subscriberUsersLoading && (
                     <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
                   )}
-                  {!subscriberUsersLoading && subscriberUsers.length === 0 && (
-                    <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">No users found.</td></tr>
+                  {!subscriberUsersLoading && filteredSubscriberUsers.length === 0 && (
+                    <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">
+                      {subscriberUsers.length === 0 ? "No users found." : "No users match the current filters."}
+                    </td></tr>
                   )}
                 </tbody>
               </table>
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {/* ── Revenue & Payouts Tab ── */}
         {tab === "payouts" && (
