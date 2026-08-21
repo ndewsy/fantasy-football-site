@@ -70,14 +70,28 @@ export async function POST(request) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const planType = stripeSession.metadata?.plan_type === 'flat_access' ? 'flat_access' : 'legacy';
+    const metaPlanType = stripeSession.metadata?.plan_type;
     const referralCreatorId = stripeSession.metadata?.referral_creator_id || null;
-
     const stripeCustomerId = stripeSession.customer || null;
-    console.log('[/api/verify-checkout] Upserting subscription:', { user_id: user.id, planType, referralCreatorId, stripeCustomerId });
 
-    const { error } = await supabase().from('subscriptions').upsert(
-      {
+    let upsertPayload;
+    if (metaPlanType === 'promo_5mo') {
+      // August promo: one-time $10 payment, 5 months of access, no recurring billing.
+      const trialEndsAt = new Date();
+      trialEndsAt.setMonth(trialEndsAt.getMonth() + 5);
+      upsertPayload = {
+        user_id: user.id,
+        status: 'active',
+        stripe_customer_id: stripeCustomerId,
+        plan_type: 'promo_5mo',
+        trial_ends_at: trialEndsAt.toISOString(),
+        referral_creator_id: referralCreatorId,
+        included_creator: null,
+        add_on_creators: [],
+      };
+    } else {
+      const planType = metaPlanType === 'flat_access' ? 'flat_access' : 'legacy';
+      upsertPayload = {
         user_id: user.id,
         status: 'active',
         stripe_customer_id: stripeCustomerId,
@@ -85,9 +99,11 @@ export async function POST(request) {
         referral_creator_id: planType === 'flat_access' ? referralCreatorId : null,
         included_creator: null,
         add_on_creators: [],
-      },
-      { onConflict: 'user_id' }
-    );
+      };
+    }
+    console.log('[/api/verify-checkout] Upserting subscription:', upsertPayload);
+
+    const { error } = await supabase().from('subscriptions').upsert(upsertPayload, { onConflict: 'user_id' });
 
     if (error) {
       console.error('[/api/verify-checkout] upsert failed:', error);

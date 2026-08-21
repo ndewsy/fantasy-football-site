@@ -1136,10 +1136,29 @@ export default function DashboardPage() {
     if (!creatorBreakdown[id]) creatorBreakdown[id] = { included: 0, addons: 0, flatCoded: 0, flatSplitShare: 0 };
     return creatorBreakdown[id];
   };
+  const paidThisMonth = (sub) => {
+    const created = new Date(sub.created_at);
+    const now = new Date();
+    return created.getFullYear() === now.getFullYear() && created.getMonth() === now.getMonth();
+  };
   for (const sub of revenueSubscriptions) {
     // Free-trial subs (e.g. comped for the signup-bug incident) count toward
     // "active subscribers" but contribute $0 until they convert to a paid plan.
     if (sub.plan_type === "free_trial") continue;
+    if (sub.plan_type === "promo_5mo") {
+      // August promo: a real one-time $10 payment for 5 months of access. It only
+      // counts as revenue in the calendar month it was actually collected — not
+      // every month the sub stays active — so this doesn't inflate MRR 5x.
+      if (paidThisMonth(sub)) {
+        totalRevenue += 10;
+        if (sub.referral_creator_id && activeCreatorIds.includes(sub.referral_creator_id)) {
+          ensureBreakdown(sub.referral_creator_id).flatCoded++;
+        } else if (activeCreatorIds.length > 0) {
+          activeCreatorIds.forEach(id => { ensureBreakdown(id).flatSplitShare += 1 / activeCreatorIds.length; });
+        }
+      }
+      continue;
+    }
     if (sub.plan_type === "flat_access") {
       totalRevenue += 10;
       if (sub.referral_creator_id && activeCreatorIds.includes(sub.referral_creator_id)) {
@@ -2746,10 +2765,24 @@ export default function DashboardPage() {
               : s.add_on_creators.split(",").filter(Boolean);
             return addons.includes(profile.creator_id);
           }).length;
-          const flatCodedCount = creatorSubs.filter(s => s.plan_type === "flat_access" && s.referral_creator_id === profile.creator_id).length;
+          // promo_5mo subs use the same referral split as flat_access, but only count
+          // in the calendar month they actually paid — it's a one-time charge, not
+          // a recurring $10/mo, so it shouldn't show up as earnings for all 5 months.
+          const promoPaidThisMonth = (s) => {
+            const created = new Date(s.created_at);
+            const now = new Date();
+            return created.getFullYear() === now.getFullYear() && created.getMonth() === now.getMonth();
+          };
+          const flatCodedCount = creatorSubs.filter(s =>
+            (s.plan_type === "flat_access" && s.referral_creator_id === profile.creator_id) ||
+            (s.plan_type === "promo_5mo" && s.referral_creator_id === profile.creator_id && promoPaidThisMonth(s))
+          ).length;
           const isCurrentlyActiveCreator = creatorActiveCreatorIds.includes(profile.creator_id);
           const flatSplitShare = isCurrentlyActiveCreator && creatorActiveCreatorIds.length > 0
-            ? creatorSubs.filter(s => s.plan_type === "flat_access" && (!s.referral_creator_id || !creatorActiveCreatorIds.includes(s.referral_creator_id))).length / creatorActiveCreatorIds.length
+            ? creatorSubs.filter(s =>
+                (s.plan_type === "flat_access" && (!s.referral_creator_id || !creatorActiveCreatorIds.includes(s.referral_creator_id))) ||
+                (s.plan_type === "promo_5mo" && (!s.referral_creator_id || !creatorActiveCreatorIds.includes(s.referral_creator_id)) && promoPaidThisMonth(s))
+              ).length / creatorActiveCreatorIds.length
             : 0;
           const monthlyTotal = includedCount * 8 + addonCount * 4 + flatCodedCount * 8 + flatSplitShare * 10;
           const paidPayouts = creatorPayouts.filter(p => p.paid);

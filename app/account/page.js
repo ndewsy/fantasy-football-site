@@ -133,7 +133,8 @@ export default function AccountPage() {
 
   const addOns = parseAddOns(subscription?.add_on_creators);
   const isFreeTrial = subscription?.plan_type === "free_trial";
-  const monthlyCost = subscription && !isFreeTrial ? 10 + addOns.length * 5 : 0;
+  const isPromo5mo = subscription?.plan_type === "promo_5mo";
+  const monthlyCost = subscription && !isFreeTrial && !isPromo5mo ? 10 + addOns.length * 5 : 0;
   const includedCreator = subscription?.included_creator;
   const trialEndsLabel = subscription?.trial_ends_at
     ? new Date(subscription.trial_ends_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
@@ -191,6 +192,10 @@ export default function AccountPage() {
                   <span className="text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200 px-2.5 py-1 rounded-full">
                     Free Trial
                   </span>
+                ) : isPromo5mo ? (
+                  <span className="text-xs font-semibold bg-purple-50 text-purple-600 border border-purple-200 px-2.5 py-1 rounded-full">
+                    Promo Active
+                  </span>
                 ) : (
                   <span className="text-xs font-semibold bg-green-50 text-green-600 border border-green-200 px-2.5 py-1 rounded-full">
                     Active
@@ -205,8 +210,15 @@ export default function AccountPage() {
                 </div>
               )}
 
+              {isPromo5mo && trialEndsLabel && (
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-500 text-sm">Access until</span>
+                  <span className="font-medium">{trialEndsLabel}</span>
+                </div>
+              )}
+
               {/* Community access */}
-              {isFreeTrial ? (
+              {isFreeTrial || isPromo5mo ? (
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500 text-sm">Community access</span>
                   <span className="font-medium text-blue-600">All creator communities</span>
@@ -261,6 +273,11 @@ export default function AccountPage() {
                     <span>Total</span>
                     <span className="text-amber-600 text-lg">$0 (free trial)</span>
                   </div>
+                ) : isPromo5mo ? (
+                  <div className="flex items-center justify-between font-bold">
+                    <span>Total</span>
+                    <span className="text-purple-600 text-lg">$10 (5 months, one-time)</span>
+                  </div>
                 ) : (
                   <>
                     <div className="flex items-center justify-between text-sm">
@@ -294,6 +311,18 @@ export default function AccountPage() {
                   </a>
                   <p className="text-gray-400 text-xs text-center -mt-2">
                     Your free trial ends {trialEndsLabel || "soon"} — upgrade anytime to keep your access.
+                  </p>
+                </>
+              ) : isPromo5mo ? (
+                <>
+                  <a
+                    href="/subscribe"
+                    className="mt-2 w-full text-center block bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold py-3 rounded-xl transition-all"
+                  >
+                    Switch to $10/mo Plan
+                  </a>
+                  <p className="text-gray-400 text-xs text-center -mt-2">
+                    Your promo access runs through {trialEndsLabel || "the end of the promo period"} — no recurring billing until you upgrade.
                   </p>
                 </>
               ) : (

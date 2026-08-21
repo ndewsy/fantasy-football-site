@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
+import { isPromoActive } from '@/lib/promo';
 
 let _stripe, _supabase;
 const stripe = () => (_stripe ??= new Stripe(process.env.STRIPE_SECRET_KEY));
@@ -46,14 +47,35 @@ export async function POST(request) {
     referralCreatorId = match.creator_id;
   }
 
+  // August promo: $10 one-time for 5 months instead of $10/month recurring.
+  // Auto-applies to everyone until the cutoff — no code required.
+  const promoActive = isPromoActive();
+
   const session = await stripe().checkout.sessions.create({
     payment_method_types: ['card'],
-    line_items: [{ price: 'price_1TrMBuA2rwv8VsfE9AOhxBis', quantity: 1 }],
-    mode: 'subscription',
+    ...(promoActive
+      ? {
+          mode: 'payment',
+          line_items: [{
+            price_data: {
+              currency: 'usd',
+              unit_amount: 1000,
+              product_data: {
+                name: 'Full Access — August Promo (5 months)',
+                description: 'One-time payment for 5 months of full access to all rankings and creator communities.',
+              },
+            },
+            quantity: 1,
+          }],
+        }
+      : {
+          mode: 'subscription',
+          line_items: [{ price: 'price_1TrMBuA2rwv8VsfE9AOhxBis', quantity: 1 }],
+        }),
     allow_promotion_codes: true,
     metadata: {
       user_id: userId,
-      plan_type: 'flat_access',
+      plan_type: promoActive ? 'promo_5mo' : 'flat_access',
       referral_creator_id: referralCreatorId || '',
     },
     success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/subscribe/success?session_id={CHECKOUT_SESSION_ID}`,

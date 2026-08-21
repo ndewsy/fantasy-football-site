@@ -3,9 +3,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
+import { isPromoActive } from "@/lib/promo";
 
 export default function SubscribePage() {
   const router = useRouter();
+  const promoActive = isPromoActive();
   const [authLoaded, setAuthLoaded] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isAdminOrCreator, setIsAdminOrCreator] = useState(false);
@@ -29,9 +31,9 @@ export default function SubscribePage() {
         supabase.from("subscriptions").select("status, plan_type").eq("user_id", user.id).eq("status", "active").maybeSingle(),
         supabase.from("profiles").select("role, is_creator").eq("id", user.id).maybeSingle(),
       ]);
-      // Free-trial subs shouldn't block the checkout flow — they need to be able
-      // to convert to a real paid plan before (or after) their trial expires.
-      setIsSubscribed(!!sub && sub.plan_type !== "free_trial");
+      // Free-trial and promo subs shouldn't block the checkout flow — they need to
+      // be able to convert to (or top up) a full plan before or after they expire.
+      setIsSubscribed(!!sub && sub.plan_type !== "free_trial" && sub.plan_type !== "promo_5mo");
       setIsAdminOrCreator(!!(prof && (prof.role === "admin" || prof.is_creator)));
       setAuthLoaded(true);
     }
@@ -131,6 +133,12 @@ export default function SubscribePage() {
         <h1 className="text-4xl font-bold mb-2">Get Access</h1>
         <p className="text-gray-500 mb-10">One subscription unlocks all rankings plus every creator community on the platform.</p>
 
+        {promoActive && (
+          <div className="bg-amber-50 border border-amber-200 text-amber-700 rounded-xl px-5 py-3 mb-6 text-sm font-medium text-center">
+            🎉 August Promo — $10 total for 5 months of access. Ends September 8th.
+          </div>
+        )}
+
         {/* Plan */}
         <div className="bg-white/70 backdrop-blur-md rounded-xl p-6 border-2 border-blue-600 shadow-lg mb-6">
           <div className="flex items-center justify-between mb-4">
@@ -138,7 +146,14 @@ export default function SubscribePage() {
               <h2 className="text-xl font-bold">Full Access</h2>
               <p className="text-gray-500 text-sm mt-1">All rankings · Consensus tab · Every creator community</p>
             </div>
-            <span className="text-2xl font-bold text-blue-600">$10<span className="text-sm text-gray-400">/mo</span></span>
+            {promoActive ? (
+              <div className="text-right">
+                <span className="text-2xl font-bold text-blue-600">$10<span className="text-sm text-gray-400"> total</span></span>
+                <p className="text-gray-400 text-xs">5 months, then $10/mo</p>
+              </div>
+            ) : (
+              <span className="text-2xl font-bold text-blue-600">$10<span className="text-sm text-gray-400">/mo</span></span>
+            )}
           </div>
           <ul className="text-gray-500 text-sm space-y-1 mb-6">
             <li className="flex items-center gap-2"><span className="text-green-500">✓</span> Dynasty SF rankings</li>
@@ -167,8 +182,8 @@ export default function SubscribePage() {
         {/* Total & CTA */}
         <div className="bg-white/70 backdrop-blur-md rounded-xl p-6 border border-white/80 shadow-lg">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-gray-500">Total per month</span>
-            <span className="text-3xl font-bold text-blue-600">$10/mo</span>
+            <span className="text-gray-500">{promoActive ? "Total (5 months)" : "Total per month"}</span>
+            <span className="text-3xl font-bold text-blue-600">{promoActive ? "$10" : "$10/mo"}</span>
           </div>
           <button
             onClick={handleSubscribe}
@@ -177,7 +192,9 @@ export default function SubscribePage() {
           >
             {submitting ? "Redirecting..." : "Subscribe Now"}
           </button>
-          <p className="text-center text-gray-400 text-xs mt-3">Cancel anytime. Billed monthly.</p>
+          <p className="text-center text-gray-400 text-xs mt-3">
+            {promoActive ? "One-time payment — no recurring billing during the promo period." : "Cancel anytime. Billed monthly."}
+          </p>
         </div>
 
         {/* Promo code redemption */}

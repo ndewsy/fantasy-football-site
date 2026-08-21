@@ -9,10 +9,12 @@ export async function GET(request) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Covers both the signup-bug free trial and the August promo (one-time $10 for
+  // 5 months) — both are non-recurring grants with a fixed trial_ends_at cutoff.
   const { data, error } = await supabase()
     .from('subscriptions')
     .update({ status: 'expired' })
-    .eq('plan_type', 'free_trial')
+    .in('plan_type', ['free_trial', 'promo_5mo'])
     .eq('status', 'active')
     .lte('trial_ends_at', new Date().toISOString())
     .select('user_id');
@@ -22,6 +24,6 @@ export async function GET(request) {
     return Response.json({ error: error.message }, { status: 500 });
   }
 
-  console.log(`[expire-free-trials] expired ${data?.length || 0} free trials`);
+  console.log(`[expire-free-trials] expired ${data?.length || 0} temporary-access subscriptions`);
   return Response.json({ ok: true, expired: data?.length || 0 });
 }
