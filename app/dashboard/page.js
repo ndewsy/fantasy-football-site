@@ -113,7 +113,7 @@ export default function DashboardPage() {
   const [subscriberUsers, setSubscriberUsers] = useState([]);
   const [subscriberUsersLoading, setSubscriberUsersLoading] = useState(false);
   const [revealedEmails, setRevealedEmails] = useState(new Set());
-  const [subscriberCategoryFilters, setSubscriberCategoryFilters] = useState(new Set(["admin", "creator", "paying", "nonpaying"]));
+  const [subscriberCategoryFilters, setSubscriberCategoryFilters] = useState(new Set(["admin", "creator", "paying", "nonpaying"])); // archive is off by default
   const [subscriberSearch, setSubscriberSearch] = useState("");
 
   // Revenue & Payouts state
@@ -525,9 +525,12 @@ export default function DashboardPage() {
     return sub.status === "active" ? "Recurring monthly" : "—";
   }
 
-  // Role wins over subscription status for bucketing — admins/creators get free
-  // platform access regardless of any subscription row they happen to have.
+  // Test accounts (email local part contains "+test") are archived regardless of
+  // role, so they don't clutter the real admin/creator/subscriber counts. Beyond
+  // that, role wins over subscription status — admins/creators get free platform
+  // access regardless of any subscription row they happen to have.
   function subscriberCategory(u) {
+    if ((u.email || "").split("@")[0].toLowerCase().includes("+test")) return "archive";
     if (u.role === "admin") return "admin";
     if (u.role === "creator" || u.is_creator) return "creator";
     const isPaying = u.subscription?.status === "active" && u.subscription.plan_type !== "free_trial";
@@ -1487,12 +1490,13 @@ export default function DashboardPage() {
 
         {/* ── Subscribers Tab ── */}
         {tab === "subscribers" && (() => {
-          const CATEGORY_LABELS = { admin: "Admin", creator: "Creator", paying: "Paying Subscriber", nonpaying: "Non-Paying Subscriber" };
+          const CATEGORY_LABELS = { admin: "Admin", creator: "Creator", paying: "Paying Subscriber", nonpaying: "Non-Paying Subscriber", archive: "Archive" };
           const CATEGORY_ACTIVE_CLASS = {
             admin: "bg-red-600 text-white",
             creator: "bg-blue-600 text-white",
             paying: "bg-green-600 text-white",
             nonpaying: "bg-gray-500 text-white",
+            archive: "bg-amber-500 text-white",
           };
           const search = subscriberSearch.trim().toLowerCase();
           const filteredSubscriberUsers = subscriberUsers.filter(u => {
