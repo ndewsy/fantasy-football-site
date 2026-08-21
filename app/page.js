@@ -5,7 +5,7 @@ import NavBar from "@/app/components/NavBar";
 import PlayerHeadshot from "@/app/components/PlayerHeadshot";
 import PromoPrice from "@/app/components/PromoPrice";
 import { isPromoActive } from "@/lib/promo";
-import ConsensusMovementWidget from "@/app/components/ConsensusMovementWidget";
+import AdpMovementWidget from "@/app/components/AdpMovementWidget";
 
 const FORMATS = ["Dynasty SF", "Dynasty 1QB", "Redraft 1QB", "Redraft SF"];
 
@@ -558,7 +558,7 @@ export default function Home() {
       <div className="max-w-6xl mx-auto px-6 pt-6 pb-20 flex flex-col lg:flex-row gap-6 items-start">
 
         <aside className="w-full lg:w-72 lg:shrink-0 lg:sticky lg:top-6 order-2 lg:order-1">
-          <ConsensusMovementWidget format={activeFormat} />
+          <AdpMovementWidget />
         </aside>
 
         <div ref={rankingsRef} className="flex-1 min-w-0 order-1 lg:order-2">
