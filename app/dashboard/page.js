@@ -1137,6 +1137,9 @@ export default function DashboardPage() {
     return creatorBreakdown[id];
   };
   for (const sub of revenueSubscriptions) {
+    // Free-trial subs (e.g. comped for the signup-bug incident) count toward
+    // "active subscribers" but contribute $0 until they convert to a paid plan.
+    if (sub.plan_type === "free_trial") continue;
     if (sub.plan_type === "flat_access") {
       totalRevenue += 10;
       if (sub.referral_creator_id && activeCreatorIds.includes(sub.referral_creator_id)) {

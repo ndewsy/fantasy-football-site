@@ -12,6 +12,10 @@ export default function SubscribePage() {
   const [referralCode, setReferralCode] = useState("");
   const [codeError, setCodeError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showRedeem, setShowRedeem] = useState(false);
+  const [promoCode, setPromoCode] = useState("");
+  const [promoError, setPromoError] = useState("");
+  const [promoSubmitting, setPromoSubmitting] = useState(false);
 
   useEffect(() => {
     async function checkAccess() {
@@ -22,10 +26,12 @@ export default function SubscribePage() {
         return;
       }
       const [{ data: sub }, { data: prof }] = await Promise.all([
-        supabase.from("subscriptions").select("status").eq("user_id", user.id).eq("status", "active").maybeSingle(),
+        supabase.from("subscriptions").select("status, plan_type").eq("user_id", user.id).eq("status", "active").maybeSingle(),
         supabase.from("profiles").select("role, is_creator").eq("id", user.id).maybeSingle(),
       ]);
-      setIsSubscribed(!!sub);
+      // Free-trial subs shouldn't block the checkout flow — they need to be able
+      // to convert to a real paid plan before (or after) their trial expires.
+      setIsSubscribed(!!sub && sub.plan_type !== "free_trial");
       setIsAdminOrCreator(!!(prof && (prof.role === "admin" || prof.is_creator)));
       setAuthLoaded(true);
     }
@@ -52,6 +58,28 @@ export default function SubscribePage() {
       return;
     }
     window.location.href = body.url;
+  }
+
+  async function handleRedeemCode() {
+    setPromoError("");
+    setPromoSubmitting(true);
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch('/api/redeem-code', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session?.access_token}`,
+      },
+      body: JSON.stringify({ code: promoCode }),
+    });
+    const body = await res.json();
+    if (!res.ok) {
+      setPromoError(body.error || "Something went wrong. Please try again.");
+      setPromoSubmitting(false);
+      return;
+    }
+    router.push('/account');
   }
 
   if (!authLoaded) {
@@ -150,6 +178,37 @@ export default function SubscribePage() {
             {submitting ? "Redirecting..." : "Subscribe Now"}
           </button>
           <p className="text-center text-gray-400 text-xs mt-3">Cancel anytime. Billed monthly.</p>
+        </div>
+
+        {/* Promo code redemption */}
+        <div className="text-center mt-6">
+          {!showRedeem ? (
+            <button
+              onClick={() => setShowRedeem(true)}
+              className="text-gray-400 hover:text-gray-600 text-sm underline"
+            >
+              Have a free month code?
+            </button>
+          ) : (
+            <div className="bg-white/70 backdrop-blur-md rounded-xl p-6 border border-white/80 shadow-lg text-left">
+              <label className="block text-sm text-gray-500 mb-2">Promo code</label>
+              <input
+                type="text"
+                value={promoCode}
+                onChange={(e) => { setPromoCode(e.target.value); setPromoError(""); }}
+                placeholder="Enter your code"
+                className={"w-full bg-gray-50 border rounded-lg px-4 py-3 text-[#0F172A] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 " + (promoError ? "border-red-400" : "border-gray-200")}
+              />
+              {promoError && <p className="text-red-500 text-sm mt-2">{promoError}</p>}
+              <button
+                onClick={handleRedeemCode}
+                disabled={promoSubmitting || !promoCode.trim()}
+                className="w-full mt-4 bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold py-3 rounded-xl transition-all disabled:opacity-60"
+              >
+                {promoSubmitting ? "Redeeming..." : "Redeem Code"}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </main>

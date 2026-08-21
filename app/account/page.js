@@ -132,8 +132,12 @@ export default function AccountPage() {
     : "—";
 
   const addOns = parseAddOns(subscription?.add_on_creators);
-  const monthlyCost = subscription ? 10 + addOns.length * 5 : 0;
+  const isFreeTrial = subscription?.plan_type === "free_trial";
+  const monthlyCost = subscription && !isFreeTrial ? 10 + addOns.length * 5 : 0;
   const includedCreator = subscription?.included_creator;
+  const trialEndsLabel = subscription?.trial_ends_at
+    ? new Date(subscription.trial_ends_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+    : null;
 
   return (
     <main className="min-h-screen text-[#0F172A]">
@@ -183,13 +187,31 @@ export default function AccountPage() {
               {/* Status badge */}
               <div className="flex items-center justify-between">
                 <span className="text-gray-500 text-sm">Status</span>
-                <span className="text-xs font-semibold bg-green-50 text-green-600 border border-green-200 px-2.5 py-1 rounded-full">
-                  Active
-                </span>
+                {isFreeTrial ? (
+                  <span className="text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200 px-2.5 py-1 rounded-full">
+                    Free Trial
+                  </span>
+                ) : (
+                  <span className="text-xs font-semibold bg-green-50 text-green-600 border border-green-200 px-2.5 py-1 rounded-full">
+                    Active
+                  </span>
+                )}
               </div>
 
+              {isFreeTrial && trialEndsLabel && (
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-500 text-sm">Free until</span>
+                  <span className="font-medium">{trialEndsLabel}</span>
+                </div>
+              )}
+
               {/* Community access */}
-              {subscription?.plan_type === "flat_access" ? (
+              {isFreeTrial ? (
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-500 text-sm">Community access</span>
+                  <span className="font-medium text-blue-600">All creator communities</span>
+                </div>
+              ) : subscription?.plan_type === "flat_access" ? (
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500 text-sm">Community access</span>
                   <span className="font-medium text-blue-600">All creator communities</span>
@@ -234,35 +256,60 @@ export default function AccountPage() {
 
               {/* Cost breakdown */}
               <div className="border-t border-gray-100 pt-4 mt-1 flex flex-col gap-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-500">Base plan</span>
-                  <span>$10/mo</span>
-                </div>
-                {addOns.map(id => (
-                  <div key={id} className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">
-                      {CREATOR_INFO[id]?.name || id} add-on
-                    </span>
-                    <span>+$5/mo</span>
+                {isFreeTrial ? (
+                  <div className="flex items-center justify-between font-bold">
+                    <span>Total</span>
+                    <span className="text-amber-600 text-lg">$0 (free trial)</span>
                   </div>
-                ))}
-                <div className="flex items-center justify-between font-bold mt-1">
-                  <span>Total</span>
-                  <span className="text-blue-600 text-lg">${monthlyCost}/mo</span>
-                </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-500">Base plan</span>
+                      <span>$10/mo</span>
+                    </div>
+                    {addOns.map(id => (
+                      <div key={id} className="flex items-center justify-between text-sm">
+                        <span className="text-gray-500">
+                          {CREATOR_INFO[id]?.name || id} add-on
+                        </span>
+                        <span>+$5/mo</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between font-bold mt-1">
+                      <span>Total</span>
+                      <span className="text-blue-600 text-lg">${monthlyCost}/mo</span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Manage button */}
-              <button
-                onClick={handleManageSubscription}
-                disabled={portalLoading}
-                className="mt-2 w-full bg-white hover:bg-gray-50 border border-gray-200 text-[#0F172A] font-semibold py-3 rounded-xl transition-colors disabled:opacity-50"
-              >
-                {portalLoading ? "Redirecting..." : "Manage Subscription"}
-              </button>
-              <p className="text-gray-400 text-xs text-center -mt-2">
-                Cancel or update billing via Stripe
-              </p>
+              {isFreeTrial ? (
+                <>
+                  <a
+                    href="/subscribe"
+                    className="mt-2 w-full text-center block bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold py-3 rounded-xl transition-all"
+                  >
+                    Upgrade to Premium — $10/mo
+                  </a>
+                  <p className="text-gray-400 text-xs text-center -mt-2">
+                    Your free trial ends {trialEndsLabel || "soon"} — upgrade anytime to keep your access.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={handleManageSubscription}
+                    disabled={portalLoading}
+                    className="mt-2 w-full bg-white hover:bg-gray-50 border border-gray-200 text-[#0F172A] font-semibold py-3 rounded-xl transition-colors disabled:opacity-50"
+                  >
+                    {portalLoading ? "Redirecting..." : "Manage Subscription"}
+                  </button>
+                  <p className="text-gray-400 text-xs text-center -mt-2">
+                    Cancel or update billing via Stripe
+                  </p>
+                </>
+              )}
             </div>
           )}
         </div>

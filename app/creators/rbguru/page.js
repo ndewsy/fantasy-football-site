@@ -41,7 +41,7 @@ export default function RBGuruPage() {
     && subscription?.status === "active"
     && activeCreatorIds.includes("rbguru");
   const isSubscribed = isDashboardUser
-    || (!!subscription && subscription.plan_type !== "flat_access")
+    || (!!subscription && subscription.plan_type !== "flat_access" && subscription.status === "active")
     || isFlatAccessGranted;
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading...</div>;
