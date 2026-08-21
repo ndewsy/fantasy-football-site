@@ -474,7 +474,7 @@ export default function Home() {
 
         {/* Creator tabs + toggle */}
         <div className="flex items-center gap-2 mb-6 border-b border-gray-200">
-          <div className="overflow-x-auto flex-1 min-w-0">
+          <div className="overflow-x-auto flex-1 min-w-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="flex flex-nowrap">
               {[{ id: "consensus", name: "Consensus" }, ...CREATORS].map(creator => {
                 let dateLabel = null;
