@@ -13,17 +13,32 @@ export default function LoginPage() {
 
   const supabase = createClient();
 
+  function friendlyAuthError(error) {
+    if (!error.message || error.message === "{}") {
+      return "Something went wrong on our end and the request timed out. Please try again in a moment.";
+    }
+    return error.message;
+  }
+
   async function handleSubmit() {
     setLoading(true);
     setMessage("");
 
     if (isSignup) {
-      const { error } = await supabase.auth.signUp({ email, password });
-      if (error) setMessage(error.message);
-      else setMessage("Check your email to confirm your account!");
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) {
+        setMessage(friendlyAuthError(error));
+      } else if (data.session) {
+        // Confirm email is off (or this account didn't need confirmation) — signUp
+        // already returned a live session, so the user is signed in right now.
+        window.location.href = "/";
+      } else {
+        // Confirm email is on — no session yet, they actually do need to check email.
+        setMessage("Check your email to confirm your account!");
+      }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) setMessage(error.message);
+      if (error) setMessage(friendlyAuthError(error));
       else window.location.href = "/";
     }
     setLoading(false);
@@ -40,7 +55,7 @@ export default function LoginPage() {
       redirectTo: "https://www.fantasycollective.ca/account/reset-password",
     });
     if (error) {
-      setMessage(error.message);
+      setMessage(friendlyAuthError(error));
     } else {
       setResetSent(true);
     }
