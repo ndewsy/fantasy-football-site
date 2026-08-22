@@ -7,7 +7,7 @@ import PromoPrice from "@/app/components/PromoPrice";
 import { isPromoActive } from "@/lib/promo";
 import AdpMovementWidget from "@/app/components/AdpMovementWidget";
 
-const FORMATS = ["Dynasty SF", "Dynasty 1QB", "Redraft 1QB", "Redraft SF"];
+const FORMATS = ["Redraft 1QB", "Redraft SF", "Dynasty 1QB", "Dynasty SF"];
 
 const CREATORS = [
   { id: "rookierager", name: "RookieRager", short: "RookieRager" },
@@ -843,13 +843,16 @@ export default function Home() {
             </button>
 
             {/* Header */}
-            <div className="p-6 border-b border-gray-100">
-              <h2 className="text-2xl font-bold text-[#0F172A] mb-2">{selectedPlayer.name}</h2>
-              <div className="flex items-center gap-2">
-                <span className={`px-2 py-1 rounded text-xs font-semibold ${posColors[selectedPlayer.pos] || "bg-gray-100 text-gray-600"}`}>
-                  {displayPosRanks[selectedPlayer.name] || selectedPlayer.pos}
-                </span>
-                <span className="text-gray-500 text-sm">{selectedPlayer.team}</span>
+            <div className="p-6 border-b border-gray-100 flex items-center gap-5">
+              <PlayerHeadshot espnId={selectedPlayer.espn_id} sleeperId={selectedPlayer.sleeper_id} name={selectedPlayer.name} size="xl" />
+              <div>
+                <h2 className="text-3xl font-bold text-[#0F172A] mb-2">{selectedPlayer.name}</h2>
+                <div className="flex items-center gap-2">
+                  <span className={`px-3 py-1.5 rounded-lg text-base font-semibold ${posColors[selectedPlayer.pos] || "bg-gray-100 text-gray-600"}`}>
+                    {displayPosRanks[selectedPlayer.name] || selectedPlayer.pos}
+                  </span>
+                  <span className="text-gray-500 text-lg">{selectedPlayer.team}</span>
+                </div>
               </div>
             </div>
 

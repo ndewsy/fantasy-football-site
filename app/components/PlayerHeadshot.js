@@ -6,6 +6,7 @@ const SIZES = {
   sm: "w-8 h-8 text-[10px]",
   md: "w-10 h-10 text-xs",
   lg: "w-16 h-16 text-lg",
+  xl: "w-28 h-28 text-3xl",
 };
 
 function initials(name) {
