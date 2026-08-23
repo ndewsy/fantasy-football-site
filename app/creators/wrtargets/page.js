@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
+import NavBar from "@/app/components/NavBar";
 
 export default function WRTargetsPage() {
   const [user, setUser] = useState(null);
@@ -47,16 +48,8 @@ export default function WRTargetsPage() {
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading...</div>;
 
   return (
-    <main className="min-h-screen text-[#0F172A]">
-      <nav className="sticky top-0 z-50 px-6 py-4 flex items-center justify-between" style={{backgroundImage: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 2px, transparent 2px, transparent 10px), linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #1e40af 100%)', boxShadow: '0 2px 20px rgba(37, 99, 235, 0.4)'}}>
-        <a href="/" className="text-xl font-bold text-white" style={{fontFamily: "'Fredoka One', cursive"}}>Fantasy Collective</a>
-        <div className="flex gap-4">
-          <a href="/" className="text-white hover:text-blue-100">Rankings</a>
-          <a href="/creators" className="text-white hover:text-blue-100">Creators</a>
-          {isDashboardUser && <a href="/dashboard" className="text-white hover:text-blue-100">Creator Dashboard</a>}
-          {user ? <a href="/account" className="text-white font-medium hover:text-blue-100 transition-colors">My Account</a> : <a href="/login" className="bg-white text-blue-600 font-semibold px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors">Login</a>}
-        </div>
-      </nav>
+    <main className="min-h-screen text-[#0F172A] lg:pl-56">
+      <NavBar activePath="/creators/wrtargets" />
 
       <div className="max-w-5xl mx-auto px-6 py-12">
         <div className="flex items-center gap-6 mb-12">
