@@ -7,8 +7,8 @@ const SIZES = {
   md: "w-10 h-10 text-xs",
   lg: "w-16 h-16 text-lg",
   xl: "w-28 h-28 text-3xl",
-  // Compact on mobile, enlarged on desktop — for dense-but-visible table rows.
-  tableRow: "w-7 h-7 lg:w-11 lg:h-11 text-[9px] lg:text-xs",
+  // Compact on mobile, matches "sm" on desktop — for dense table rows.
+  tableRow: "w-6 h-6 lg:w-8 lg:h-8 text-[9px] lg:text-[10px]",
 };
 
 function initials(name) {
