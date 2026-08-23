@@ -756,7 +756,10 @@ export default function Home() {
                           <td className="px-2 py-1.5 lg:px-6 lg:py-4 text-gray-400 font-mono text-[10px] lg:text-sm">{rank}{(() => { const m = movementCache[activeFormat]?.[activeCreator]?.[player.name]; if (!m) return null; return <span className={`ml-1.5 text-xs font-semibold ${m > 0 ? "text-green-600" : "text-red-500"}`}>{m > 0 ? "▲" : "▼"}{Math.abs(m)}</span>; })()}</td>
                           <td className="px-2 py-1.5 lg:px-6 lg:py-4 font-medium">
                             <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-1.5 lg:gap-2.5 text-xs lg:text-base min-w-0">
-                              <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="tableRow" shape="square" teamColor={teamColors(player.team).primary} />
+                              <span className="relative inline-block shrink-0">
+                                <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="tableRow" shape="square" teamColor={teamColors(player.team).primary} />
+                                <span className="absolute bottom-0 left-0 right-0 h-1 lg:h-1.5 rounded-b-md" style={{ backgroundColor: teamColors(player.team).secondary }} />
+                              </span>
                               <span className="lg:hidden truncate min-w-0">{abbreviateFirstName(player.name)}</span>
                               <span className="hidden lg:inline">{player.name}</span>
                             </span>
@@ -803,7 +806,10 @@ export default function Home() {
                             <td className="px-2 py-1.5 lg:px-6 lg:py-4 text-gray-400 font-mono text-[10px] lg:text-sm">{rank}{(() => { const m = movementCache[activeFormat]?.[activeCreator]?.[player.name]; if (!m) return null; return <span className={`ml-1.5 text-xs font-semibold ${m > 0 ? "text-green-600" : "text-red-500"}`}>{m > 0 ? "▲" : "▼"}{Math.abs(m)}</span>; })()}</td>
                             <td className="px-2 py-1.5 lg:px-6 lg:py-4 font-medium">
                               <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-1.5 lg:gap-2.5 text-xs lg:text-base min-w-0">
+                                <span className="relative inline-block shrink-0">
                                 <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="tableRow" shape="square" teamColor={teamColors(player.team).primary} />
+                                <span className="absolute bottom-0 left-0 right-0 h-1 lg:h-1.5 rounded-b-md" style={{ backgroundColor: teamColors(player.team).secondary }} />
+                              </span>
                                 <span className="lg:hidden truncate min-w-0">{abbreviateFirstName(player.name)}</span>
                                 <span className="hidden lg:inline">{player.name}</span>
                               </span>
@@ -863,7 +869,10 @@ export default function Home() {
                           <td className="px-2 py-1.5 lg:px-6 lg:py-4 text-gray-400 font-mono text-[10px] lg:text-sm">{rank}{(() => { const m = movementCache[activeFormat]?.[activeCreator]?.[player.name]; if (!m) return null; return <span className={`ml-1.5 text-xs font-semibold ${m > 0 ? "text-green-600" : "text-red-500"}`}>{m > 0 ? "▲" : "▼"}{Math.abs(m)}</span>; })()}</td>
                           <td className="px-2 py-1.5 lg:px-6 lg:py-4 font-medium">
                             <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-1.5 lg:gap-2.5 text-xs lg:text-base min-w-0">
-                              <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="tableRow" shape="square" teamColor={teamColors(player.team).primary} />
+                              <span className="relative inline-block shrink-0">
+                                <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="tableRow" shape="square" teamColor={teamColors(player.team).primary} />
+                                <span className="absolute bottom-0 left-0 right-0 h-1 lg:h-1.5 rounded-b-md" style={{ backgroundColor: teamColors(player.team).secondary }} />
+                              </span>
                               <span className="lg:hidden truncate min-w-0">{abbreviateFirstName(player.name)}</span>
                               <span className="hidden lg:inline">{player.name}</span>
                             </span>
