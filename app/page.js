@@ -482,7 +482,7 @@ export default function Home() {
             <button
               key={fmt}
               onClick={() => handleFormatChange(fmt)}
-              className={`px-2 py-1.5 text-[10px] lg:px-4 lg:py-2 lg:text-sm rounded-lg font-medium transition-colors shrink-0 ${
+              className={`flex-1 lg:flex-none text-center px-2 py-2.5 text-xs lg:px-4 lg:py-2 lg:text-sm rounded-lg font-medium transition-colors lg:shrink-0 ${
                 activeFormat === fmt
                   ? "bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white"
                   : "bg-white/60 backdrop-blur-sm text-gray-600 hover:bg-white/80 border border-white/70"
