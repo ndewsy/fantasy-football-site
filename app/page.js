@@ -32,14 +32,37 @@ const posColors = {
   TE: "bg-amber-100 text-amber-700",
 };
 
-// Vivid variants for the player modal's dark blue banner, where posColors'
-// light backgrounds would have poor contrast.
+// Vivid variants for the player modal's dark banner, where posColors' light
+// backgrounds would have poor contrast.
 const posBannerColors = {
   WR: "bg-blue-400",
   RB: "bg-green-500",
   QB: "bg-red-500",
   TE: "bg-amber-500",
 };
+
+// Each team's primary/secondary brand colors, used for the player modal
+// banner. Primary is held through the midpoint so white text stays legible
+// regardless of which team; secondary only shows as an accent in the corner.
+// Falls back to the site's default blue for free agents / unknown teams.
+const TEAM_COLORS = {
+  ARI: ["#97233F", "#000000"], ATL: ["#A71930", "#000000"], BAL: ["#241773", "#000000"],
+  BUF: ["#00338D", "#C60C30"], CAR: ["#0085CA", "#101820"], CHI: ["#0B162A", "#C83803"],
+  CIN: ["#FB4F14", "#000000"], CLE: ["#311D00", "#FF3C00"], DAL: ["#041E42", "#869397"],
+  DEN: ["#FB4F14", "#002244"], DET: ["#0076B6", "#B0B7BC"], GB: ["#203731", "#FFB612"],
+  HOU: ["#03202F", "#A71930"], IND: ["#002C5F", "#A2AAAD"], JAX: ["#101820", "#006778"],
+  KC: ["#E31837", "#FFB81C"], LAC: ["#0080C6", "#FFC20E"], LAR: ["#003594", "#FFA300"],
+  LV: ["#000000", "#A5ACAF"], MIA: ["#008E97", "#FC4C02"], MIN: ["#4F2683", "#FFC62F"],
+  NE: ["#002244", "#C60C30"], NO: ["#101820", "#D3BC8D"], NYG: ["#0B2265", "#A71930"],
+  NYJ: ["#125740", "#000000"], PHI: ["#004C54", "#A5ACAF"], PIT: ["#101820", "#FFB612"],
+  SEA: ["#002244", "#69BE28"], SF: ["#AA0000", "#B3995D"], TB: ["#D50A0A", "#34302B"],
+  TEN: ["#0C2340", "#4B92DB"], WAS: ["#5A1414", "#FFB612"],
+};
+const DEFAULT_MODAL_GRADIENT = ["#1d4ed8", "#1e40af"];
+function modalBannerGradient(team) {
+  const [primary, secondary] = TEAM_COLORS[team] || DEFAULT_MODAL_GRADIENT;
+  return `linear-gradient(135deg, ${primary} 0%, ${primary} 55%, ${secondary} 100%)`;
+}
 
 const FREE_ROWS = 12;
 const DEFAULT_TIERS = [1, 13, 25, 37, 49, 61, 73, 85, 97, 109, 121, 151];
@@ -913,7 +936,7 @@ export default function Home() {
             {/* Header */}
             <div
               className="relative p-6 rounded-t-2xl overflow-hidden flex items-end gap-4"
-              style={{backgroundImage: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #1e40af 100%)'}}
+              style={{backgroundImage: modalBannerGradient(selectedPlayer.team)}}
             >
               <PlayerHeadshot espnId={selectedPlayer.espn_id} sleeperId={selectedPlayer.sleeper_id} name={selectedPlayer.name} size="xl" shape="square" />
               <div className="pb-0.5 min-w-0">
