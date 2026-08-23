@@ -609,14 +609,17 @@ export default function Home() {
           <div className="relative">
             <div className="bg-white/60 backdrop-blur-md rounded-xl overflow-hidden border border-white/70 shadow-lg">
               <table className="w-full">
-                <thead className="bg-white/40 text-gray-500 text-sm">
+                <thead className="bg-white/40 text-gray-500 text-xs lg:text-sm">
                   <tr>
-                    <th className="text-left px-6 py-3 w-16">Rank</th>
-                    <th className="text-left px-6 py-3">Player</th>
-                    <th className="text-left px-6 py-3">Position</th>
+                    <th className="text-left px-2 py-2 lg:px-6 lg:py-3 w-8 lg:w-16">Rank</th>
+                    <th className="text-left px-2 py-2 lg:px-6 lg:py-3">Player</th>
+                    <th className="text-left px-1.5 py-2 lg:px-6 lg:py-3">
+                      <span className="lg:hidden">Pos</span>
+                      <span className="hidden lg:inline">Position</span>
+                    </th>
                     <th className="hidden sm:table-cell text-left px-6 py-3">Team</th>
-                    {showCreatorColumns && activeCreator === "consensus" && ACTIVE_CREATORS.map(c => (
-                      <th key={c.id} className="hidden sm:table-cell text-left px-6 py-3 whitespace-nowrap">{c.short}</th>
+                    {activeCreator === "consensus" && ACTIVE_CREATORS.map(c => (
+                      <th key={c.id} className={`text-left px-1.5 py-2 lg:px-6 lg:py-3 whitespace-nowrap text-[10px] lg:text-sm ${showCreatorColumns ? "" : "lg:hidden"}`}>{c.short}</th>
                     ))}
                   </tr>
                 </thead>
@@ -632,7 +635,7 @@ export default function Home() {
                       <Fragment key={player.name}>
                         {showDivider && (
                           <tr className="select-none pointer-events-none">
-                            <td colSpan={999} className="py-1.5 px-6">
+                            <td colSpan={999} className="py-1 px-2 lg:py-1.5 lg:px-6">
                               <div className="w-full flex items-center gap-3">
                                 <div className="flex-1 h-px bg-blue-200" />
                                 <span className="text-xs font-semibold text-blue-600 tracking-wider uppercase">Tier {tierNum}</span>
@@ -642,21 +645,21 @@ export default function Home() {
                           </tr>
                         )}
                         <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-4 text-gray-400 font-mono text-sm">{rank}{(() => { const m = movementCache[activeFormat]?.[activeCreator]?.[player.name]; if (!m) return null; return <span className={`ml-1.5 text-xs font-semibold ${m > 0 ? "text-green-600" : "text-red-500"}`}>{m > 0 ? "▲" : "▼"}{Math.abs(m)}</span>; })()}</td>
-                          <td className="px-6 py-4 font-medium">
-                            <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-2.5">
-                              <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="sm" />
+                          <td className="px-2 py-1.5 lg:px-6 lg:py-4 text-gray-400 font-mono text-[10px] lg:text-sm">{rank}{(() => { const m = movementCache[activeFormat]?.[activeCreator]?.[player.name]; if (!m) return null; return <span className={`ml-1.5 text-xs font-semibold ${m > 0 ? "text-green-600" : "text-red-500"}`}>{m > 0 ? "▲" : "▼"}{Math.abs(m)}</span>; })()}</td>
+                          <td className="px-2 py-1.5 lg:px-6 lg:py-4 font-medium">
+                            <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-1.5 lg:gap-2.5 text-xs lg:text-base">
+                              <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="tableRow" />
                               {player.name}
                             </span>
                           </td>
-                          <td className="px-6 py-4">
-                            <span className={`px-2 py-1 rounded text-xs font-semibold ${posColors[player.pos] || "bg-gray-100 text-gray-600"}`}>
+                          <td className="px-1.5 py-1.5 lg:px-6 lg:py-4">
+                            <span className={`px-1.5 py-0.5 lg:px-2 lg:py-1 rounded text-[10px] lg:text-xs font-semibold ${posColors[player.pos] || "bg-gray-100 text-gray-600"}`}>
                               {displayPosRanks[player.name]}
                             </span>
                           </td>
                           <td className="hidden sm:table-cell px-6 py-4 text-gray-500">{player.team}</td>
-                          {showCreatorColumns && activeCreator === "consensus" && ACTIVE_CREATORS.map(c => (
-                            <td key={c.id} className="hidden sm:table-cell px-6 py-4 text-xs font-mono text-gray-400">
+                          {activeCreator === "consensus" && ACTIVE_CREATORS.map(c => (
+                            <td key={c.id} className={`px-1.5 py-1.5 lg:px-6 lg:py-4 text-[10px] lg:text-xs font-mono text-gray-400 ${showCreatorColumns ? "" : "lg:hidden"}`}>
                               {creatorPosRanks[c.id]?.[normalizeName(player.name)] || "—"}
                             </td>
                           ))}
@@ -678,7 +681,7 @@ export default function Home() {
                         <Fragment key={player.name}>
                           {showDivider && (
                             <tr>
-                              <td colSpan={999} className="py-1.5 px-6">
+                              <td colSpan={999} className="py-1 px-2 lg:py-1.5 lg:px-6">
                                 <div className="w-full flex items-center gap-3">
                                   <div className="flex-1 h-px bg-blue-200" />
                                   <span className="text-xs font-semibold text-blue-600 tracking-wider uppercase">Tier {tierNum}</span>
@@ -688,21 +691,21 @@ export default function Home() {
                             </tr>
                           )}
                           <tr className="border-b border-gray-100">
-                            <td className="px-6 py-4 text-gray-400 font-mono text-sm">{rank}{(() => { const m = movementCache[activeFormat]?.[activeCreator]?.[player.name]; if (!m) return null; return <span className={`ml-1.5 text-xs font-semibold ${m > 0 ? "text-green-600" : "text-red-500"}`}>{m > 0 ? "▲" : "▼"}{Math.abs(m)}</span>; })()}</td>
-                            <td className="px-6 py-4 font-medium">
-                              <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-2.5">
-                                <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="sm" />
+                            <td className="px-2 py-1.5 lg:px-6 lg:py-4 text-gray-400 font-mono text-[10px] lg:text-sm">{rank}{(() => { const m = movementCache[activeFormat]?.[activeCreator]?.[player.name]; if (!m) return null; return <span className={`ml-1.5 text-xs font-semibold ${m > 0 ? "text-green-600" : "text-red-500"}`}>{m > 0 ? "▲" : "▼"}{Math.abs(m)}</span>; })()}</td>
+                            <td className="px-2 py-1.5 lg:px-6 lg:py-4 font-medium">
+                              <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-1.5 lg:gap-2.5 text-xs lg:text-base">
+                                <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="tableRow" />
                                 {player.name}
                               </span>
                             </td>
-                            <td className="px-6 py-4">
-                              <span className={`px-2 py-1 rounded text-xs font-semibold ${posColors[player.pos] || "bg-gray-100 text-gray-600"}`}>
+                            <td className="px-1.5 py-1.5 lg:px-6 lg:py-4">
+                              <span className={`px-1.5 py-0.5 lg:px-2 lg:py-1 rounded text-[10px] lg:text-xs font-semibold ${posColors[player.pos] || "bg-gray-100 text-gray-600"}`}>
                                 {displayPosRanks[player.name]}
                               </span>
                             </td>
-                            <td className="px-6 py-4 text-gray-500">{player.team}</td>
-                            {showCreatorColumns && activeCreator === "consensus" && ACTIVE_CREATORS.map(c => (
-                              <td key={c.id} className="px-6 py-4 text-xs font-mono text-gray-400">
+                            <td className="hidden sm:table-cell px-6 py-4 text-gray-500">{player.team}</td>
+                            {activeCreator === "consensus" && ACTIVE_CREATORS.map(c => (
+                              <td key={c.id} className={`px-1.5 py-1.5 lg:px-6 lg:py-4 text-[10px] lg:text-xs font-mono text-gray-400 ${showCreatorColumns ? "" : "lg:hidden"}`}>
                                 {creatorPosRanks[c.id]?.[normalizeName(player.name)] || "—"}
                               </td>
                             ))}
@@ -737,7 +740,7 @@ export default function Home() {
                       <Fragment key={player.name}>
                         {showDivider && (
                           <tr className="select-none pointer-events-none">
-                            <td colSpan={999} className="py-1.5 px-6">
+                            <td colSpan={999} className="py-1 px-2 lg:py-1.5 lg:px-6">
                               <div className="w-full flex items-center gap-3">
                                 <div className="flex-1 h-px bg-blue-200" />
                                 <span className="text-xs font-semibold text-blue-600 tracking-wider uppercase">Tier {tierNum}</span>
@@ -747,21 +750,21 @@ export default function Home() {
                           </tr>
                         )}
                         <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-4 text-gray-400 font-mono text-sm">{rank}{(() => { const m = movementCache[activeFormat]?.[activeCreator]?.[player.name]; if (!m) return null; return <span className={`ml-1.5 text-xs font-semibold ${m > 0 ? "text-green-600" : "text-red-500"}`}>{m > 0 ? "▲" : "▼"}{Math.abs(m)}</span>; })()}</td>
-                          <td className="px-6 py-4 font-medium">
-                            <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-2.5">
-                              <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="sm" />
+                          <td className="px-2 py-1.5 lg:px-6 lg:py-4 text-gray-400 font-mono text-[10px] lg:text-sm">{rank}{(() => { const m = movementCache[activeFormat]?.[activeCreator]?.[player.name]; if (!m) return null; return <span className={`ml-1.5 text-xs font-semibold ${m > 0 ? "text-green-600" : "text-red-500"}`}>{m > 0 ? "▲" : "▼"}{Math.abs(m)}</span>; })()}</td>
+                          <td className="px-2 py-1.5 lg:px-6 lg:py-4 font-medium">
+                            <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-1.5 lg:gap-2.5 text-xs lg:text-base">
+                              <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="tableRow" />
                               {player.name}
                             </span>
                           </td>
-                          <td className="px-6 py-4">
-                            <span className={`px-2 py-1 rounded text-xs font-semibold ${posColors[player.pos] || "bg-gray-100 text-gray-600"}`}>
+                          <td className="px-1.5 py-1.5 lg:px-6 lg:py-4">
+                            <span className={`px-1.5 py-0.5 lg:px-2 lg:py-1 rounded text-[10px] lg:text-xs font-semibold ${posColors[player.pos] || "bg-gray-100 text-gray-600"}`}>
                               {displayPosRanks[player.name]}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-gray-500">{player.team}</td>
-                          {showCreatorColumns && activeCreator === "consensus" && ACTIVE_CREATORS.map(c => (
-                            <td key={c.id} className="px-6 py-4 text-xs font-mono text-gray-400">
+                          <td className="hidden sm:table-cell px-6 py-4 text-gray-500">{player.team}</td>
+                          {activeCreator === "consensus" && ACTIVE_CREATORS.map(c => (
+                            <td key={c.id} className={`px-1.5 py-1.5 lg:px-6 lg:py-4 text-[10px] lg:text-xs font-mono text-gray-400 ${showCreatorColumns ? "" : "lg:hidden"}`}>
                               {creatorPosRanks[c.id]?.[normalizeName(player.name)] || "—"}
                             </td>
                           ))}
