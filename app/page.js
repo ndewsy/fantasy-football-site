@@ -18,6 +18,13 @@ const CREATORS = [
 
 const ACTIVE_CREATORS = CREATORS.filter(c => !c.comingSoon);
 
+// Mobile-only compact badge for creator rank columns — desktop keeps the
+// full "RookieRager"/"FFHuddle" header text via c.short.
+const CREATOR_MOBILE_BADGE = {
+  rookierager: { label: "RR", className: "bg-orange-100 text-orange-700" },
+  ffhuddle: { label: "FFH", className: "bg-blue-100 text-blue-700" },
+};
+
 const posColors = {
   WR: "bg-blue-100 text-blue-700",
   RB: "bg-green-100 text-green-700",
@@ -649,14 +656,23 @@ export default function Home() {
                 <thead className="bg-white/40 text-gray-500 text-xs lg:text-sm">
                   <tr>
                     <th className="text-left px-2 py-2 lg:px-6 lg:py-3 w-8 lg:w-16">Rank</th>
-                    <th className="text-left px-2 py-2 lg:px-6 lg:py-3">Player</th>
+                    <th className="text-left px-2 py-2 lg:px-6 lg:py-3 w-full lg:w-auto">Player</th>
                     <th className="text-left px-1.5 py-2 lg:px-6 lg:py-3">
                       <span className="lg:hidden">Pos</span>
                       <span className="hidden lg:inline">Position</span>
                     </th>
                     <th className="hidden sm:table-cell text-left px-6 py-3">Team</th>
                     {activeCreator === "consensus" && ACTIVE_CREATORS.map(c => (
-                      <th key={c.id} className={`text-left px-1.5 py-2 lg:px-6 lg:py-3 whitespace-nowrap text-[10px] lg:text-sm ${showCreatorColumns ? "" : "lg:hidden"}`}>{c.short}</th>
+                      <th key={c.id} className={`text-left px-1 py-2 lg:px-6 lg:py-3 whitespace-nowrap text-[10px] lg:text-sm ${showCreatorColumns ? "" : "lg:hidden"}`}>
+                        <span className="lg:hidden">
+                          {CREATOR_MOBILE_BADGE[c.id] ? (
+                            <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-bold ${CREATOR_MOBILE_BADGE[c.id].className}`}>
+                              {CREATOR_MOBILE_BADGE[c.id].label}
+                            </span>
+                          ) : c.short}
+                        </span>
+                        <span className="hidden lg:inline">{c.short}</span>
+                      </th>
                     ))}
                   </tr>
                 </thead>
@@ -684,9 +700,9 @@ export default function Home() {
                         <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                           <td className="px-2 py-1.5 lg:px-6 lg:py-4 text-gray-400 font-mono text-[10px] lg:text-sm">{rank}{(() => { const m = movementCache[activeFormat]?.[activeCreator]?.[player.name]; if (!m) return null; return <span className={`ml-1.5 text-xs font-semibold ${m > 0 ? "text-green-600" : "text-red-500"}`}>{m > 0 ? "▲" : "▼"}{Math.abs(m)}</span>; })()}</td>
                           <td className="px-2 py-1.5 lg:px-6 lg:py-4 font-medium">
-                            <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-1.5 lg:gap-2.5 text-xs lg:text-base">
+                            <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-1.5 lg:gap-2.5 text-xs lg:text-base min-w-0">
                               <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="tableRow" />
-                              <span className="lg:hidden">{abbreviateFirstName(player.name)}</span>
+                              <span className="lg:hidden truncate min-w-0">{abbreviateFirstName(player.name)}</span>
                               <span className="hidden lg:inline">{player.name}</span>
                             </span>
                           </td>
@@ -697,7 +713,7 @@ export default function Home() {
                           </td>
                           <td className="hidden sm:table-cell px-6 py-4 text-gray-500">{player.team}</td>
                           {activeCreator === "consensus" && ACTIVE_CREATORS.map(c => (
-                            <td key={c.id} className={`px-1.5 py-1.5 lg:px-6 lg:py-4 text-[10px] lg:text-xs font-mono text-gray-400 ${showCreatorColumns ? "" : "lg:hidden"}`}>
+                            <td key={c.id} className={`px-1 py-1.5 lg:px-6 lg:py-4 text-center lg:text-left text-[10px] lg:text-xs font-mono text-gray-400 ${showCreatorColumns ? "" : "lg:hidden"}`}>
                               {creatorPosRanks[c.id]?.[normalizeName(player.name)] || "—"}
                             </td>
                           ))}
@@ -731,9 +747,9 @@ export default function Home() {
                           <tr className="border-b border-gray-100">
                             <td className="px-2 py-1.5 lg:px-6 lg:py-4 text-gray-400 font-mono text-[10px] lg:text-sm">{rank}{(() => { const m = movementCache[activeFormat]?.[activeCreator]?.[player.name]; if (!m) return null; return <span className={`ml-1.5 text-xs font-semibold ${m > 0 ? "text-green-600" : "text-red-500"}`}>{m > 0 ? "▲" : "▼"}{Math.abs(m)}</span>; })()}</td>
                             <td className="px-2 py-1.5 lg:px-6 lg:py-4 font-medium">
-                              <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-1.5 lg:gap-2.5 text-xs lg:text-base">
+                              <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-1.5 lg:gap-2.5 text-xs lg:text-base min-w-0">
                                 <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="tableRow" />
-                                <span className="lg:hidden">{abbreviateFirstName(player.name)}</span>
+                                <span className="lg:hidden truncate min-w-0">{abbreviateFirstName(player.name)}</span>
                                 <span className="hidden lg:inline">{player.name}</span>
                               </span>
                             </td>
@@ -744,7 +760,7 @@ export default function Home() {
                             </td>
                             <td className="hidden sm:table-cell px-6 py-4 text-gray-500">{player.team}</td>
                             {activeCreator === "consensus" && ACTIVE_CREATORS.map(c => (
-                              <td key={c.id} className={`px-1.5 py-1.5 lg:px-6 lg:py-4 text-[10px] lg:text-xs font-mono text-gray-400 ${showCreatorColumns ? "" : "lg:hidden"}`}>
+                              <td key={c.id} className={`px-1 py-1.5 lg:px-6 lg:py-4 text-center lg:text-left text-[10px] lg:text-xs font-mono text-gray-400 ${showCreatorColumns ? "" : "lg:hidden"}`}>
                                 {creatorPosRanks[c.id]?.[normalizeName(player.name)] || "—"}
                               </td>
                             ))}
@@ -791,9 +807,9 @@ export default function Home() {
                         <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                           <td className="px-2 py-1.5 lg:px-6 lg:py-4 text-gray-400 font-mono text-[10px] lg:text-sm">{rank}{(() => { const m = movementCache[activeFormat]?.[activeCreator]?.[player.name]; if (!m) return null; return <span className={`ml-1.5 text-xs font-semibold ${m > 0 ? "text-green-600" : "text-red-500"}`}>{m > 0 ? "▲" : "▼"}{Math.abs(m)}</span>; })()}</td>
                           <td className="px-2 py-1.5 lg:px-6 lg:py-4 font-medium">
-                            <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-1.5 lg:gap-2.5 text-xs lg:text-base">
+                            <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-1.5 lg:gap-2.5 text-xs lg:text-base min-w-0">
                               <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="tableRow" />
-                              <span className="lg:hidden">{abbreviateFirstName(player.name)}</span>
+                              <span className="lg:hidden truncate min-w-0">{abbreviateFirstName(player.name)}</span>
                               <span className="hidden lg:inline">{player.name}</span>
                             </span>
                           </td>
@@ -804,7 +820,7 @@ export default function Home() {
                           </td>
                           <td className="hidden sm:table-cell px-6 py-4 text-gray-500">{player.team}</td>
                           {activeCreator === "consensus" && ACTIVE_CREATORS.map(c => (
-                            <td key={c.id} className={`px-1.5 py-1.5 lg:px-6 lg:py-4 text-[10px] lg:text-xs font-mono text-gray-400 ${showCreatorColumns ? "" : "lg:hidden"}`}>
+                            <td key={c.id} className={`px-1 py-1.5 lg:px-6 lg:py-4 text-center lg:text-left text-[10px] lg:text-xs font-mono text-gray-400 ${showCreatorColumns ? "" : "lg:hidden"}`}>
                               {creatorPosRanks[c.id]?.[normalizeName(player.name)] || "—"}
                             </td>
                           ))}
