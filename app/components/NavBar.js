@@ -66,6 +66,25 @@ function AccountIcon(props) {
   );
 }
 
+// Shared between the desktop sidebar and the mobile drawer so both render the
+// exact same look — icon, label, and the blue-gradient active pill.
+function NavLink({ href, label, Icon, active, onClick }) {
+  return (
+    <a
+      href={href}
+      onClick={onClick}
+      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+        active
+          ? "bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white shadow-md shadow-blue-600/20"
+          : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+      }`}
+    >
+      <Icon className="w-5 h-5 shrink-0" />
+      {label}
+    </a>
+  );
+}
+
 export default function NavBar({ activePath = "/" }) {
   const [user, setUser] = useState(null);
   const [isDashboardUser, setIsDashboardUser] = useState(false);
@@ -111,37 +130,13 @@ export default function NavBar({ activePath = "/" }) {
           Fantasy<br />Collective
         </a>
         <div className="flex-1 flex flex-col gap-1 px-3 overflow-y-auto">
-          {links.map(({ href, label, icon: Icon }) => {
-            const active = activePath === href;
-            return (
-              <a
-                key={href}
-                href={href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                  active
-                    ? "bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white shadow-md shadow-blue-600/20"
-                    : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
-                }`}
-              >
-                <Icon className="w-5 h-5 shrink-0" />
-                {label}
-              </a>
-            );
-          })}
+          {links.map(({ href, label, icon }) => (
+            <NavLink key={href} href={href} label={label} Icon={icon} active={activePath === href} />
+          ))}
         </div>
         <div className="px-3 pb-6 pt-2">
           {user ? (
-            <a
-              href="/account"
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                activePath === "/account"
-                  ? "bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white shadow-md shadow-blue-600/20"
-                  : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
-              }`}
-            >
-              <AccountIcon className="w-5 h-5 shrink-0" />
-              My Account
-            </a>
+            <NavLink href="/account" label="My Account" Icon={AccountIcon} active={activePath === "/account"} />
           ) : (
             <a href="/login" className="flex items-center justify-center gap-2 bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-semibold px-3 py-2.5 rounded-xl transition-all text-sm">
               Login
@@ -150,12 +145,13 @@ export default function NavBar({ activePath = "/" }) {
         </div>
       </nav>
 
-      {/* Mobile top bar */}
-      <nav ref={navRef} className="lg:hidden relative sticky top-0 z-50 px-6 py-4 flex items-center justify-between" style={{backgroundImage: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 2px, transparent 2px, transparent 10px), linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #1e40af 100%)', boxShadow: '0 2px 20px rgba(37, 99, 235, 0.4)'}}>
-        <a href="/" className={`${montserrat.className} text-xl font-bold text-white shrink-0`}>Fantasy Collective</a>
+      {/* Mobile top bar — light/white to match the desktop sidebar, opens a drawer
+          styled identically to it rather than a plain-text dropdown. */}
+      <nav ref={navRef} className="lg:hidden relative sticky top-0 z-50 px-4 py-3 flex items-center justify-between bg-white border-b border-gray-100">
+        <a href="/" className={`${montserrat.className} text-lg font-bold text-blue-600 shrink-0`}>Fantasy Collective</a>
 
         <button
-          className="flex items-center justify-center w-11 h-11 rounded-lg text-white hover:bg-blue-500 transition-colors"
+          className="flex items-center justify-center w-10 h-10 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors"
           onClick={() => setMenuOpen(prev => !prev)}
           aria-label="Toggle menu"
         >
@@ -173,23 +169,49 @@ export default function NavBar({ activePath = "/" }) {
           )}
         </button>
 
-        {menuOpen && (
-          <div className="absolute top-full left-0 right-0 bg-blue-700 border-b border-blue-500 shadow-lg px-6 py-3 flex flex-col">
-            {links.map(({ href, label }) => (
-              <a
-                key={href}
-                href={href}
-                className={`py-3 text-base font-medium border-b border-blue-600 last:border-0 transition-colors ${activePath === href ? "text-white" : "text-blue-100 hover:text-white"}`}
-              >
-                {label}
-              </a>
-            ))}
-            {user
-              ? <a href="/account" className={`py-3 text-base font-medium transition-colors ${activePath === "/account" ? "text-white" : "text-blue-100 hover:text-white"}`}>My Account</a>
-              : <a href="/login" className="mt-3 mb-1 bg-white text-blue-600 font-bold px-4 py-3 rounded-xl text-center hover:bg-blue-50">Login</a>
-            }
+        {/* Backdrop */}
+        <div
+          className={`fixed inset-0 bg-black/40 z-40 transition-opacity duration-200 ${menuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+          onClick={() => setMenuOpen(false)}
+          aria-hidden="true"
+        />
+
+        {/* Drawer — same nav items, same styling, same logo as the desktop sidebar */}
+        <div
+          className={`fixed top-0 left-0 h-screen w-72 max-w-[80vw] bg-white z-50 shadow-2xl flex flex-col transition-transform duration-200 ${
+            menuOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          <div className="flex items-center justify-between px-6 pt-7 pb-8">
+            <span className={`${montserrat.className} text-lg font-bold text-blue-600 leading-tight`}>
+              Fantasy<br />Collective
+            </span>
+            <button
+              onClick={() => setMenuOpen(false)}
+              className="text-gray-400 hover:text-gray-700 transition-colors"
+              aria-label="Close menu"
+            >
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                <line x1="4" y1="4" x2="16" y2="16" />
+                <line x1="16" y1="4" x2="4" y2="16" />
+              </svg>
+            </button>
           </div>
-        )}
+          <div className="flex-1 flex flex-col gap-1 px-3 overflow-y-auto">
+            {links.map(({ href, label, icon }) => (
+              <NavLink key={href} href={href} label={label} Icon={icon} active={activePath === href} onClick={() => setMenuOpen(false)} />
+            ))}
+          </div>
+          <div className="px-3 pb-6 pt-2">
+            {user ? (
+              <NavLink href="/account" label="My Account" Icon={AccountIcon} active={activePath === "/account"} onClick={() => setMenuOpen(false)} />
+            ) : (
+              <a href="/login" className="flex items-center justify-center gap-2 bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-semibold px-3 py-2.5 rounded-xl transition-all text-sm">
+                Login
+              </a>
+            )}
+          </div>
+        </div>
       </nav>
     </>
   );
