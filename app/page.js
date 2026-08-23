@@ -56,6 +56,20 @@ function normalizeName(name) {
   return name.toLowerCase().replace(/\./g, ' ').trim().replace(/\s+/g, ' ');
 }
 
+// Mobile-only display abbreviation — never touches the underlying player data,
+// just how the name renders in the narrow table row. "Jahmyr Gibbs" -> "J. Gibbs".
+function abbreviateFirstName(name) {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2) return name;
+  return `${parts[0][0]}. ${parts.slice(1).join(" ")}`;
+}
+
+// Mobile-only display abbreviation for format tab labels — desktop keeps the
+// full "Redraft 1QB" etc. via a separate span.
+function abbreviateFormat(fmt) {
+  return fmt.replace("Redraft", "RD").replace("Dynasty", "DYN");
+}
+
 function computeConsensus(formatData) {
   const creatorLists = Object.values(formatData);
   if (creatorLists.length === 0) return null;
@@ -456,76 +470,99 @@ export default function Home() {
         <div ref={rankingsRef} className="flex-1 min-w-0 order-1">
 
         {/* Format tabs */}
-        <div className="flex flex-wrap gap-1.5 mb-5 lg:flex-nowrap lg:gap-2 lg:overflow-x-auto lg:pb-1">
+        <div className="flex flex-wrap gap-1 mb-5 lg:flex-nowrap lg:gap-2 lg:overflow-x-auto lg:pb-1">
           {FORMATS.map(fmt => (
             <button
               key={fmt}
               onClick={() => handleFormatChange(fmt)}
-              className={`px-3 py-1.5 text-xs lg:px-4 lg:py-2 lg:text-sm rounded-lg font-medium transition-colors shrink-0 ${
+              className={`px-2 py-1.5 text-[10px] lg:px-4 lg:py-2 lg:text-sm rounded-lg font-medium transition-colors shrink-0 ${
                 activeFormat === fmt
                   ? "bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white"
                   : "bg-white/60 backdrop-blur-sm text-gray-600 hover:bg-white/80 border border-white/70"
               }`}
             >
-              {fmt}
+              <span className="lg:hidden">{abbreviateFormat(fmt)}</span>
+              <span className="hidden lg:inline">{fmt}</span>
             </button>
           ))}
         </div>
 
         {/* Creator tabs + toggle */}
-        <div className="flex items-center gap-2 mb-6 border-b border-gray-200">
-          <div className="flex-1 min-w-0 lg:overflow-x-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden">
-            <div className="flex flex-wrap lg:flex-nowrap">
-              {[{ id: "consensus", name: "Consensus" }, ...CREATORS].map(creator => {
-                let dateLabel = null;
-                if (!creator.comingSoon) {
-                  if (creator.id === "consensus") {
-                    const formatTimestamps = Object.values(updatedAtCache[activeFormat] || {}).filter(Boolean);
-                    const latest = formatTimestamps.sort().reverse()[0];
-                    dateLabel = formatUpdatedAt(latest);
-                  } else {
-                    dateLabel = formatUpdatedAt(updatedAtCache[activeFormat]?.[creator.id]);
-                  }
-                }
-                return (
-                  <button
-                    key={creator.id}
-                    onClick={() => !creator.comingSoon && setActiveCreator(creator.id)}
-                    disabled={creator.comingSoon}
-                    className={`px-3 py-1.5 text-xs lg:px-4 lg:py-2 lg:text-sm font-medium transition-colors border-b-2 -mb-px shrink-0 text-left ${
-                      creator.comingSoon
-                        ? "border-transparent text-gray-300 cursor-not-allowed italic"
-                        : activeCreator === creator.id
-                          ? "border-blue-600 text-blue-600"
-                          : "border-transparent text-gray-500 hover:text-gray-700"
-                    }`}
-                  >
-                    <span className="block leading-5">{creator.name}</span>
-                    {dateLabel && (
-                      <span className={`block text-[10px] lg:text-xs font-normal leading-4 mt-0.5 ${
-                        activeCreator === creator.id ? "text-blue-400" : "text-gray-400"
-                      }`}>
-                        {dateLabel}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+        {(() => {
+          const creatorTabItems = [{ id: "consensus", name: "Consensus" }, ...CREATORS].map(creator => {
+            let dateLabel = null;
+            if (!creator.comingSoon) {
+              if (creator.id === "consensus") {
+                const formatTimestamps = Object.values(updatedAtCache[activeFormat] || {}).filter(Boolean);
+                const latest = formatTimestamps.sort().reverse()[0];
+                dateLabel = formatUpdatedAt(latest);
+              } else {
+                dateLabel = formatUpdatedAt(updatedAtCache[activeFormat]?.[creator.id]);
+              }
+            }
+            return { ...creator, dateLabel };
+          });
+
+          return (
+            <div className="flex items-center gap-2 mb-6 border-b border-gray-200">
+              {/* Mobile: dropdown, defaults to Consensus */}
+              <div className="lg:hidden flex-1 min-w-0 pb-2">
+                <select
+                  value={activeCreator}
+                  onChange={e => setActiveCreator(e.target.value)}
+                  className="w-full bg-white/60 backdrop-blur-sm border border-white/70 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  {creatorTabItems.map(creator => (
+                    <option key={creator.id} value={creator.id} disabled={creator.comingSoon}>
+                      {creator.name}{creator.comingSoon ? " (Coming Soon)" : creator.dateLabel ? ` — ${creator.dateLabel}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Desktop: tab row, unchanged */}
+              <div className="hidden lg:block flex-1 min-w-0 lg:overflow-x-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden">
+                <div className="flex flex-wrap lg:flex-nowrap">
+                  {creatorTabItems.map(creator => (
+                    <button
+                      key={creator.id}
+                      onClick={() => !creator.comingSoon && setActiveCreator(creator.id)}
+                      disabled={creator.comingSoon}
+                      className={`px-3 py-1.5 text-xs lg:px-4 lg:py-2 lg:text-sm font-medium transition-colors border-b-2 -mb-px shrink-0 text-left ${
+                        creator.comingSoon
+                          ? "border-transparent text-gray-300 cursor-not-allowed italic"
+                          : activeCreator === creator.id
+                            ? "border-blue-600 text-blue-600"
+                            : "border-transparent text-gray-500 hover:text-gray-700"
+                      }`}
+                    >
+                      <span className="block leading-5">{creator.name}</span>
+                      {creator.dateLabel && (
+                        <span className={`block text-[10px] lg:text-xs font-normal leading-4 mt-0.5 ${
+                          activeCreator === creator.id ? "text-blue-400" : "text-gray-400"
+                        }`}>
+                          {creator.dateLabel}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {activeCreator === "consensus" && !stillLoading && hasData && (
+                <button
+                  onClick={() => setShowCreatorColumns(prev => !prev)}
+                  className={`hidden sm:block -mb-px shrink-0 px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                    showCreatorColumns
+                      ? "bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white"
+                      : "bg-white/60 backdrop-blur-sm text-gray-600 border border-white/70 hover:bg-white/80"
+                  }`}
+                >
+                  {showCreatorColumns ? "Hide Creator Rankings" : "Show Creator Rankings"}
+                </button>
+              )}
             </div>
-          </div>
-          {activeCreator === "consensus" && !stillLoading && hasData && (
-            <button
-              onClick={() => setShowCreatorColumns(prev => !prev)}
-              className={`hidden sm:block -mb-px shrink-0 px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
-                showCreatorColumns
-                  ? "bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white"
-                  : "bg-white/60 backdrop-blur-sm text-gray-600 border border-white/70 hover:bg-white/80"
-              }`}
-            >
-              {showCreatorColumns ? "Hide Creator Rankings" : "Show Creator Rankings"}
-            </button>
-          )}
-        </div>
+          );
+        })()}
 
         {/* Position filters + team filter + search */}
         {!stillLoading && hasData && (
@@ -649,7 +686,8 @@ export default function Home() {
                           <td className="px-2 py-1.5 lg:px-6 lg:py-4 font-medium">
                             <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-1.5 lg:gap-2.5 text-xs lg:text-base">
                               <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="tableRow" />
-                              {player.name}
+                              <span className="lg:hidden">{abbreviateFirstName(player.name)}</span>
+                              <span className="hidden lg:inline">{player.name}</span>
                             </span>
                           </td>
                           <td className="px-1.5 py-1.5 lg:px-6 lg:py-4">
@@ -695,7 +733,8 @@ export default function Home() {
                             <td className="px-2 py-1.5 lg:px-6 lg:py-4 font-medium">
                               <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-1.5 lg:gap-2.5 text-xs lg:text-base">
                                 <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="tableRow" />
-                                {player.name}
+                                <span className="lg:hidden">{abbreviateFirstName(player.name)}</span>
+                                <span className="hidden lg:inline">{player.name}</span>
                               </span>
                             </td>
                             <td className="px-1.5 py-1.5 lg:px-6 lg:py-4">
@@ -754,7 +793,8 @@ export default function Home() {
                           <td className="px-2 py-1.5 lg:px-6 lg:py-4 font-medium">
                             <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-1.5 lg:gap-2.5 text-xs lg:text-base">
                               <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="tableRow" />
-                              {player.name}
+                              <span className="lg:hidden">{abbreviateFirstName(player.name)}</span>
+                              <span className="hidden lg:inline">{player.name}</span>
                             </span>
                           </td>
                           <td className="px-1.5 py-1.5 lg:px-6 lg:py-4">
