@@ -32,6 +32,15 @@ const posColors = {
   TE: "bg-amber-100 text-amber-700",
 };
 
+// Vivid variants for the player modal's dark blue banner, where posColors'
+// light backgrounds would have poor contrast.
+const posBannerColors = {
+  WR: "bg-blue-400",
+  RB: "bg-green-500",
+  QB: "bg-red-500",
+  TE: "bg-amber-500",
+};
+
 const FREE_ROWS = 12;
 const DEFAULT_TIERS = [1, 13, 25, 37, 49, 61, 73, 85, 97, 109, 121, 151];
 
@@ -135,9 +144,9 @@ export default function Home() {
       const supabase = createClient();
       const { data } = await supabase
         .from("players")
-        .select("id, name, position, team, sleeper_id, espn_id")
+        .select("id, name, position, team, sleeper_id, espn_id, height_inches, weight_lbs, age")
         .order("adp_rank");
-      setPlayerPool((data || []).map(p => ({ id: p.id, name: p.name, pos: p.position, team: p.team || "FA", sleeper_id: p.sleeper_id, espn_id: p.espn_id })));
+      setPlayerPool((data || []).map(p => ({ id: p.id, name: p.name, pos: p.position, team: p.team || "FA", sleeper_id: p.sleeper_id, espn_id: p.espn_id, height_inches: p.height_inches, weight_lbs: p.weight_lbs, age: p.age })));
       setPoolLoaded(true);
     }
     loadPool();
@@ -896,21 +905,35 @@ export default function Home() {
             {/* Close */}
             <button
               onClick={() => setPlayerModalOpen(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition-colors text-lg leading-none font-medium"
+              className="absolute top-4 right-4 z-10 text-white/80 hover:text-white transition-colors text-lg leading-none font-medium"
             >
               ✕
             </button>
 
             {/* Header */}
-            <div className="p-6 border-b border-gray-100 flex items-center gap-5">
-              <PlayerHeadshot espnId={selectedPlayer.espn_id} sleeperId={selectedPlayer.sleeper_id} name={selectedPlayer.name} size="xl" />
-              <div>
-                <h2 className="text-3xl font-bold text-[#0F172A] mb-2">{selectedPlayer.name}</h2>
+            <div
+              className="relative p-6 rounded-t-2xl overflow-hidden flex items-end gap-4"
+              style={{backgroundImage: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #1e40af 100%)'}}
+            >
+              <PlayerHeadshot espnId={selectedPlayer.espn_id} sleeperId={selectedPlayer.sleeper_id} name={selectedPlayer.name} size="xl" shape="square" />
+              <div className="pb-0.5 min-w-0">
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-white uppercase tracking-tight leading-none mb-1.5 truncate">{selectedPlayer.name}</h2>
+                {(selectedPlayer.age || selectedPlayer.height_inches || selectedPlayer.weight_lbs) && (
+                  <p className="text-blue-100 text-sm font-medium mb-2">
+                    {[
+                      selectedPlayer.age ? `${selectedPlayer.age}` : null,
+                      selectedPlayer.height_inches ? `${Math.floor(selectedPlayer.height_inches / 12)}'${selectedPlayer.height_inches % 12}"` : null,
+                      selectedPlayer.weight_lbs ? `${selectedPlayer.weight_lbs} LBS` : null,
+                    ].filter(Boolean).join(" | ")}
+                  </p>
+                )}
                 <div className="flex items-center gap-2">
-                  <span className={`px-3 py-1.5 rounded-lg text-base font-semibold ${posColors[selectedPlayer.pos] || "bg-gray-100 text-gray-600"}`}>
+                  <span className={`px-2.5 py-1 rounded-lg text-sm font-semibold text-white ${posBannerColors[selectedPlayer.pos] || "bg-white/20"}`}>
                     {displayPosRanks[selectedPlayer.name] || selectedPlayer.pos}
                   </span>
-                  <span className="text-gray-500 text-lg">{selectedPlayer.team}</span>
+                  <span className="px-2.5 py-1 rounded-lg text-sm font-semibold bg-white/20 text-white backdrop-blur-sm">
+                    {selectedPlayer.team}
+                  </span>
                 </div>
               </div>
             </div>
