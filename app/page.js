@@ -456,7 +456,7 @@ export default function Home() {
         <div ref={rankingsRef} className="flex-1 min-w-0 order-1">
 
         {/* Format tabs */}
-        <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
+        <div className="flex gap-2 mb-5 overflow-x-auto pb-1 [mask-image:linear-gradient(to_right,black_85%,transparent)] [-webkit-mask-image:linear-gradient(to_right,black_85%,transparent)] lg:[mask-image:none] lg:[-webkit-mask-image:none]">
           {FORMATS.map(fmt => (
             <button
               key={fmt}
@@ -474,7 +474,7 @@ export default function Home() {
 
         {/* Creator tabs + toggle */}
         <div className="flex items-center gap-2 mb-6 border-b border-gray-200">
-          <div className="overflow-x-auto flex-1 min-w-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="overflow-x-auto flex-1 min-w-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,black_85%,transparent)] [-webkit-mask-image:linear-gradient(to_right,black_85%,transparent)] lg:[mask-image:none] lg:[-webkit-mask-image:none]">
             <div className="flex flex-nowrap">
               {[{ id: "consensus", name: "Consensus" }, ...CREATORS].map(creator => {
                 let dateLabel = null;
