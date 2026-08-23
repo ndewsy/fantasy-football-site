@@ -456,12 +456,12 @@ export default function Home() {
         <div ref={rankingsRef} className="flex-1 min-w-0 order-1">
 
         {/* Format tabs */}
-        <div className="flex gap-2 mb-5 overflow-x-auto pb-1 [mask-image:linear-gradient(to_right,black_85%,transparent)] [-webkit-mask-image:linear-gradient(to_right,black_85%,transparent)] lg:[mask-image:none] lg:[-webkit-mask-image:none]">
+        <div className="flex flex-wrap gap-1.5 mb-5 lg:flex-nowrap lg:gap-2 lg:overflow-x-auto lg:pb-1">
           {FORMATS.map(fmt => (
             <button
               key={fmt}
               onClick={() => handleFormatChange(fmt)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors shrink-0 ${
+              className={`px-3 py-1.5 text-xs lg:px-4 lg:py-2 lg:text-sm rounded-lg font-medium transition-colors shrink-0 ${
                 activeFormat === fmt
                   ? "bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white"
                   : "bg-white/60 backdrop-blur-sm text-gray-600 hover:bg-white/80 border border-white/70"
@@ -474,8 +474,8 @@ export default function Home() {
 
         {/* Creator tabs + toggle */}
         <div className="flex items-center gap-2 mb-6 border-b border-gray-200">
-          <div className="overflow-x-auto flex-1 min-w-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,black_85%,transparent)] [-webkit-mask-image:linear-gradient(to_right,black_85%,transparent)] lg:[mask-image:none] lg:[-webkit-mask-image:none]">
-            <div className="flex flex-nowrap">
+          <div className="flex-1 min-w-0 lg:overflow-x-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden">
+            <div className="flex flex-wrap lg:flex-nowrap">
               {[{ id: "consensus", name: "Consensus" }, ...CREATORS].map(creator => {
                 let dateLabel = null;
                 if (!creator.comingSoon) {
@@ -492,7 +492,7 @@ export default function Home() {
                     key={creator.id}
                     onClick={() => !creator.comingSoon && setActiveCreator(creator.id)}
                     disabled={creator.comingSoon}
-                    className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px shrink-0 text-left ${
+                    className={`px-3 py-1.5 text-xs lg:px-4 lg:py-2 lg:text-sm font-medium transition-colors border-b-2 -mb-px shrink-0 text-left ${
                       creator.comingSoon
                         ? "border-transparent text-gray-300 cursor-not-allowed italic"
                         : activeCreator === creator.id
@@ -502,7 +502,7 @@ export default function Home() {
                   >
                     <span className="block leading-5">{creator.name}</span>
                     {dateLabel && (
-                      <span className={`block text-xs font-normal leading-4 mt-0.5 ${
+                      <span className={`block text-[10px] lg:text-xs font-normal leading-4 mt-0.5 ${
                         activeCreator === creator.id ? "text-blue-400" : "text-gray-400"
                       }`}>
                         {dateLabel}
@@ -535,7 +535,7 @@ export default function Home() {
                 <button
                   key={pos}
                   onClick={() => setPosFilter(pos)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors shrink-0 ${
+                  className={`px-2.5 py-1 text-xs lg:px-3 lg:py-1.5 lg:text-sm rounded-lg font-medium transition-colors shrink-0 ${
                     posFilter === pos
                       ? "bg-blue-600 text-white"
                       : "bg-white/60 backdrop-blur-sm text-gray-600 border border-white/70 hover:bg-white/80"
@@ -547,7 +547,7 @@ export default function Home() {
               <select
                 value={teamFilter}
                 onChange={e => setTeamFilter(e.target.value)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                className={`px-2.5 py-1 text-xs lg:px-3 lg:py-1.5 lg:text-sm rounded-lg font-medium transition-colors border cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500 ${
                   teamFilter !== "All"
                     ? "bg-blue-600 text-white border-blue-600"
                     : "bg-white/60 backdrop-blur-sm text-gray-600 border-white/70 hover:bg-white/80"
