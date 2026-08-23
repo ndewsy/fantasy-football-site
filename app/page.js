@@ -42,8 +42,7 @@ const posBannerColors = {
 };
 
 // Each team's primary/secondary brand colors, used for the player modal
-// banner. Primary is held through the midpoint so white text stays legible
-// regardless of which team; secondary only shows as an accent in the corner.
+// banner (primary, as tonal shades of itself) and the team badge (secondary).
 // Falls back to the site's default blue for free agents / unknown teams.
 const TEAM_COLORS = {
   ARI: ["#97233F", "#000000"], ATL: ["#A71930", "#000000"], BAL: ["#241773", "#000000"],
@@ -58,10 +57,34 @@ const TEAM_COLORS = {
   SEA: ["#002244", "#69BE28"], SF: ["#AA0000", "#B3995D"], TB: ["#D50A0A", "#34302B"],
   TEN: ["#0C2340", "#4B92DB"], WAS: ["#5A1414", "#FFB612"],
 };
-const DEFAULT_MODAL_GRADIENT = ["#1d4ed8", "#1e40af"];
+const DEFAULT_TEAM_COLORS = ["#2563EB", "#1E40AF"];
+
+function teamColors(team) {
+  const [primary, secondary] = TEAM_COLORS[team] || DEFAULT_TEAM_COLORS;
+  return { primary, secondary };
+}
+
+// Lightens (positive percent) or darkens (negative) a hex color.
+function shadeColor(hex, percent) {
+  const num = parseInt(hex.replace("#", ""), 16);
+  const amt = Math.round(2.55 * percent);
+  const r = Math.max(0, Math.min(255, (num >> 16) + amt));
+  const g = Math.max(0, Math.min(255, ((num >> 8) & 0x00ff) + amt));
+  const b = Math.max(0, Math.min(255, (num & 0x0000ff) + amt));
+  return `#${(0x1000000 + r * 0x10000 + g * 0x100 + b).toString(16).slice(1)}`;
+}
+
+// Picks readable black/white text for an arbitrary background color.
+function contrastText(hex) {
+  const num = parseInt(hex.replace("#", ""), 16);
+  const r = (num >> 16) & 0xff, g = (num >> 8) & 0xff, b = num & 0xff;
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.6 ? "#0F172A" : "#FFFFFF";
+}
+
 function modalBannerGradient(team) {
-  const [primary, secondary] = TEAM_COLORS[team] || DEFAULT_MODAL_GRADIENT;
-  return `linear-gradient(135deg, ${primary} 0%, ${primary} 55%, ${secondary} 100%)`;
+  const { primary } = teamColors(team);
+  return `linear-gradient(to bottom, ${shadeColor(primary, 10)} 0%, ${primary} 50%, ${shadeColor(primary, -18)} 100%)`;
 }
 
 const FREE_ROWS = 12;
@@ -954,7 +977,10 @@ export default function Home() {
                   <span className={`px-2.5 py-1 rounded-lg text-sm font-semibold text-white ${posBannerColors[selectedPlayer.pos] || "bg-white/20"}`}>
                     {displayPosRanks[selectedPlayer.name] || selectedPlayer.pos}
                   </span>
-                  <span className="px-2.5 py-1 rounded-lg text-sm font-semibold bg-white/20 text-white backdrop-blur-sm">
+                  <span
+                    className="px-2.5 py-1 rounded-lg text-sm font-semibold"
+                    style={{ backgroundColor: teamColors(selectedPlayer.team).secondary, color: contrastText(teamColors(selectedPlayer.team).secondary) }}
+                  >
                     {selectedPlayer.team}
                   </span>
                 </div>
