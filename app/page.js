@@ -5,7 +5,7 @@ import NavBar from "@/app/components/NavBar";
 import PlayerHeadshot from "@/app/components/PlayerHeadshot";
 import PromoPrice from "@/app/components/PromoPrice";
 import { isPromoActive } from "@/lib/promo";
-import AdpMovementWidget from "@/app/components/AdpMovementWidget";
+import ConsensusMovementWidget from "@/app/components/ConsensusMovementWidget";
 
 const FORMATS = ["Redraft 1QB", "Redraft SF", "Dynasty 1QB", "Dynasty SF"];
 
@@ -933,7 +933,7 @@ export default function Home() {
         </div>
 
         <aside className="w-full lg:w-72 lg:shrink-0 lg:sticky lg:top-6 order-2">
-          <AdpMovementWidget />
+          <ConsensusMovementWidget format={activeFormat} />
         </aside>
 
       </div>

@@ -33,25 +33,46 @@ function MovementRow({ m, direction }) {
   );
 }
 
-export default function AdpMovementWidget() {
+export default function ConsensusMovementWidget({ format }) {
+  const [days, setDays] = useState(7);
   const [data, setData] = useState(null);
 
   useEffect(() => {
-    fetch("/api/rankings/adp-movement")
+    fetch(`/api/rankings/consensus-movement?format=${encodeURIComponent(format)}&days=${days}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then(setData)
+      .then((result) => setData(result ? { ...result, format, days } : null))
       .catch(() => setData(null));
-  }, []);
+  }, [format, days]);
 
-  const empty = data && !data.buildingData && data.risers.length === 0 && data.fallers.length === 0;
+  // Ignore stale data left over from the previous format/window while the new fetch is in flight.
+  const loaded = data && data.format === format && data.days === days;
+  const empty = loaded && !data.buildingData && data.risers.length === 0 && data.fallers.length === 0;
 
   return (
     <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-4">
-      <h3 className="text-sm font-bold text-[#0F172A] mb-1">ADP Movers</h3>
-      {!data ? (
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="text-sm font-bold text-[#0F172A]">Consensus Movers</h3>
+        <div className="flex items-center gap-1 shrink-0">
+          {[7, 14].map((d) => (
+            <button
+              key={d}
+              onClick={() => setDays(d)}
+              className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ${
+                days === d
+                  ? "bg-[#2563EB] text-white"
+                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+              }`}
+            >
+              {d}D
+            </button>
+          ))}
+        </div>
+      </div>
+      <p className="text-[11px] text-gray-400 mb-2">{format} · last {days} days</p>
+      {!loaded ? (
         <p className="text-xs text-gray-400 py-4 text-center">Loading...</p>
       ) : data.buildingData || empty ? (
-        <p className="text-xs text-gray-400 py-4 text-center">Building up ADP history — check back soon.</p>
+        <p className="text-xs text-gray-400 py-4 text-center">Building up rankings history — check back soon.</p>
       ) : (
         <>
           {data.risers.length > 0 && (

@@ -1,43 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
+import { parseRanked, computeConsensus, cutoffDate } from '@/lib/consensusMovement';
 
 let _supabase;
 const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY));
-
-// Parses a rankings.players JSONB value into an ordered array of player objects.
-// Handles both the new integer-ID format and the legacy embedded-object format.
-function parseRanked(raw, idToName) {
-  if (!raw) return [];
-  const ranked = Array.isArray(raw) ? raw.filter(p => !p?.unranked) : (raw.ranked || []);
-  if (ranked.length === 0) return [];
-  if (typeof ranked[0] === 'number') {
-    return ranked.map(id => {
-      const name = idToName[id];
-      return name ? { name } : null;
-    }).filter(Boolean);
-  }
-  // Legacy: embedded objects
-  return ranked.map(({ unranked: _, ...p }) => p);
-}
-
-function computeConsensus(formatData) {
-  const playerMap = {};
-  for (const players of Object.values(formatData)) {
-    players.forEach((p, i) => {
-      if (!playerMap[p.name]) playerMap[p.name] = { name: p.name, totalRank: 0, count: 0 };
-      playerMap[p.name].totalRank += i + 1;
-      playerMap[p.name].count++;
-    });
-  }
-  return Object.values(playerMap)
-    .map(p => ({ name: p.name, avgRank: p.totalRank / p.count }))
-    .sort((a, b) => a.avgRank - b.avgRank);
-}
-
-function cutoffDate() {
-  const d = new Date();
-  d.setDate(d.getDate() - 30);
-  return d.toISOString().split('T')[0];
-}
 
 function buildMovement(currentRanked, historicalRanked) {
   const histMap = {};
