@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
+import PageTitle from "@/app/components/PageTitle";
 import { isPromoActive } from "@/lib/promo";
 
 export default function SubscribePage() {
@@ -99,7 +100,7 @@ export default function SubscribePage() {
         <NavBar activePath="/subscribe" />
         <div className="max-w-md mx-auto px-6 py-24 text-center">
           <div className="text-5xl mb-6">⭐</div>
-          <h1 className="text-3xl font-bold mb-3">You already have full access</h1>
+          <PageTitle title="You already have full access" className="mb-3" />
           <p className="text-gray-500 mb-8">Your account has complimentary access to all rankings and creator communities — no subscription needed.</p>
           <a href="/" className="inline-block bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold px-8 py-3 rounded-xl transition-all">
             Go to Rankings
@@ -115,7 +116,7 @@ export default function SubscribePage() {
         <NavBar activePath="/subscribe" />
         <div className="max-w-md mx-auto px-6 py-24 text-center">
           <div className="text-5xl mb-6">✅</div>
-          <h1 className="text-3xl font-bold mb-3">You're already subscribed</h1>
+          <PageTitle title="You're already subscribed" className="mb-3" />
           <p className="text-gray-500 mb-8">You have an active subscription. Head to your account to manage it.</p>
           <a href="/account" className="inline-block bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold px-8 py-3 rounded-xl transition-all">
             Go to My Account
@@ -130,8 +131,8 @@ export default function SubscribePage() {
       <NavBar activePath="/subscribe" />
 
       <div className="max-w-2xl mx-auto px-6 py-16">
-        <h1 className="text-4xl font-bold mb-2">Get Access</h1>
-        <p className="text-gray-500 mb-10">One subscription unlocks all rankings plus every creator community on the platform.</p>
+        <PageTitle title="Get Access" />
+        <p className="text-gray-500 mb-10 text-center">One subscription unlocks all rankings plus every creator community on the platform.</p>
 
         {promoActive && (
           <div className="bg-amber-50 border border-amber-200 text-amber-700 rounded-xl px-5 py-3 mb-6 text-sm font-medium text-center">

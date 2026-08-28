@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
+import PageTitle from "@/app/components/PageTitle";
 import CreatorAvatar from "@/app/components/CreatorAvatar";
 
 const creators = [
@@ -31,8 +32,8 @@ export default function CreatorsPage() {
     <main className="min-h-screen text-[#0F172A] lg:pl-56">
       <NavBar activePath="/creators" />
       <div className="max-w-5xl mx-auto px-6 py-16">
-        <h2 className="text-4xl font-bold mb-4">Our Creators</h2>
-        <p className="text-gray-500 mb-12">Subscribe to get access to all rankings plus join a creator community.</p>
+        <PageTitle title="Our Creators" />
+        <p className="text-gray-500 mb-12 text-center">Subscribe to get access to all rankings plus join a creator community.</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {creators.map((creator) => {
             const db = creatorProfiles[creator.id];

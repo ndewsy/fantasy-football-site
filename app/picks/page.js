@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
+import { anton } from "@/lib/fonts";
 
 // ── team metadata ───────────────────────────────────────────────────────────
 
@@ -461,7 +462,7 @@ export default function PicksPage() {
         {/* Header */}
         <div className="flex items-start justify-between flex-wrap gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-[#0F172A]">Season Picks</h1>
+            <h1 className={`${anton.className} text-3xl uppercase tracking-tight text-[#0F172A]`}>Season Picks</h1>
             <p className="text-gray-500 text-sm mt-0.5">Pick the winner of every 2026 NFL regular season game.</p>
           </div>
           <div className="flex gap-3 flex-wrap">

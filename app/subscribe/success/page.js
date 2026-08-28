@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
+import PageTitle from "@/app/components/PageTitle";
 
 export default function SuccessPage() {
   const [status, setStatus] = useState("saving");
@@ -51,7 +52,7 @@ export default function SuccessPage() {
     <main className="min-h-screen flex items-center justify-center px-6">
       <div className="text-center max-w-md">
         <div className="text-6xl mb-6">🎉</div>
-        <h1 className="text-4xl font-bold mb-4 text-[#0F172A]">You're in!</h1>
+        <PageTitle title="You're in!" className="mb-4" />
         <p className="text-gray-500 mb-8">
           Your subscription is active. You now have access to all rankings and your chosen creator community.
         </p>

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
+import PageTitle from "@/app/components/PageTitle";
 import PromoPrice from "@/app/components/PromoPrice";
 import { isPromoActive } from "@/lib/promo";
 
@@ -148,7 +149,7 @@ export default function AccountPage() {
       <NavBar activePath="/account" />
 
       <div className="max-w-2xl mx-auto px-6 py-16">
-        <h1 className="text-3xl font-bold mb-10">My Account</h1>
+        <PageTitle title="My Account" className="mb-10" />
 
         {/* Profile card */}
         <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-6 mb-6">

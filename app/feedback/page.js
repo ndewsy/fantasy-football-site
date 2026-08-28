@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
+import PageTitle from "@/app/components/PageTitle";
 
 const TABS = [
   { key: "help", label: "Get Help" },
@@ -72,8 +73,8 @@ export default function FeedbackPage() {
       <NavBar activePath="/feedback" />
 
       <div className="max-w-2xl mx-auto px-6 py-16">
-        <h1 className="text-3xl font-bold mb-2">Contact Us</h1>
-        <p className="text-gray-500 mb-8">Got a question or a great idea? We'd love to hear from you.</p>
+        <PageTitle title="Contact Us" />
+        <p className="text-gray-500 mb-8 text-center">Got a question or a great idea? We'd love to hear from you.</p>
 
         {/* Tabs */}
         <div className="flex gap-0 border-b border-gray-200 mb-8">

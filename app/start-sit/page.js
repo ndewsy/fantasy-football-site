@@ -1,13 +1,12 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Anton } from "next/font/google";
 import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
+import PageTitle from "@/app/components/PageTitle";
+import PillToggle from "@/app/components/PillToggle";
 import PlayerHeadshot from "@/app/components/PlayerHeadshot";
 import PromoPrice from "@/app/components/PromoPrice";
 import { isPromoActive } from "@/lib/promo";
-
-const anton = Anton({ subsets: ["latin"], weight: "400" });
 
 const START_SIT_LAUNCH_DATE = new Date("2026-09-05T00:00:00-04:00");
 
@@ -233,12 +232,7 @@ export default function StartSitPage() {
       <NavBar activePath="/start-sit" />
 
       <div className="max-w-4xl mx-auto px-6 py-12">
-        <div className="text-center mb-2">
-          <h1 className={`${anton.className} text-4xl sm:text-5xl uppercase tracking-tight leading-none text-[#0F172A]`}>
-            Start/Sit
-          </h1>
-          <p className="text-gray-400 font-semibold tracking-[0.3em] uppercase text-sm mt-0.5">Tool</p>
-        </div>
+        <PageTitle title="Start/Sit" subtitle="Tool" />
         <p className="text-gray-500 text-center mb-8 max-w-xl mx-auto">
           Fantasy point projections built from live sportsbook player prop lines — pick two players and see who projects higher.
         </p>
@@ -268,21 +262,7 @@ export default function StartSitPage() {
             {isBetaTester && !isPubliclyLive && (
               <p className="text-xs text-blue-600 font-semibold mb-4">🧪 Beta preview — live for subscribers September 5th</p>
             )}
-            <div className="flex items-center justify-center gap-2.5 mb-8">
-              {SCORING_OPTIONS.map((opt) => (
-                <button
-                  key={opt.id}
-                  onClick={() => setScoring(opt.id)}
-                  className={`px-4 py-1.5 rounded-full text-sm font-extrabold uppercase tracking-wide shadow-md transition-all ${
-                    scoring === opt.id
-                      ? "bg-[#2563EB] text-white shadow-blue-600/30"
-                      : "bg-gray-200 text-gray-500 shadow-gray-400/10 hover:bg-gray-300"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
+            <PillToggle options={SCORING_OPTIONS} value={scoring} onChange={setScoring} className="mb-8" />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
               <PlayerPicker label="Player A" player={playerA} onSelect={setPlayerA} onClear={() => setPlayerA(null)} />

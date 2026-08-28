@@ -1,16 +1,14 @@
 "use client";
 import { Fragment, useEffect, useRef, useState } from "react";
-import { Anton } from "next/font/google";
 import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
+import PageTitle from "@/app/components/PageTitle";
+import PillToggle from "@/app/components/PillToggle";
 import PlayerHeadshot from "@/app/components/PlayerHeadshot";
 import PromoPrice from "@/app/components/PromoPrice";
 import { isPromoActive } from "@/lib/promo";
+import { anton } from "@/lib/fonts";
 import ConsensusMovementWidget from "@/app/components/ConsensusMovementWidget";
-
-// Free stand-in for "Vanguard CF" (a paid font) on the player card name banner —
-// same bold, condensed, high-impact display feel without a webfont license.
-const anton = Anton({ subsets: ["latin"], weight: "400" });
 
 const FORMATS = ["Redraft 1QB", "Redraft SF", "Dynasty 1QB", "Dynasty SF"];
 
@@ -526,7 +524,7 @@ export default function Home() {
       {/* Subscriber header — shown instead of the full landing */}
       {authLoaded && (isSubscribed || isDashboardUser) && (
         <div className="max-w-5xl mx-auto px-6 pt-10 pb-2">
-          <h2 className="text-3xl font-bold text-[#0F172A]">Rankings</h2>
+          <h2 className={`${anton.className} text-4xl uppercase tracking-tight text-[#0F172A]`}>Rankings</h2>
           <p className="text-gray-500 mt-1">Expert consensus rankings across all formats.</p>
         </div>
       )}

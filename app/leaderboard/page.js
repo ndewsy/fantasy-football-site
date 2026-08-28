@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
+import PageTitle from "@/app/components/PageTitle";
 
 function RankBadge({ rank }) {
   const styles = {
@@ -56,8 +57,8 @@ export default function LeaderboardPage() {
       <main className="flex-1 max-w-3xl mx-auto w-full px-4 py-8">
 
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-[#0F172A]">Season Leaderboard</h1>
+        <div className="mb-6 text-center">
+          <PageTitle title="Season Leaderboard" />
           <p className="text-gray-500 text-sm mt-0.5">
             Only users who submitted all 272 picks appear here.
           </p>

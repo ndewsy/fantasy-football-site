@@ -1,13 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Anton } from "next/font/google";
 import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
+import PageTitle from "@/app/components/PageTitle";
+import PillToggle from "@/app/components/PillToggle";
 import PlayerHeadshot from "@/app/components/PlayerHeadshot";
 import PromoPrice from "@/app/components/PromoPrice";
 import { isPromoActive } from "@/lib/promo";
-
-const anton = Anton({ subsets: ["latin"], weight: "400" });
 
 const FORMATS = ["Auction 1QB", "Auction SF"];
 
@@ -97,11 +96,7 @@ export default function AuctionPage() {
       <NavBar activePath="/auction" />
 
       <div className="max-w-4xl mx-auto px-6 py-12">
-        <div className="text-center mb-2">
-          <h1 className={`${anton.className} text-4xl sm:text-5xl uppercase tracking-tight leading-none text-[#0F172A]`}>
-            Auction Draft
-          </h1>
-        </div>
+        <PageTitle title="Auction Draft" />
         <p className="text-gray-500 text-center mb-8 max-w-xl mx-auto">
           Auction values as a % of a $200 budget, plus each creator&apos;s team-build strategy for the format.
         </p>
@@ -121,19 +116,7 @@ export default function AuctionPage() {
 
         {isSubscribed && (
           <>
-            <div className="flex items-center justify-center gap-2.5 mb-4">
-              {FORMATS.map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFormat(f)}
-                  className={`px-4 py-1.5 rounded-full text-sm font-extrabold uppercase tracking-wide shadow-md transition-all ${
-                    format === f ? "bg-[#2563EB] text-white shadow-blue-600/30" : "bg-gray-200 text-gray-500 shadow-gray-400/10 hover:bg-gray-300"
-                  }`}
-                >
-                  {f}
-                </button>
-              ))}
-            </div>
+            <PillToggle options={FORMATS} value={format} onChange={setFormat} className="mb-4" />
 
             {boardLoading ? (
               <p className="text-sm text-gray-400 text-center py-12">Loading...</p>
