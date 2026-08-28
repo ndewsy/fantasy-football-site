@@ -1009,11 +1009,28 @@ export default function Home() {
                       </tr>
                     </thead>
                     <tbody>
-                      {FORMATS.map(fmt => {
+                      {[activeFormat, ...FORMATS.filter(fmt => fmt !== activeFormat)].map(fmt => {
                         const row = playerRankings[fmt] || {};
+                        const isActive = fmt === activeFormat;
                         return (
-                          <tr key={fmt} className="border-t border-gray-100 hover:bg-gray-50 transition-colors">
-                            <td className="px-4 py-3 font-medium text-[#0F172A]">{fmt}</td>
+                          <tr
+                            key={fmt}
+                            className={`border-t transition-colors ${
+                              isActive
+                                ? "relative z-10 border-blue-200 bg-blue-50 ring-2 ring-inset ring-blue-400 shadow-[0_0_18px_rgba(37,99,235,0.45)]"
+                                : "border-gray-100 hover:bg-gray-50"
+                            }`}
+                          >
+                            <td className="px-4 py-3 font-medium text-[#0F172A]">
+                              <span className="flex items-center gap-1.5">
+                                {fmt}
+                                {isActive && (
+                                  <span className="text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-100 px-1.5 py-0.5 rounded">
+                                    Viewing
+                                  </span>
+                                )}
+                              </span>
+                            </td>
                             <td className="px-4 py-3 text-center text-gray-600">{row.consensus ?? "—"}</td>
                             <td className="px-4 py-3 text-center text-gray-600">{row.rookierager ?? "—"}</td>
                             <td className="px-4 py-3 text-center text-gray-600">{row.ffhuddle ?? "—"}</td>
