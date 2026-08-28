@@ -8,6 +8,7 @@ import rehypeSanitize from "rehype-sanitize";
 import CreatorAvatar from "@/app/components/CreatorAvatar";
 import PlayerHeadshot from "@/app/components/PlayerHeadshot";
 import AuctionRankingsEditor from "@/app/components/AuctionRankingsEditor";
+import { riskColor } from "@/lib/riskColor";
 import Cropper from "react-easy-crop";
 
 const FORMATS = ["Dynasty SF", "Dynasty 1QB", "Redraft 1QB", "Redraft SF"];
@@ -551,12 +552,30 @@ export default function DashboardPage() {
   async function loadPlayerDb() {
     setPlayerDbLoading(true);
     const supabase = createClient();
-    const { data } = await supabase
-      .from('players')
-      .select('id, name, position, team, status, source, last_synced_at, sleeper_id, espn_id')
-      .order('position').order('name');
-    setPlayerDbList(data || []);
+    const all = [];
+    const PAGE = 1000;
+    for (let from = 0; ; from += PAGE) {
+      const { data } = await supabase
+        .from('players')
+        .select('id, name, position, team, status, source, last_synced_at, sleeper_id, espn_id, risk_rating')
+        .order('position').order('name')
+        .range(from, from + PAGE - 1);
+      all.push(...(data || []));
+      if (!data || data.length < PAGE) break;
+    }
+    setPlayerDbList(all);
     setPlayerDbLoading(false);
+  }
+
+  async function saveRiskRating(playerId, value) {
+    setPlayerDbList(prev => prev.map(p => p.id === playerId ? { ...p, risk_rating: value } : p));
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    await fetch('/api/players', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+      body: JSON.stringify({ id: playerId, risk_rating: value }),
+    }).catch(() => {});
   }
 
   async function triggerPlayerSync() {
@@ -1995,6 +2014,7 @@ export default function DashboardPage() {
                         <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Status</th>
                         <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Source</th>
                         <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Last Synced</th>
+                        <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 w-40">Risk Rating</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2032,11 +2052,39 @@ export default function DashboardPage() {
                               ? new Date(p.last_synced_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
                               : '—'}
                           </td>
+                          <td className="px-4 py-2.5">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="range"
+                                min="1"
+                                max="10"
+                                value={p.risk_rating ?? 1}
+                                onChange={e => saveRiskRating(p.id, Number(e.target.value))}
+                                className="w-20 accent-current"
+                                style={{ color: riskColor(p.risk_rating ?? 1) }}
+                              />
+                              <span
+                                className="text-xs font-bold w-5 text-center shrink-0"
+                                style={{ color: p.risk_rating ? riskColor(p.risk_rating) : undefined }}
+                              >
+                                {p.risk_rating ?? '—'}
+                              </span>
+                              {p.risk_rating != null && (
+                                <button
+                                  onClick={() => saveRiskRating(p.id, null)}
+                                  title="Clear rating"
+                                  className="text-gray-300 hover:text-red-500 text-xs shrink-0"
+                                >
+                                  ✕
+                                </button>
+                              )}
+                            </div>
+                          </td>
                         </tr>
                       ))}
                       {filtered.length === 0 && (
                         <tr>
-                          <td colSpan={6} className="px-4 py-8 text-center text-gray-400 text-sm">
+                          <td colSpan={7} className="px-4 py-8 text-center text-gray-400 text-sm">
                             {playerDbList.length === 0 ? 'No players yet. Run a sync to import from Sleeper.' : 'No players match your filters.'}
                           </td>
                         </tr>

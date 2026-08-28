@@ -8,6 +8,7 @@ import PlayerHeadshot from "@/app/components/PlayerHeadshot";
 import PromoPrice from "@/app/components/PromoPrice";
 import { isPromoActive } from "@/lib/promo";
 import { anton } from "@/lib/fonts";
+import { riskColor } from "@/lib/riskColor";
 import ConsensusMovementWidget from "@/app/components/ConsensusMovementWidget";
 
 const FORMATS = ["Redraft 1QB", "Redraft SF", "Dynasty 1QB", "Dynasty SF"];
@@ -193,9 +194,9 @@ export default function Home() {
       const supabase = createClient();
       const { data } = await supabase
         .from("players")
-        .select("id, name, position, team, sleeper_id, espn_id, height_inches, weight_lbs, age")
+        .select("id, name, position, team, sleeper_id, espn_id, height_inches, weight_lbs, age, risk_rating")
         .order("adp_rank");
-      setPlayerPool((data || []).map(p => ({ id: p.id, name: p.name, pos: p.position, team: p.team || "FA", sleeper_id: p.sleeper_id, espn_id: p.espn_id, height_inches: p.height_inches, weight_lbs: p.weight_lbs, age: p.age })));
+      setPlayerPool((data || []).map(p => ({ id: p.id, name: p.name, pos: p.position, team: p.team || "FA", sleeper_id: p.sleeper_id, espn_id: p.espn_id, height_inches: p.height_inches, weight_lbs: p.weight_lbs, age: p.age, risk_rating: p.risk_rating })));
       setPoolLoaded(true);
     }
     loadPool();
@@ -989,6 +990,30 @@ export default function Home() {
                 </div>
               </div>
             </div>
+
+            {/* Risk Rating */}
+            {selectedPlayer.risk_rating != null && (
+              <div className="px-6 pt-5">
+                <div className="flex items-center justify-between mb-1.5">
+                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Risk Rating</h3>
+                  <span className="text-sm font-bold" style={{ color: riskColor(selectedPlayer.risk_rating) }}>
+                    {selectedPlayer.risk_rating}/10
+                  </span>
+                </div>
+                <div
+                  className="relative h-2 rounded-full"
+                  style={{ background: `linear-gradient(to right, ${riskColor(1)}, ${riskColor(10)})` }}
+                >
+                  <div
+                    className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white border-2 shadow"
+                    style={{
+                      left: `calc(${((selectedPlayer.risk_rating - 1) / 9) * 100}% - 7px)`,
+                      borderColor: riskColor(selectedPlayer.risk_rating),
+                    }}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Rankings table */}
             <div className="p-6">

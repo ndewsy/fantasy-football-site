@@ -30,3 +30,24 @@ export async function POST(request) {
   if (error) return Response.json({ error: error.message }, { status: 500 });
   return Response.json({ ok: true, id: data.id });
 }
+
+export async function PATCH(request) {
+  const user = await requireAdmin(request);
+  if (!user) return Response.json({ error: 'Forbidden' }, { status: 403 });
+
+  const { id, risk_rating } = await request.json();
+  if (!id) return Response.json({ error: 'id is required' }, { status: 400 });
+
+  const value = risk_rating === null ? null : Number(risk_rating);
+  if (value !== null && (!Number.isInteger(value) || value < 1 || value > 10)) {
+    return Response.json({ error: 'risk_rating must be an integer 1-10 or null' }, { status: 400 });
+  }
+
+  const { error } = await supabase()
+    .from('players')
+    .update({ risk_rating: value })
+    .eq('id', id);
+
+  if (error) return Response.json({ error: error.message }, { status: 500 });
+  return Response.json({ ok: true });
+}
