@@ -523,7 +523,7 @@ export default function Home() {
 
       {/* Subscriber header — shown instead of the full landing */}
       {authLoaded && (isSubscribed || isDashboardUser) && (
-        <div className="max-w-5xl mx-auto px-6 pt-10 pb-2">
+        <div className="w-full px-6 lg:px-8 pt-10 pb-2">
           <h2 className={`${anton.className} text-4xl uppercase tracking-tight text-[#0F172A]`}>Rankings</h2>
           <p className="text-gray-500 mt-1">Expert consensus rankings across all formats.</p>
         </div>
