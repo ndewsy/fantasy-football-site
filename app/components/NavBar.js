@@ -22,6 +22,14 @@ function CreatorsIcon(props) {
     </svg>
   );
 }
+function StartSitIcon(props) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M5 3v14M15 3v14" />
+      <path d="M5 6l3-3 3 3M15 14l-3 3-3-3" />
+    </svg>
+  );
+}
 function PicksIcon(props) {
   return (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -115,6 +123,7 @@ export default function NavBar({ activePath = "/" }) {
 
   const links = [
     { href: "/", label: "Rankings", icon: RankingsIcon },
+    { href: "/start-sit", label: "Start/Sit", icon: StartSitIcon },
     { href: "/creators", label: "Creators", icon: CreatorsIcon },
     { href: "/picks", label: "Picks", icon: PicksIcon },
     ...(user ? [{ href: "/leaderboard", label: "Leaderboard", icon: LeaderboardIcon }] : []),

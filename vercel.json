@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/expire-free-trials",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/sync-player-props",
+      "schedule": "0 5 * * *"
     }
   ]
 }
