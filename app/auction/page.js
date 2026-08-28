@@ -12,7 +12,6 @@ const anton = Anton({ subsets: ["latin"], weight: "400" });
 const FORMATS = ["Auction 1QB", "Auction SF"];
 
 const CREATORS = [
-  { id: "rookierager", name: "RookieRager" },
   { id: "ffhuddle", name: "FantasyFootballHuddle" },
 ];
 
@@ -30,10 +29,11 @@ export default function AuctionPage() {
   const [loading, setLoading] = useState(true);
 
   const [format, setFormat] = useState(FORMATS[0]);
-  const [creator, setCreator] = useState(CREATORS[0].id);
+  const creator = CREATORS[0].id;
   const [board, setBoard] = useState(null);
   const [playersById, setPlayersById] = useState({});
   const [boardLoading, setBoardLoading] = useState(true);
+  const [teamBuildOpen, setTeamBuildOpen] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -69,6 +69,7 @@ export default function AuctionPage() {
   useEffect(() => {
     if (!isSubscribed) return;
     setBoardLoading(true);
+    setTeamBuildOpen(false);
     fetch(`/api/auction-rankings?creator_id=${encodeURIComponent(creator)}&format=${encodeURIComponent(format)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then(setBoard)
@@ -134,20 +135,6 @@ export default function AuctionPage() {
               ))}
             </div>
 
-            <div className="flex items-center justify-center gap-1.5 mb-8">
-              {CREATORS.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => setCreator(c.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                    creator === c.id ? "bg-[#0F172A] text-white" : "bg-white/70 text-gray-500 border border-white/80 hover:bg-gray-50"
-                  }`}
-                >
-                  {c.name}
-                </button>
-              ))}
-            </div>
-
             {boardLoading ? (
               <p className="text-sm text-gray-400 text-center py-12">Loading...</p>
             ) : !board?.players?.length ? (
@@ -156,12 +143,27 @@ export default function AuctionPage() {
               </div>
             ) : (
               <>
-                <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-5 mb-6">
-                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Team Build</h3>
-                  {board.teamBuildDescription ? (
-                    <p className="text-sm text-[#0F172A] whitespace-pre-wrap leading-relaxed">{board.teamBuildDescription}</p>
-                  ) : (
-                    <p className="text-sm text-gray-400">Strategy write-up coming soon.</p>
+                <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg mb-6 overflow-hidden">
+                  <button
+                    onClick={() => setTeamBuildOpen((v) => !v)}
+                    className="w-full flex items-center justify-between px-5 py-3.5 text-left"
+                  >
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Team Build</h3>
+                    <svg
+                      viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                      className={`w-4 h-4 text-gray-400 transition-transform ${teamBuildOpen ? "rotate-180" : ""}`}
+                    >
+                      <path d="M5 7.5l5 5 5-5" />
+                    </svg>
+                  </button>
+                  {teamBuildOpen && (
+                    <div className="px-5 pb-5">
+                      {board.teamBuildDescription ? (
+                        <p className="text-sm text-[#0F172A] whitespace-pre-wrap leading-relaxed">{board.teamBuildDescription}</p>
+                      ) : (
+                        <p className="text-sm text-gray-400">Strategy write-up coming soon.</p>
+                      )}
+                    </div>
                   )}
                 </div>
 
