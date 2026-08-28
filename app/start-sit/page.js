@@ -6,6 +6,8 @@ import PlayerHeadshot from "@/app/components/PlayerHeadshot";
 import PromoPrice from "@/app/components/PromoPrice";
 import { isPromoActive } from "@/lib/promo";
 
+const START_SIT_LAUNCH_DATE = new Date("2026-09-05T00:00:00-04:00");
+
 const SCORING_OPTIONS = [
   { id: "ppr", label: "Full PPR" },
   { id: "half_ppr", label: "Half PPR" },
@@ -183,6 +185,13 @@ export default function StartSitPage() {
     || (!!subscription && subscription.plan_type !== "flat_access" && subscription.status === "active")
     || isFlatAccessGranted;
 
+  // Creators/admins get the tool now as beta testers; regular subscribers see a
+  // "coming soon" notice until public launch.
+  const isBetaTester = isDashboardUser;
+  const isPubliclyLive = new Date() >= START_SIT_LAUNCH_DATE;
+  const hasFullAccess = isBetaTester || (isSubscribed && isPubliclyLive);
+  const isPreLaunchSubscriber = isSubscribed && !isBetaTester && !isPubliclyLive;
+
   useEffect(() => {
     if (!playerA || !playerB) { setComparison(null); return; }
     setComparing(true);
@@ -205,6 +214,13 @@ export default function StartSitPage() {
           Fantasy point projections built from live sportsbook player prop lines — pick two players and see who projects higher.
         </p>
 
+        {isPreLaunchSubscriber && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8 text-center">
+            <p className="text-blue-700 font-semibold text-lg mb-1">🚀 This tool will be live September 5th</p>
+            <p className="text-gray-500 text-sm">Start/Sit is finishing up beta testing with our creators — check back soon.</p>
+          </div>
+        )}
+
         {!isSubscribed && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 mb-8 text-center">
             <p className="text-amber-600 font-semibold text-lg mb-1">🔒 Start/Sit is a subscriber tool</p>
@@ -218,8 +234,11 @@ export default function StartSitPage() {
           </div>
         )}
 
-        {isSubscribed && (
+        {hasFullAccess && (
           <>
+            {isBetaTester && !isPubliclyLive && (
+              <p className="text-xs text-blue-600 font-semibold mb-4">🧪 Beta preview — live for subscribers September 5th</p>
+            )}
             <div className="flex items-center gap-2 mb-6">
               <span className="text-xs font-semibold text-gray-500 mr-1">Scoring:</span>
               {SCORING_OPTIONS.map((opt) => (
