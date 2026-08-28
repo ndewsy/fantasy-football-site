@@ -1,23 +1,28 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { Anton } from "next/font/google";
 import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
 import PlayerHeadshot from "@/app/components/PlayerHeadshot";
 import PromoPrice from "@/app/components/PromoPrice";
 import { isPromoActive } from "@/lib/promo";
 
+const anton = Anton({ subsets: ["latin"], weight: "400" });
+
 const START_SIT_LAUNCH_DATE = new Date("2026-09-05T00:00:00-04:00");
 
 const SCORING_OPTIONS = [
-  { id: "ppr", label: "Full PPR" },
-  { id: "half_ppr", label: "Half PPR" },
+  { id: "ppr", label: "PPR" },
+  { id: "half_ppr", label: "0.5 PPR" },
   { id: "standard", label: "Standard" },
 ];
 
+// Brand-color badges rather than scraped/reproduced sportsbook logo artwork,
+// which we don't hold rights to embed.
 const SPORTSBOOKS = [
-  { name: "DraftKings", url: "https://sportsbook.draftkings.com" },
-  { name: "FanDuel", url: "https://sportsbook.fanduel.com" },
-  { name: "BetMGM", url: "https://sports.betmgm.com" },
+  { name: "DraftKings", url: "https://sportsbook.draftkings.com", bg: "#053213", text: "#53D337" },
+  { name: "FanDuel", url: "https://sportsbook.fanduel.com", bg: "#1493FF", text: "#FFFFFF" },
+  { name: "BetMGM", url: "https://sports.betmgm.com", bg: "#B4975A", text: "#111111" },
 ];
 
 function PlayerPicker({ label, player, onSelect, onClear }) {
@@ -97,15 +102,34 @@ function PlayerPicker({ label, player, onSelect, onClear }) {
   );
 }
 
-function ProjectionCard({ result, recommended, opponentLabel }) {
+// Quick visual summary — green/red photo treatment — shown above the detailed
+// per-stat breakdown once both players have been compared.
+function PlayerSummaryCard({ result, isRecommended, hasRecommendation }) {
+  const { player, hasGame } = result;
+  const color = !hasGame ? "#9CA3AF" : isRecommended ? "#16A34A" : hasRecommendation ? "#DC2626" : "#9CA3AF";
+  const label = !hasGame ? "No Data" : isRecommended ? "Start" : hasRecommendation ? "Sit" : "";
+  const labelCls = !hasGame || !hasRecommendation
+    ? "bg-gray-100 text-gray-500"
+    : isRecommended
+      ? "bg-green-100 text-green-700"
+      : "bg-red-100 text-red-600";
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="xl" shape="square" teamColor={color} />
+      <p className="font-bold text-sm text-[#0F172A] text-center max-w-[7rem] truncate">{player.name}</p>
+      {label && (
+        <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${labelCls}`}>
+          {label}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function ProjectionCard({ result, opponentLabel }) {
   const { player, hasGame, gameStartsAt, homeAway, projection } = result;
   return (
-    <div className={`bg-white/70 backdrop-blur-md rounded-xl border shadow-lg p-5 relative ${recommended ? "border-green-400 ring-2 ring-green-300" : "border-white/80"}`}>
-      {recommended && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow">
-          START
-        </div>
-      )}
+    <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-5 relative">
       <div className="flex items-center gap-3 mb-4">
         <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="lg" />
         <div className="min-w-0">
@@ -209,8 +233,13 @@ export default function StartSitPage() {
       <NavBar activePath="/start-sit" />
 
       <div className="max-w-4xl mx-auto px-6 py-12">
-        <h1 className="text-3xl font-bold mb-1">Start/Sit</h1>
-        <p className="text-gray-500 mb-8">
+        <div className="text-center mb-2">
+          <h1 className={`${anton.className} text-4xl sm:text-5xl uppercase tracking-tight leading-none text-[#0F172A]`}>
+            Start/Sit
+          </h1>
+          <p className="text-gray-400 font-semibold tracking-[0.3em] uppercase text-sm mt-0.5">Tool</p>
+        </div>
+        <p className="text-gray-500 text-center mb-8 max-w-xl mx-auto">
           Fantasy point projections built from live sportsbook player prop lines — pick two players and see who projects higher.
         </p>
 
@@ -239,16 +268,15 @@ export default function StartSitPage() {
             {isBetaTester && !isPubliclyLive && (
               <p className="text-xs text-blue-600 font-semibold mb-4">🧪 Beta preview — live for subscribers September 5th</p>
             )}
-            <div className="flex items-center gap-2 mb-6">
-              <span className="text-xs font-semibold text-gray-500 mr-1">Scoring:</span>
+            <div className="flex items-center justify-center gap-2.5 mb-8">
               {SCORING_OPTIONS.map((opt) => (
                 <button
                   key={opt.id}
                   onClick={() => setScoring(opt.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  className={`px-4 py-1.5 rounded-full text-sm font-extrabold uppercase tracking-wide shadow-md transition-all ${
                     scoring === opt.id
-                      ? "bg-[#2563EB] text-white"
-                      : "bg-white/70 text-gray-500 border border-white/80 hover:bg-gray-50"
+                      ? "bg-[#2563EB] text-white shadow-blue-600/30"
+                      : "bg-gray-200 text-gray-500 shadow-gray-400/10 hover:bg-gray-300"
                   }`}
                 >
                   {opt.label}
@@ -264,40 +292,53 @@ export default function StartSitPage() {
             {comparing && <p className="text-sm text-gray-400 text-center py-8">Loading projections...</p>}
 
             {!comparing && comparison && !comparison.error && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {comparison.players.map((result) => {
-                  const opp = comparison.players.find((r) => r.player.id !== result.player.id);
-                  const opponentLabel = result.opponentId
-                    ? result.opponentId.replace(/_NFL$/, "").replaceAll("_", " ")
-                    : opp?.player.team || "";
-                  return (
-                    <ProjectionCard
+              <>
+                <div className="flex items-start justify-center gap-8 sm:gap-14 mb-8">
+                  {comparison.players.map((result) => (
+                    <PlayerSummaryCard
                       key={result.player.id}
                       result={result}
-                      opponentLabel={opponentLabel}
-                      recommended={comparison.recommendedPlayerId === result.player.id}
+                      isRecommended={comparison.recommendedPlayerId === result.player.id}
+                      hasRecommendation={!!comparison.recommendedPlayerId}
                     />
-                  );
-                })}
-              </div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {comparison.players.map((result) => {
+                    const opp = comparison.players.find((r) => r.player.id !== result.player.id);
+                    const opponentLabel = result.opponentId
+                      ? result.opponentId.replace(/_NFL$/, "").replaceAll("_", " ")
+                      : opp?.player.team || "";
+                    return (
+                      <ProjectionCard
+                        key={result.player.id}
+                        result={result}
+                        opponentLabel={opponentLabel}
+                      />
+                    );
+                  })}
+                </div>
+              </>
             )}
 
             {!comparing && comparison?.error && (
               <p className="text-sm text-red-500 text-center py-8">{comparison.error}</p>
             )}
 
-            <div className="mt-10 pt-6 border-t border-gray-100">
-              <p className="text-xs text-gray-400 mb-2">Projections are derived from consensus sportsbook lines. Check live odds:</p>
-              <div className="flex flex-wrap gap-3">
+            <div className="mt-10 pt-6 border-t border-gray-100 text-center">
+              <p className="text-xs text-gray-400 mb-3">Projections are derived from consensus sportsbook lines. Check live odds:</p>
+              <div className="flex flex-wrap items-center justify-center gap-3">
                 {SPORTSBOOKS.map((b) => (
                   <a
                     key={b.name}
                     href={b.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 underline"
+                    style={{ backgroundColor: b.bg, color: b.text }}
+                    className="text-xs font-extrabold uppercase tracking-wide px-4 py-2 rounded-lg shadow-md hover:brightness-110 transition-all"
                   >
-                    {b.name} ↗
+                    {b.name}
                   </a>
                 ))}
               </div>
