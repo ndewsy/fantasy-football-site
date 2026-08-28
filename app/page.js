@@ -998,47 +998,44 @@ export default function Home() {
               {playerRankingsLoading ? (
                 <p className="text-gray-400 text-sm py-6 text-center">Loading...</p>
               ) : (
-                <div className="rounded-xl overflow-hidden border border-gray-100">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50 text-gray-500">
-                      <tr>
-                        <th className="text-left px-4 py-2.5 font-medium">Format</th>
-                        <th className="text-center px-4 py-2.5 font-medium">Consensus</th>
-                        <th className="text-center px-4 py-2.5 font-medium">RookieRager</th>
-                        <th className="text-center px-4 py-2.5 font-medium">FFHuddle</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[activeFormat, ...FORMATS.filter(fmt => fmt !== activeFormat)].map(fmt => {
-                        const row = playerRankings[fmt] || {};
-                        const isActive = fmt === activeFormat;
-                        return (
-                          <tr
-                            key={fmt}
-                            className={`border-t transition-colors ${
-                              isActive
-                                ? "relative z-10 border-blue-200 bg-blue-50 ring-2 ring-inset ring-blue-400 shadow-[0_0_18px_rgba(37,99,235,0.45)]"
-                                : "border-gray-100 hover:bg-gray-50"
-                            }`}
-                          >
-                            <td className="px-4 py-3 font-medium text-[#0F172A]">
-                              <span className="flex items-center gap-1.5">
-                                {fmt}
-                                {isActive && (
-                                  <span className="text-[9px] font-bold text-blue-600 uppercase tracking-wider bg-blue-100 px-1.5 py-0.5 rounded">
-                                    Viewing
-                                  </span>
-                                )}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-center text-gray-600">{row.consensus ?? "—"}</td>
-                            <td className="px-4 py-3 text-center text-gray-600">{row.rookierager ?? "—"}</td>
-                            <td className="px-4 py-3 text-center text-gray-600">{row.ffhuddle ?? "—"}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                <div className="relative pl-4">
+                  {/* Active-format indicator dot — sits in the gutter outside the
+                      glowing row, aligned to the active row's fixed position (it's
+                      always sorted to the first data row, right below the header). */}
+                  <span className="absolute left-0 top-[62px] -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(37,99,235,0.9)]" />
+                  <div className="rounded-xl overflow-hidden border border-gray-100">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 text-gray-500">
+                        <tr>
+                          <th className="text-left px-4 py-2.5 font-medium">Format</th>
+                          <th className="text-center px-4 py-2.5 font-medium">Consensus</th>
+                          <th className="text-center px-4 py-2.5 font-medium">RookieRager</th>
+                          <th className="text-center px-4 py-2.5 font-medium">FFHuddle</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[activeFormat, ...FORMATS.filter(fmt => fmt !== activeFormat)].map(fmt => {
+                          const row = playerRankings[fmt] || {};
+                          const isActive = fmt === activeFormat;
+                          return (
+                            <tr
+                              key={fmt}
+                              className={`border-t transition-colors ${
+                                isActive
+                                  ? "relative z-10 border-blue-200 bg-blue-50 ring-2 ring-inset ring-blue-400 shadow-[0_0_18px_rgba(37,99,235,0.45)]"
+                                  : "border-gray-100 hover:bg-gray-50"
+                              }`}
+                            >
+                              <td className="px-4 py-3 font-medium text-[#0F172A]">{fmt}</td>
+                              <td className="px-4 py-3 text-center text-gray-600">{row.consensus ?? "—"}</td>
+                              <td className="px-4 py-3 text-center text-gray-600">{row.rookierager ?? "—"}</td>
+                              <td className="px-4 py-3 text-center text-gray-600">{row.ffhuddle ?? "—"}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </div>
