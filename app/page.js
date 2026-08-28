@@ -1,11 +1,16 @@
 "use client";
 import { Fragment, useEffect, useRef, useState } from "react";
+import { Anton } from "next/font/google";
 import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
 import PlayerHeadshot from "@/app/components/PlayerHeadshot";
 import PromoPrice from "@/app/components/PromoPrice";
 import { isPromoActive } from "@/lib/promo";
 import ConsensusMovementWidget from "@/app/components/ConsensusMovementWidget";
+
+// Free stand-in for "Vanguard CF" (a paid font) on the player card name banner —
+// same bold, condensed, high-impact display feel without a webfont license.
+const anton = Anton({ subsets: ["latin"], weight: "400" });
 
 const FORMATS = ["Redraft 1QB", "Redraft SF", "Dynasty 1QB", "Dynasty SF"];
 
@@ -963,7 +968,7 @@ export default function Home() {
             >
               <PlayerHeadshot espnId={selectedPlayer.espn_id} sleeperId={selectedPlayer.sleeper_id} name={selectedPlayer.name} size="xl" shape="square" />
               <div className="pb-0.5 min-w-0">
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-white uppercase tracking-tight leading-none mb-1.5 truncate">{selectedPlayer.name}</h2>
+                <h2 className={`${anton.className} text-2xl sm:text-3xl text-white uppercase tracking-tight leading-none mb-1.5 truncate`}>{selectedPlayer.name}</h2>
                 {(selectedPlayer.age || selectedPlayer.height_inches || selectedPlayer.weight_lbs) && (
                   <p className="text-blue-100 text-sm font-medium mb-2">
                     {[
