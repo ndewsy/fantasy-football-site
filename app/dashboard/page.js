@@ -7,6 +7,7 @@ import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import CreatorAvatar from "@/app/components/CreatorAvatar";
 import PlayerHeadshot from "@/app/components/PlayerHeadshot";
+import AuctionRankingsEditor from "@/app/components/AuctionRankingsEditor";
 import Cropper from "react-easy-crop";
 
 const FORMATS = ["Dynasty SF", "Dynasty 1QB", "Redraft 1QB", "Redraft SF"];
@@ -103,6 +104,7 @@ export default function DashboardPage() {
 
   // Admin state
   const [adminProfiles, setAdminProfiles] = useState([]);
+  const [auctionAdminCreatorId, setAuctionAdminCreatorId] = useState("");
   const [adminPosts, setAdminPosts] = useState([]);
   const [adminSubCount, setAdminSubCount] = useState(0);
   const [roleUpdating, setRoleUpdating] = useState(null);
@@ -1309,7 +1311,7 @@ export default function DashboardPage() {
         {/* Row 1 — Dashboard tabs */}
         <div className="flex gap-1.5 mb-6 overflow-x-auto pb-1">
           {profile.role === "admin" && (
-            [["admin", "Admin Overview"], ["subscribers", "Subscribers"], ["payouts", "Revenue & Payouts"], ["feedback", "Feedback"], ["players", "Add Players"], ["playerdb", "Player Database"]].map(([t, label]) => (
+            [["admin", "Admin Overview"], ["subscribers", "Subscribers"], ["payouts", "Revenue & Payouts"], ["feedback", "Feedback"], ["players", "Add Players"], ["playerdb", "Player Database"], ["admin-auction", "Auction Rankings"]].map(([t, label]) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -1324,7 +1326,7 @@ export default function DashboardPage() {
             ))
           )}
           {profile.is_creator && (
-            ["rankings", "posts", "earnings", "analytics", "profile"].map((t) => (
+            ["rankings", "auction", "posts", "earnings", "analytics", "profile"].map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -1334,7 +1336,7 @@ export default function DashboardPage() {
                     : "bg-white/60 backdrop-blur-sm text-gray-500 hover:bg-white/80 border border-white/70"
                 }`}
               >
-                {t === "rankings" ? "My Rankings" : t === "posts" ? "My Posts" : t === "earnings" ? "My Earnings" : t === "analytics" ? "My Analytics" : "My Profile"}
+                {t === "rankings" ? "My Rankings" : t === "auction" ? "My Auction" : t === "posts" ? "My Posts" : t === "earnings" ? "My Earnings" : t === "analytics" ? "My Analytics" : "My Profile"}
               </button>
             ))
           )}
@@ -2047,6 +2049,38 @@ export default function DashboardPage() {
           );
         })()}
 
+        {/* ── Admin: Auction Rankings Tab ── */}
+        {tab === "admin-auction" && (() => {
+          const creators = adminProfiles.filter(p => p.is_creator && p.creator_id);
+          return (
+            <div>
+              <h2 className="text-lg font-bold text-[#0F172A] mb-4">Auction Rankings — Admin</h2>
+              <div className="flex items-center gap-2 mb-4">
+                <label className="text-xs font-semibold text-gray-500">Creator:</label>
+                <select
+                  value={auctionAdminCreatorId}
+                  onChange={(e) => setAuctionAdminCreatorId(e.target.value)}
+                  className="bg-white rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select a creator...</option>
+                  {creators.map(c => (
+                    <option key={c.creator_id} value={c.creator_id}>{c.display_name || c.creator_id}</option>
+                  ))}
+                </select>
+              </div>
+              {auctionAdminCreatorId ? (
+                <AuctionRankingsEditor
+                  key={auctionAdminCreatorId}
+                  creatorId={auctionAdminCreatorId}
+                  creatorLabel={creators.find(c => c.creator_id === auctionAdminCreatorId)?.display_name || auctionAdminCreatorId}
+                />
+              ) : (
+                <p className="text-sm text-gray-400">Pick a creator above to view or edit their auction rankings.</p>
+              )}
+            </div>
+          );
+        })()}
+
         {/* ── Rankings Tab ── */}
         {tab === "rankings" && (
           <div onClick={() => { setSelectedPlayers(new Set()); setLastClickedPlayer(null); }}>
@@ -2710,6 +2744,11 @@ export default function DashboardPage() {
             </div>
 
           </div>
+        )}
+
+        {/* ── My Auction Tab ── */}
+        {tab === "auction" && (
+          <AuctionRankingsEditor creatorId={profile.creator_id} />
         )}
 
         {/* ── Posts Tab ── */}
