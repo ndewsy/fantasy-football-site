@@ -992,14 +992,16 @@ export default function Home() {
             </div>
 
             {/* Risk Rating */}
-            {selectedPlayer.risk_rating != null && (
-              <div className="px-6 pt-5">
-                <div className="flex items-center justify-between mb-1.5">
-                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Risk Rating</h3>
+            <div className="px-6 pt-5">
+              <div className="flex items-center justify-between mb-1.5">
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Risk Rating</h3>
+                {selectedPlayer.risk_rating != null && (
                   <span className="text-sm font-bold" style={{ color: riskColor(selectedPlayer.risk_rating) }}>
                     {selectedPlayer.risk_rating}/10
                   </span>
-                </div>
+                )}
+              </div>
+              {selectedPlayer.risk_rating != null ? (
                 <div
                   className="relative h-2 rounded-full"
                   style={{ background: `linear-gradient(to right, ${riskColor(1)}, ${riskColor(10)})` }}
@@ -1012,8 +1014,13 @@ export default function Home() {
                     }}
                   />
                 </div>
-              </div>
-            )}
+              ) : (
+                <>
+                  <div className="h-2 rounded-full bg-gray-100" />
+                  <p className="text-xs text-gray-400 italic mt-1.5">Risk not set</p>
+                </>
+              )}
+            </div>
 
             {/* Rankings table */}
             <div className="p-6">

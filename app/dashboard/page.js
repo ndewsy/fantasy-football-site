@@ -348,7 +348,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (tab === 'playerdb' && profile?.role === 'admin') loadPlayerDb();
-    if (tab === 'subscribers' && profile?.role === 'admin') loadSubscriberUsers();
+    if (tab === 'subscribers' && (profile?.role === 'admin' || profile?.is_creator)) loadSubscriberUsers();
   }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function updateFeedbackStatus(id, newStatus) {
@@ -515,8 +515,13 @@ export default function DashboardPage() {
   const PLAN_LABELS = { flat_access: "Full Access", legacy: "Legacy Plan", free_trial: "Free Trial", promo_5mo: "August Promo" };
 
   function subscriptionPlanLabel(sub) {
-    if (!sub) return "—";
+    if (!sub) return "No plan";
     return PLAN_LABELS[sub.plan_type] || sub.plan_type;
+  }
+
+  function signedUpLabel(createdAt) {
+    if (!createdAt) return "—";
+    return new Date(createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   }
 
   function subscriptionExpiresLabel(sub) {
@@ -1345,7 +1350,7 @@ export default function DashboardPage() {
             ))
           )}
           {profile.is_creator && (
-            ["rankings", "auction", "posts", "earnings", "analytics", "profile"].map((t) => (
+            ["rankings", "auction", "posts", "earnings", "analytics", "subscribers", "profile"].map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -1355,7 +1360,7 @@ export default function DashboardPage() {
                     : "bg-white/60 backdrop-blur-sm text-gray-500 hover:bg-white/80 border border-white/70"
                 }`}
               >
-                {t === "rankings" ? "My Rankings" : t === "auction" ? "My Auction" : t === "posts" ? "My Posts" : t === "earnings" ? "My Earnings" : t === "analytics" ? "My Analytics" : "My Profile"}
+                {t === "rankings" ? "My Rankings" : t === "auction" ? "My Auction" : t === "posts" ? "My Posts" : t === "earnings" ? "My Earnings" : t === "analytics" ? "My Analytics" : t === "subscribers" ? "Subscribers" : "My Profile"}
               </button>
             ))
           )}
@@ -1565,6 +1570,7 @@ export default function DashboardPage() {
                     <th className="text-left px-4 py-3">Plan</th>
                     <th className="text-left px-4 py-3">Status</th>
                     <th className="text-left px-4 py-3">Expires</th>
+                    <th className="text-left px-4 py-3">Signed Up</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1601,13 +1607,14 @@ export default function DashboardPage() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-gray-600">{subscriptionExpiresLabel(u.subscription)}</td>
+                      <td className="px-4 py-3 text-gray-600">{signedUpLabel(u.created_at)}</td>
                     </tr>
                   ))}
                   {subscriberUsersLoading && (
-                    <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+                    <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
                   )}
                   {!subscriberUsersLoading && filteredSubscriberUsers.length === 0 && (
-                    <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">
+                    <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">
                       {subscriberUsers.length === 0 ? "No users found." : "No users match the current filters."}
                     </td></tr>
                   )}

@@ -12,11 +12,11 @@ export async function GET(request) {
 
   const { data: prof } = await supabase()
     .from('profiles')
-    .select('role')
+    .select('role, is_creator')
     .eq('id', user.id)
     .maybeSingle();
 
-  if (prof?.role !== 'admin') {
+  if (prof?.role !== 'admin' && !prof?.is_creator) {
     return Response.json({ error: 'Forbidden' }, { status: 403 });
   }
 
