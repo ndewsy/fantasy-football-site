@@ -12,6 +12,17 @@ async function requireAdmin(request) {
   return prof?.role === 'admin' ? user : null;
 }
 
+// Risk ratings are settable by creators too, not just admins — unlike adding
+// new players, which stays admin-only.
+async function requireAdminOrCreator(request) {
+  const token = request.headers.get('Authorization')?.replace('Bearer ', '');
+  if (!token) return null;
+  const { data: { user }, error } = await supabase().auth.getUser(token);
+  if (error || !user) return null;
+  const { data: prof } = await supabase().from('profiles').select('role, is_creator').eq('id', user.id).maybeSingle();
+  return (prof?.role === 'admin' || prof?.is_creator) ? user : null;
+}
+
 export async function POST(request) {
   const user = await requireAdmin(request);
   if (!user) return Response.json({ error: 'Forbidden' }, { status: 403 });
@@ -32,7 +43,7 @@ export async function POST(request) {
 }
 
 export async function PATCH(request) {
-  const user = await requireAdmin(request);
+  const user = await requireAdminOrCreator(request);
   if (!user) return Response.json({ error: 'Forbidden' }, { status: 403 });
 
   const { id, risk_rating } = await request.json();

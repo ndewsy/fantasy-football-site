@@ -369,6 +369,20 @@ export default function Home() {
     return () => { document.body.style.overflow = ""; };
   }, [playerModalOpen]);
 
+  // Creators/admins can set a player's risk rating right from the card;
+  // subscribers only ever see the read-only version (gated in the JSX below).
+  async function saveRiskRating(playerId, value) {
+    setSelectedPlayer(prev => (prev && prev.id === playerId ? { ...prev, risk_rating: value } : prev));
+    setPlayerPool(prev => prev.map(p => (p.id === playerId ? { ...p, risk_rating: value } : p)));
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    await fetch("/api/players", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+      body: JSON.stringify({ id: playerId, risk_rating: value }),
+    }).catch(() => {});
+  }
+
   async function openPlayerModal(player) {
     if (activeCreator !== "consensus") {
       const supabase = createClient();
@@ -991,17 +1005,43 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Risk Rating */}
+            {/* Risk Rating — creators/admins can set it here; everyone else sees it read-only */}
             <div className="px-6 pt-5">
               <div className="flex items-center justify-between mb-1.5">
                 <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Risk Rating</h3>
-                {selectedPlayer.risk_rating != null && (
-                  <span className="text-sm font-bold" style={{ color: riskColor(selectedPlayer.risk_rating) }}>
-                    {selectedPlayer.risk_rating}/10
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {selectedPlayer.risk_rating != null && (
+                    <span className="text-sm font-bold" style={{ color: riskColor(selectedPlayer.risk_rating) }}>
+                      {selectedPlayer.risk_rating}/10
+                    </span>
+                  )}
+                  {isDashboardUser && selectedPlayer.risk_rating != null && (
+                    <button
+                      onClick={() => saveRiskRating(selectedPlayer.id, null)}
+                      className="text-[10px] text-gray-400 hover:text-red-500 underline"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
               </div>
-              {selectedPlayer.risk_rating != null ? (
+
+              {isDashboardUser ? (
+                <>
+                  <input
+                    type="range"
+                    min="1"
+                    max="10"
+                    value={selectedPlayer.risk_rating ?? 1}
+                    onChange={(e) => saveRiskRating(selectedPlayer.id, Number(e.target.value))}
+                    className="w-full accent-current"
+                    style={{ color: riskColor(selectedPlayer.risk_rating ?? 1) }}
+                  />
+                  {selectedPlayer.risk_rating == null && (
+                    <p className="text-xs text-gray-400 italic mt-1">Drag to set a rating</p>
+                  )}
+                </>
+              ) : selectedPlayer.risk_rating != null ? (
                 <div
                   className="relative h-2 rounded-full"
                   style={{ background: `linear-gradient(to right, ${riskColor(1)}, ${riskColor(10)})` }}
