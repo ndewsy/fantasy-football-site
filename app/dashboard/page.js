@@ -1288,7 +1288,7 @@ export default function DashboardPage() {
       <NavBar activePath="/dashboard" />
 
       <div className="max-w-5xl mx-auto px-6 py-10">
-        <div className="mb-8 flex items-start justify-between">
+        <div className="mb-8 flex flex-wrap items-start justify-between gap-y-3">
           <div className="flex items-center gap-4">
             {profile.is_creator && (
               <CreatorAvatar
@@ -1299,7 +1299,7 @@ export default function DashboardPage() {
               />
             )}
             <div>
-              <h1 className="text-3xl font-bold">Welcome back, {profile.display_name}</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold">Welcome back, {profile.display_name}</h1>
               <p className="text-gray-500 mt-1 inline-flex items-center gap-2 flex-wrap">
                 {profile.role === "admin" && (
                   <span className="inline-flex items-center gap-1.5">
@@ -1358,7 +1358,7 @@ export default function DashboardPage() {
         {tab === "admin" && (
           <div>
             {/* Stats row */}
-            <div className="grid grid-cols-3 gap-4 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
               {[
                 { label: "Total Users", value: adminProfiles.length },
                 { label: "Creators", value: adminProfiles.filter(p => p.is_creator).length },
@@ -1374,6 +1374,7 @@ export default function DashboardPage() {
             {/* Users table */}
             <h2 className="text-lg font-bold mb-3">Users</h2>
             <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden mb-8">
+              <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-white/40 text-gray-500 text-sm">
                   <tr>
@@ -1477,6 +1478,7 @@ export default function DashboardPage() {
                   )}
                 </tbody>
               </table>
+              </div>
             </div>
 
             {/* Recent posts */}
@@ -1550,6 +1552,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden">
+              <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-white/40 text-gray-500 text-sm">
                   <tr>
@@ -1608,6 +1611,7 @@ export default function DashboardPage() {
                   )}
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
           );
@@ -1616,7 +1620,7 @@ export default function DashboardPage() {
         {/* ── Revenue & Payouts Tab ── */}
         {tab === "payouts" && (
           <div>
-            <div className="grid grid-cols-3 gap-4 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
               {[
                 { label: "Total Monthly Revenue", value: `$${totalRevenue.toLocaleString()}`, sub: `${revenueSubscriptions.length} active subscribers` },
                 { label: "Platform Revenue", value: `$${platformRevenue.toLocaleString()}`, sub: "after creator payouts" },
@@ -1632,6 +1636,7 @@ export default function DashboardPage() {
 
             <h2 className="text-lg font-bold mb-3">Creator Payouts — {currentPeriod}</h2>
             <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden mb-8">
+              <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-white/40 text-gray-500 text-sm">
                   <tr>
@@ -1699,6 +1704,7 @@ export default function DashboardPage() {
                   })}
                 </tbody>
               </table>
+              </div>
             </div>
 
             <h2 className="text-lg font-bold mb-3">Payout History</h2>
@@ -1708,6 +1714,7 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden">
+                <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-white/40 text-gray-500 text-sm">
                     <tr>
@@ -1730,6 +1737,7 @@ export default function DashboardPage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             )}
           </div>
@@ -1784,6 +1792,7 @@ export default function DashboardPage() {
               }
               return (
                 <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden">
+                  <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead className="bg-white/40 text-gray-500 text-xs uppercase tracking-wider">
                       <tr>
@@ -1829,6 +1838,7 @@ export default function DashboardPage() {
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               );
             })()}
@@ -2000,6 +2010,7 @@ export default function DashboardPage() {
                 <p className="text-gray-400 text-sm py-8 text-center">Loading…</p>
               ) : (
                 <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden">
+                  <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-100 bg-white/40">
@@ -2057,6 +2068,7 @@ export default function DashboardPage() {
                       )}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               )}
             </div>
@@ -2099,7 +2111,7 @@ export default function DashboardPage() {
         {tab === "rankings" && (
           <div onClick={() => { setSelectedPlayers(new Set()); setLastClickedPlayer(null); }}>
             {/* Row 2 — Format tabs */}
-            <div className="flex gap-2 mb-3 pb-3 border-b border-gray-100">
+            <div className="flex gap-2 mb-3 pb-3 border-b border-gray-100 overflow-x-auto">
               {FORMATS.map((fmt) => (
                 <button
                   key={fmt}
@@ -2196,8 +2208,8 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
+              <div className="flex flex-wrap items-center gap-3">
                 <p className="text-gray-400 text-sm">Drag to reorder, or click any rank number and type a new position. Changes save automatically.</p>
                 {rankingsSaving && <span className="text-gray-400 text-xs">Saving...</span>}
                 {!rankingsSaving && rankingsSaved && <span className="text-green-600 text-xs font-medium">Saved ✓</span>}
@@ -2218,6 +2230,7 @@ export default function DashboardPage() {
             {/* Unranked Players panel */}
             {showUnranked && unrankedPlayers.length > 0 && (
               <div className="mb-4 bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden">
+                <div className="overflow-x-auto">
                 <table className="w-full">
                   <tbody>
                     {unrankedPlayers.map(player => (
@@ -2249,6 +2262,7 @@ export default function DashboardPage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             )}
 
@@ -2310,6 +2324,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="bg-white/60 backdrop-blur-md rounded-xl overflow-hidden border border-white/70 shadow-lg mb-4">
+              <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-white/40 text-gray-500 text-sm">
                   <tr>
@@ -2455,6 +2470,7 @@ export default function DashboardPage() {
                   })}
                 </tbody>
               </table>
+              </div>
             </div>
 
             {!rankingsSearch.trim() && (
@@ -2567,6 +2583,7 @@ export default function DashboardPage() {
                             )}
                           </div>
                           <div className="border border-gray-100 rounded-xl overflow-hidden">
+                            <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                               <thead className="bg-gray-50 text-gray-400 text-xs">
                                 <tr>
@@ -2597,6 +2614,7 @@ export default function DashboardPage() {
                                 })}
                               </tbody>
                             </table>
+                            </div>
                           </div>
                         </>
                       );
@@ -3018,7 +3036,7 @@ export default function DashboardPage() {
           return (
             <div>
               {/* Summary cards */}
-              <div className="grid grid-cols-3 gap-4 mb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
                 <div className="bg-white/70 backdrop-blur-md border border-white/80 shadow-lg rounded-xl p-5">
                   <p className="text-3xl font-bold text-[#0F172A]">{includedCount}</p>
                   <p className="text-gray-700 text-sm font-medium mt-1">Included subscribers</p>
@@ -3041,6 +3059,7 @@ export default function DashboardPage() {
               {/* Breakdown table */}
               <h2 className="text-lg font-bold mb-3">Earnings Breakdown</h2>
               <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden mb-8">
+                <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-white/40 text-gray-500 text-sm">
                     <tr>
@@ -3083,6 +3102,7 @@ export default function DashboardPage() {
                     </tr>
                   </tbody>
                 </table>
+                </div>
               </div>
 
               {/* Payout history */}
@@ -3093,6 +3113,7 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden">
+                  <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead className="bg-white/40 text-gray-500 text-sm">
                       <tr>
@@ -3113,6 +3134,7 @@ export default function DashboardPage() {
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               )}
             </div>
@@ -3145,7 +3167,7 @@ export default function DashboardPage() {
           return (
             <div>
               <h2 className="text-lg font-bold mb-4">Page Views</h2>
-              <div className="grid grid-cols-2 gap-4 mb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
                 <div className="bg-white/70 backdrop-blur-md border border-white/80 shadow-lg rounded-xl p-5">
                   <p className="text-3xl font-bold text-blue-600">{thisWeekViews}</p>
                   <p className="text-gray-500 text-sm mt-1">This week</p>
@@ -3168,6 +3190,7 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden">
+                  <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead className="bg-white/40 text-gray-500 text-sm">
                       <tr>
@@ -3188,6 +3211,7 @@ export default function DashboardPage() {
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               )}
             </div>

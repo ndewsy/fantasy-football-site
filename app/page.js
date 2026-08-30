@@ -173,6 +173,8 @@ export default function Home() {
   const [teamFilter, setTeamFilter] = useState("All");
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [playerModalOpen, setPlayerModalOpen] = useState(false);
+  const [riskSaveStatus, setRiskSaveStatus] = useState(null); // { playerId, status: "saving" | "saved" | "error" }
+  const riskSaveSeqRef = useRef(0);
   const [playerRankings, setPlayerRankings] = useState({});
   const [playerRankingsLoading, setPlayerRankingsLoading] = useState(false);
   const [tiersCache, setTiersCache] = useState({});
@@ -371,16 +373,36 @@ export default function Home() {
 
   // Creators/admins can set a player's risk rating right from the card;
   // subscribers only ever see the read-only version (gated in the JSX below).
-  async function saveRiskRating(playerId, value) {
+  // onChange (fires continuously while dragging) only updates local state for
+  // instant visual feedback; the actual autosave commits on release/blur so we
+  // don't fire a PATCH per pixel of drag or risk two in-flight saves resolving
+  // out of order and clobbering a newer value with a stale one.
+  function updateRiskRatingLocal(playerId, value) {
     setSelectedPlayer(prev => (prev && prev.id === playerId ? { ...prev, risk_rating: value } : prev));
     setPlayerPool(prev => prev.map(p => (p.id === playerId ? { ...p, risk_rating: value } : p)));
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    await fetch("/api/players", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
-      body: JSON.stringify({ id: playerId, risk_rating: value }),
-    }).catch(() => {});
+  }
+
+  async function commitRiskRating(playerId, value) {
+    const seq = ++riskSaveSeqRef.current;
+    setRiskSaveStatus({ playerId, status: "saving" });
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/players", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ id: playerId, risk_rating: value }),
+      });
+      if (!res.ok) throw new Error("save failed");
+      if (seq === riskSaveSeqRef.current) setRiskSaveStatus({ playerId, status: "saved" });
+    } catch {
+      if (seq === riskSaveSeqRef.current) setRiskSaveStatus({ playerId, status: "error" });
+    }
+  }
+
+  function clearRiskRating(playerId) {
+    updateRiskRatingLocal(playerId, null);
+    commitRiskRating(playerId, null);
   }
 
   async function openPlayerModal(player) {
@@ -1017,7 +1039,7 @@ export default function Home() {
                   )}
                   {isDashboardUser && selectedPlayer.risk_rating != null && (
                     <button
-                      onClick={() => saveRiskRating(selectedPlayer.id, null)}
+                      onClick={() => clearRiskRating(selectedPlayer.id)}
                       className="text-[10px] text-gray-400 hover:text-red-500 underline"
                     >
                       Clear
@@ -1033,13 +1055,26 @@ export default function Home() {
                     min="1"
                     max="10"
                     value={selectedPlayer.risk_rating ?? 1}
-                    onChange={(e) => saveRiskRating(selectedPlayer.id, Number(e.target.value))}
+                    onChange={(e) => updateRiskRatingLocal(selectedPlayer.id, Number(e.target.value))}
+                    onMouseUp={(e) => commitRiskRating(selectedPlayer.id, Number(e.target.value))}
+                    onTouchEnd={(e) => commitRiskRating(selectedPlayer.id, Number(e.target.value))}
+                    onKeyUp={(e) => commitRiskRating(selectedPlayer.id, Number(e.target.value))}
+                    onBlur={(e) => commitRiskRating(selectedPlayer.id, Number(e.target.value))}
                     className="w-full accent-current"
                     style={{ color: riskColor(selectedPlayer.risk_rating ?? 1) }}
                   />
-                  {selectedPlayer.risk_rating == null && (
-                    <p className="text-xs text-gray-400 italic mt-1">Drag to set a rating</p>
-                  )}
+                  <div className="flex items-center justify-between mt-1">
+                    {selectedPlayer.risk_rating == null ? (
+                      <p className="text-xs text-gray-400 italic">Drag to set a rating</p>
+                    ) : <span />}
+                    {riskSaveStatus?.playerId === selectedPlayer.id && (
+                      <p className={`text-[10px] ${
+                        riskSaveStatus.status === "error" ? "text-red-500" : "text-gray-400"
+                      }`}>
+                        {riskSaveStatus.status === "saving" ? "Saving…" : riskSaveStatus.status === "saved" ? "Saved" : "Failed to save — try again"}
+                      </p>
+                    )}
+                  </div>
                 </>
               ) : selectedPlayer.risk_rating != null ? (
                 <div
