@@ -136,6 +136,44 @@ function abbreviateFormat(fmt) {
   return fmt.replace("Redraft", "RD").replace("Dynasty", "DYN");
 }
 
+// Position-appropriate stat line for the "previous season" card section —
+// no point showing pass attempts on a WR or targets on a QB.
+function seasonStatLine(position, stats) {
+  if (!stats) return [];
+  if (position === "QB") {
+    return [
+      { label: "Comp/Att", value: `${stats.pass_cmp}/${stats.pass_att}` },
+      { label: "Pass Yds", value: stats.pass_yd },
+      { label: "Pass TD", value: stats.pass_td },
+      { label: "INT", value: stats.pass_int },
+      { label: "Rush Yds", value: stats.rush_yd },
+      { label: "Rush TD", value: stats.rush_td },
+    ];
+  }
+  if (position === "RB") {
+    return [
+      { label: "Rush Att", value: stats.rush_att },
+      { label: "Rush Yds", value: stats.rush_yd },
+      { label: "Rush TD", value: stats.rush_td },
+      { label: "Rec", value: stats.rec },
+      { label: "Targets", value: stats.rec_tgt },
+      { label: "Rec Yds", value: stats.rec_yd },
+      { label: "Rec TD", value: stats.rec_td },
+    ];
+  }
+  // WR / TE
+  const line = [
+    { label: "Rec", value: stats.rec },
+    { label: "Targets", value: stats.rec_tgt },
+    { label: "Rec Yds", value: stats.rec_yd },
+    { label: "Rec TD", value: stats.rec_td },
+  ];
+  if (stats.rush_att > 0) {
+    line.push({ label: "Rush Yds", value: stats.rush_yd }, { label: "Rush TD", value: stats.rush_td });
+  }
+  return line;
+}
+
 function computeConsensus(formatData) {
   const creatorLists = Object.values(formatData);
   if (creatorLists.length === 0) return null;
@@ -177,6 +215,8 @@ export default function Home() {
   const riskSaveSeqRef = useRef(0);
   const [playerRankings, setPlayerRankings] = useState({});
   const [playerRankingsLoading, setPlayerRankingsLoading] = useState(false);
+  const [seasonStats, setSeasonStats] = useState(null);
+  const [seasonStatsLoading, setSeasonStatsLoading] = useState(false);
   const [tiersCache, setTiersCache] = useState({});
   const [updatedAtCache, setUpdatedAtCache] = useState({});
   const [lockedCache, setLockedCache] = useState({});
@@ -419,6 +459,13 @@ export default function Home() {
     setPlayerModalOpen(true);
     setPlayerRankingsLoading(true);
     setPlayerRankings({});
+    setSeasonStatsLoading(true);
+    setSeasonStats(null);
+    fetch(`/api/player-stats?playerId=${player.id}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setSeasonStats(d?.seasonStats || null))
+      .catch(() => setSeasonStats(null))
+      .finally(() => setSeasonStatsLoading(false));
 
     const rankingsData = {};
     const modalById = Object.fromEntries(playerPool.map(p => [p.id, p]));
@@ -1096,6 +1143,32 @@ export default function Home() {
                 </>
               )}
             </div>
+
+            {/* Previous Season Stats */}
+            {!seasonStatsLoading && seasonStats && (
+              <div className="px-6 pt-5">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{seasonStats.season} Season</h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-[#0F172A]">{seasonStats.fantasy_points} pts</span>
+                    {seasonStats.fantasy_finish && (
+                      <span className="text-[10px] font-bold uppercase bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                        {seasonStats.position}{seasonStats.fantasy_finish}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  {seasonStatLine(seasonStats.position, seasonStats.stats).map((s) => (
+                    <div key={s.label} className="bg-gray-50 rounded-lg px-2 py-1.5 text-center">
+                      <p className="text-sm font-bold text-[#0F172A]">{s.value}</p>
+                      <p className="text-[9px] text-gray-400 uppercase tracking-wide">{s.label}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1.5">Full PPR scoring · {seasonStats.games_played} games played</p>
+              </div>
+            )}
 
             {/* Rankings table */}
             <div className="p-6">

@@ -15,6 +15,10 @@
     {
       "path": "/api/cron/sync-player-props",
       "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/sync-season-stats",
+      "schedule": "0 7 * * 0"
     }
   ]
 }
