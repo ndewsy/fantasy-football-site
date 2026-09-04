@@ -99,11 +99,10 @@ export async function GET(request) {
   }
 
   // Keyed by player_id|sgo_event_id|stat_id (the table's real unique
-  // constraint) — SportsGameOdds can return more than one "over" odd for the
-  // same player/event/stat (e.g. alternate-line markets alongside the main
-  // line), and Postgres' ON CONFLICT DO UPDATE errors out if a single upsert
-  // tries to touch the same conflict key twice, which was silently failing
-  // every cron run since the first one that hit a duplicate.
+  // constraint) — Postgres' ON CONFLICT DO UPDATE errors out if a single
+  // upsert tries to touch the same conflict key twice, so any leftover
+  // duplicate is deduped here as a safety net even with the periodID filter
+  // above narrowing each stat down to one full-game "over" odd.
   const lineRowsByKey = new Map();
   const unmatchedRows = [];
   let skippedNoLine = 0;
@@ -120,17 +119,22 @@ export async function GET(request) {
 
     for (const odd of Object.values(odds)) {
       if (odd.sideID !== 'over') continue;
+      if (odd.periodID !== 'game') continue; // full-game line only — skip 1q/2q/1h/etc sub-markets
       if (!TARGET_STAT_IDS.has(odd.statID)) continue;
       const sgoPlayerID = odd.playerID || odd.statEntityID;
       if (!sgoPlayerID || !eventPlayers[sgoPlayerID]) continue;
 
-      const line = odd.bookOverUnder ?? odd.fairOverUnder;
-      if (line === undefined || line === null) {
+      // DraftKings specifically, per-book — bookOverUnder/fairOverUnder are
+      // cross-book blends that can drift from what's actually on the site.
+      const dk = odd.byBookmaker?.draftkings;
+      if (!dk?.available || dk.overUnder === undefined || dk.overUnder === null) {
         skippedNoLine++;
         continue;
       }
+      const line = dk.overUnder;
 
       const underOdd = odd.opposingOddID ? odds[odd.opposingOddID] : null;
+      const underDk = underOdd?.byBookmaker?.draftkings;
 
       const playerInfo = eventPlayers[sgoPlayerID];
       const playerTeamID = playerInfo.teamID;
@@ -158,8 +162,8 @@ export async function GET(request) {
         sgo_event_id: event.eventID,
         stat_id: odd.statID,
         line: Number(line),
-        over_odds: odd.bookOdds ?? odd.fairOdds ?? null,
-        under_odds: underOdd?.bookOdds ?? underOdd?.fairOdds ?? null,
+        over_odds: dk.odds ?? null,
+        under_odds: underDk?.odds ?? null,
         team_id: playerTeamID || null,
         opponent_id: opponentID || null,
         home_away: homeAway,
