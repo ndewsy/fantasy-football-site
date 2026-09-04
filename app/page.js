@@ -218,11 +218,22 @@ export default function Home() {
   useEffect(() => {
     async function loadPool() {
       const supabase = createClient();
-      const { data } = await supabase
-        .from("players")
-        .select("id, name, position, team, sleeper_id, espn_id, height_inches, weight_lbs, age, risk_rating")
-        .order("adp_rank");
-      setPlayerPool((data || []).map(p => ({ id: p.id, name: p.name, pos: p.position, team: p.team || "FA", sleeper_id: p.sleeper_id, espn_id: p.espn_id, height_inches: p.height_inches, weight_lbs: p.weight_lbs, age: p.age, risk_rating: p.risk_rating })));
+      // Supabase caps an unpaginated select at 1000 rows — the players table
+      // crossed that threshold once DST/K rows were added, so this has to
+      // page through in batches or the tail of the pool silently vanishes.
+      const PAGE = 1000;
+      const data = [];
+      for (let from = 0; ; from += PAGE) {
+        const { data: batch } = await supabase
+          .from("players")
+          .select("id, name, position, team, sleeper_id, espn_id, height_inches, weight_lbs, age, risk_rating")
+          .order("adp_rank", { nullsFirst: false })
+          .order("id")
+          .range(from, from + PAGE - 1);
+        data.push(...(batch || []));
+        if (!batch || batch.length < PAGE) break;
+      }
+      setPlayerPool(data.map(p => ({ id: p.id, name: p.name, pos: p.position, team: p.team || "FA", sleeper_id: p.sleeper_id, espn_id: p.espn_id, height_inches: p.height_inches, weight_lbs: p.weight_lbs, age: p.age, risk_rating: p.risk_rating })));
       setPoolLoaded(true);
     }
     loadPool();

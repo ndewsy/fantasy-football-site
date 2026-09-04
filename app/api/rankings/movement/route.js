@@ -26,8 +26,13 @@ export async function GET(request) {
   if (!format) return Response.json({ error: 'format required' }, { status: 400 });
 
   // Build id→name lookup for expanding integer arrays
-  const { data: playersData } = await supabase().from('players').select('id, name');
-  const idToName = Object.fromEntries((playersData || []).map(p => [p.id, p.name]));
+  const playersData = [];
+  for (let from = 0; ; from += 1000) {
+    const { data: batch } = await supabase().from('players').select('id, name').range(from, from + 999);
+    playersData.push(...(batch || []));
+    if (!batch || batch.length < 1000) break;
+  }
+  const idToName = Object.fromEntries(playersData.map(p => [p.id, p.name]));
 
   const cutoff = cutoffDate();
 

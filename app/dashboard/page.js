@@ -241,11 +241,30 @@ export default function DashboardPage() {
 
       if (prof.is_creator) {
 
-        const [rankingsRes, { data: poolData }] = await Promise.all([
+        // Supabase caps an unpaginated select at 1000 rows — the players
+        // table crossed that threshold once DST/K rows were added, so this
+        // has to page through in batches or the tail silently vanishes.
+        async function loadAllPlayers() {
+          const PAGE = 1000;
+          const rows = [];
+          for (let from = 0; ; from += PAGE) {
+            const { data: batch } = await supabase
+              .from("players")
+              .select("id, name, position, team, sleeper_id, espn_id")
+              .order("adp_rank", { nullsFirst: false })
+              .order("id")
+              .range(from, from + PAGE - 1);
+            rows.push(...(batch || []));
+            if (!batch || batch.length < PAGE) break;
+          }
+          return rows;
+        }
+
+        const [rankingsRes, poolData] = await Promise.all([
           fetch(`/api/rankings?creator_id=${encodeURIComponent(prof.creator_id)}`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          supabase.from("players").select("id, name, position, team, sleeper_id, espn_id").order("adp_rank"),
+          loadAllPlayers(),
         ]);
 
         const { rankings: savedRankings } = rankingsRes.ok ? await rankingsRes.json() : { rankings: [] };
@@ -271,14 +290,20 @@ export default function DashboardPage() {
         setBreakRankByFormat(breakRankMap);
         setBreakRankInput(String(breakRankMap[FORMATS[0]] ?? ""));
         setSavedFormats(new Set((savedRankings || []).map(r => r.format)));
-        // For formats with no saved data yet, initialize with pool and default tiers
+        // For formats with no saved data yet, initialize with pool and default tiers.
+        // DST/Kickers are scoped to their own position — the base formats mix
+        // QB/RB/WR/TE together deliberately, but a DST list shouldn't get
+        // topped up with every WR/RB in the database.
         for (const fmt of FORMATS) {
+          const fmtPool = fmt === DST_FORMAT ? pool.filter(p => p.pos === "DST")
+            : fmt === KICKER_FORMAT ? pool.filter(p => p.pos === "K")
+            : pool;
           if (!rankingsMap[fmt]) rankingsMap[fmt] = [];
           if (rankingsMap[fmt].length === 0) {
-            rankingsMap[fmt] = [...pool];
+            rankingsMap[fmt] = [...fmtPool];
           } else {
             const existingIds = new Set(rankingsMap[fmt].map(p => p.id));
-            const missing = pool.filter(p => !existingIds.has(p.id)).map(p => ({ ...p, unranked: true }));
+            const missing = fmtPool.filter(p => !existingIds.has(p.id)).map(p => ({ ...p, unranked: true }));
             if (missing.length > 0) rankingsMap[fmt] = [...rankingsMap[fmt], ...missing];
           }
           if (!tiersMap[fmt]) tiersMap[fmt] = [...DEFAULT_TIERS];

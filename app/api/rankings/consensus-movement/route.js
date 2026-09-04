@@ -16,9 +16,14 @@ export async function GET(request) {
 
   const days = searchParams.get('days') === '14' ? 14 : 7;
 
-  const { data: playersData } = await supabase().from('players').select('id, name, position, team, espn_id, sleeper_id');
-  const idToName = Object.fromEntries((playersData || []).map(p => [p.id, p.name]));
-  const byName = Object.fromEntries((playersData || []).map(p => [p.name, p]));
+  const playersData = [];
+  for (let from = 0; ; from += 1000) {
+    const { data: batch } = await supabase().from('players').select('id, name, position, team, espn_id, sleeper_id').range(from, from + 999);
+    playersData.push(...(batch || []));
+    if (!batch || batch.length < 1000) break;
+  }
+  const idToName = Object.fromEntries(playersData.map(p => [p.id, p.name]));
+  const byName = Object.fromEntries(playersData.map(p => [p.name, p]));
 
   const cutoff = cutoffDate(days);
 
