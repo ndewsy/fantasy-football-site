@@ -122,6 +122,12 @@ export default function DashboardPage() {
   const [revenueSubscriptions, setRevenueSubscriptions] = useState([]);
   const [payouts, setPayouts] = useState([]);
   const [payoutSaving, setPayoutSaving] = useState(null);
+  const [revenuePeriod, setRevenuePeriod] = useState("current");
+  const [historicalRevenue, setHistoricalRevenue] = useState(null);
+  const [historicalRevenueLoading, setHistoricalRevenueLoading] = useState(false);
+  const [earningsPeriod, setEarningsPeriod] = useState("current");
+  const [historicalPlatformRevenue, setHistoricalPlatformRevenue] = useState(null);
+  const [historicalPlatformRevenueLoading, setHistoricalPlatformRevenueLoading] = useState(false);
 
   // Feedback state (admin only)
   const [feedbackItems, setFeedbackItems] = useState([]);
@@ -350,6 +356,16 @@ export default function DashboardPage() {
     if (tab === 'subscribers' && (profile?.role === 'admin' || profile?.is_creator)) loadSubscriberUsers();
   }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (revenuePeriod === "current") { setHistoricalRevenue(null); return; }
+    fetchRevenuePeriod(revenuePeriod, setHistoricalRevenueLoading, setHistoricalRevenue);
+  }, [revenuePeriod]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (earningsPeriod === "current") { setHistoricalPlatformRevenue(null); return; }
+    fetchRevenuePeriod(earningsPeriod, setHistoricalPlatformRevenueLoading, setHistoricalPlatformRevenue);
+  }, [earningsPeriod]); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function updateFeedbackStatus(id, newStatus) {
     const supabase = createClient();
     await supabase.from("feedback").update({ status: newStatus }).eq("id", id);
@@ -394,6 +410,38 @@ export default function DashboardPage() {
       });
     }
     setPayoutSaving(null);
+  }
+
+  // "This Month" plus the last 12 calendar months plus YTD — real historical
+  // totals for anything other than "current" come from Stripe's actual charge
+  // history (the app itself has no historical revenue record of its own).
+  const REVENUE_PERIOD_OPTIONS = (() => {
+    const opts = [{ value: "current", label: "This Month" }];
+    const now = new Date();
+    for (let i = 1; i <= 12; i++) {
+      const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+      const value = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+      const label = d.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+      opts.push({ value, label });
+    }
+    opts.push({ value: "ytd", label: "Year to Date" });
+    return opts;
+  })();
+
+  async function fetchRevenuePeriod(period, setLoading, setData) {
+    setLoading(true);
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    try {
+      const res = await fetch(`/api/admin/revenue?period=${encodeURIComponent(period)}`, {
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      setData(res.ok ? await res.json() : { error: "Failed to load" });
+    } catch {
+      setData({ error: "Failed to load" });
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function updateCreatorId(profileId, newCreatorId) {
@@ -1620,6 +1668,40 @@ export default function DashboardPage() {
         {/* ── Revenue & Payouts Tab ── */}
         {tab === "payouts" && (
           <div>
+            <div className="flex items-center gap-2 mb-4">
+              <label className="text-xs font-semibold text-gray-500">Period:</label>
+              <select
+                value={revenuePeriod}
+                onChange={(e) => setRevenuePeriod(e.target.value)}
+                className="bg-white rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {REVENUE_PERIOD_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {revenuePeriod !== "current" && (
+              <div className="bg-white/70 backdrop-blur-md border border-white/80 shadow-lg rounded-xl p-5 mb-8">
+                {historicalRevenueLoading ? (
+                  <p className="text-gray-400 text-sm">Loading real revenue history from Stripe...</p>
+                ) : historicalRevenue?.error ? (
+                  <p className="text-red-500 text-sm">{historicalRevenue.error}</p>
+                ) : historicalRevenue ? (
+                  <>
+                    <p className="text-3xl font-bold text-blue-600">${historicalRevenue.totalRevenue.toLocaleString()}</p>
+                    <p className="text-[#0F172A] text-sm font-medium mt-1">Total Revenue — {historicalRevenue.label}</p>
+                    <p className="text-gray-400 text-xs mt-0.5">{historicalRevenue.chargeCount} successful charge{historicalRevenue.chargeCount === 1 ? "" : "s"} · sourced live from Stripe</p>
+                    <p className="text-gray-400 text-xs mt-3 max-w-md">
+                      Platform/creator payout splits aren&apos;t available for past periods — the app only tracks each subscriber&apos;s <em>current</em> plan, not what it was historically, so an accurate split can&apos;t be reconstructed.
+                    </p>
+                  </>
+                ) : null}
+              </div>
+            )}
+
+            {revenuePeriod === "current" && (
+              <>
             <div className="grid grid-cols-3 gap-2 lg:gap-4 mb-8">
               {[
                 { label: "Total Monthly Revenue", value: `$${totalRevenue.toLocaleString()}`, sub: `${revenueSubscriptions.length} active subscribers` },
@@ -1706,6 +1788,8 @@ export default function DashboardPage() {
               </table>
               </div>
             </div>
+              </>
+            )}
 
             <h2 className="text-lg font-bold mb-3">Payout History</h2>
             {payouts.length === 0 ? (
@@ -3035,6 +3119,40 @@ export default function DashboardPage() {
 
           return (
             <div>
+              <div className="flex items-center gap-2 mb-4">
+                <label className="text-xs font-semibold text-gray-500">Period:</label>
+                <select
+                  value={earningsPeriod}
+                  onChange={(e) => setEarningsPeriod(e.target.value)}
+                  className="bg-white rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {REVENUE_PERIOD_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {earningsPeriod !== "current" && (
+                <div className="bg-white/70 backdrop-blur-md border border-white/80 shadow-lg rounded-xl p-5 mb-8">
+                  {historicalPlatformRevenueLoading ? (
+                    <p className="text-gray-400 text-sm">Loading real revenue history from Stripe...</p>
+                  ) : historicalPlatformRevenue?.error ? (
+                    <p className="text-red-500 text-sm">{historicalPlatformRevenue.error}</p>
+                  ) : historicalPlatformRevenue ? (
+                    <>
+                      <p className="text-3xl font-bold text-blue-600">${historicalPlatformRevenue.totalRevenue.toLocaleString()}</p>
+                      <p className="text-[#0F172A] text-sm font-medium mt-1">Platform-wide Revenue — {historicalPlatformRevenue.label}</p>
+                      <p className="text-gray-400 text-xs mt-0.5">{historicalPlatformRevenue.chargeCount} successful charge{historicalPlatformRevenue.chargeCount === 1 ? "" : "s"} · sourced live from Stripe</p>
+                      <p className="text-gray-400 text-xs mt-3 max-w-md">
+                        This is total revenue across the whole platform, not your personal cut — your earnings breakdown depends on which subscribers were tied to you at the time, which isn&apos;t tracked historically, so it&apos;s only available for the current month.
+                      </p>
+                    </>
+                  ) : null}
+                </div>
+              )}
+
+              {earningsPeriod === "current" && (
+              <>
               {/* Summary cards */}
               <div className="grid grid-cols-3 gap-2 lg:gap-4 mb-8">
                 <div className="bg-white/70 backdrop-blur-md border border-white/80 shadow-lg rounded-xl p-2 lg:p-5">
@@ -3104,6 +3222,8 @@ export default function DashboardPage() {
                 </table>
                 </div>
               </div>
+              </>
+              )}
 
               {/* Payout history */}
               <h2 className="text-lg font-bold mb-3">Payout History</h2>
