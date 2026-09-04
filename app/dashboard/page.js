@@ -1689,11 +1689,24 @@ export default function DashboardPage() {
                   <p className="text-red-500 text-sm">{historicalRevenue.error}</p>
                 ) : historicalRevenue ? (
                   <>
-                    <p className="text-3xl font-bold text-blue-600">${historicalRevenue.totalRevenue.toLocaleString()}</p>
-                    <p className="text-[#0F172A] text-sm font-medium mt-1">Total Revenue — {historicalRevenue.label}</p>
-                    <p className="text-gray-400 text-xs mt-0.5">{historicalRevenue.chargeCount} successful charge{historicalRevenue.chargeCount === 1 ? "" : "s"} · sourced live from Stripe</p>
+                    <p className="text-[#0F172A] text-sm font-medium mb-3">{historicalRevenue.label}</p>
+                    <div className="grid grid-cols-3 gap-3 mb-3">
+                      <div>
+                        <p className="text-xl lg:text-2xl font-bold text-[#0F172A]">${historicalRevenue.totalRevenue.toLocaleString()}</p>
+                        <p className="text-gray-500 text-xs mt-0.5">Gross Revenue</p>
+                      </div>
+                      <div>
+                        <p className="text-xl lg:text-2xl font-bold text-red-500">-${historicalRevenue.stripeFees.toLocaleString()}</p>
+                        <p className="text-gray-500 text-xs mt-0.5">Stripe Fees</p>
+                      </div>
+                      <div>
+                        <p className="text-xl lg:text-2xl font-bold text-blue-600">${historicalRevenue.netRevenue.toLocaleString()}</p>
+                        <p className="text-gray-500 text-xs mt-0.5">Net Revenue</p>
+                      </div>
+                    </div>
+                    <p className="text-gray-400 text-xs">{historicalRevenue.chargeCount} successful charge{historicalRevenue.chargeCount === 1 ? "" : "s"} · sourced live from Stripe (fees converted to USD at each charge&apos;s own settlement rate)</p>
                     <p className="text-gray-400 text-xs mt-3 max-w-md">
-                      Platform/creator payout splits aren&apos;t available for past periods — the app only tracks each subscriber&apos;s <em>current</em> plan, not what it was historically, so an accurate split can&apos;t be reconstructed.
+                      Platform/creator payout splits aren&apos;t available for past periods — checked both Stripe (no referral/creator data was ever attached to charges or subscriptions) and the app&apos;s own database (only tracks each subscriber&apos;s <em>current</em> plan, not historical), so an accurate split can&apos;t be reconstructed.
                     </p>
                   </>
                 ) : null}
@@ -3140,9 +3153,22 @@ export default function DashboardPage() {
                     <p className="text-red-500 text-sm">{historicalPlatformRevenue.error}</p>
                   ) : historicalPlatformRevenue ? (
                     <>
-                      <p className="text-3xl font-bold text-blue-600">${historicalPlatformRevenue.totalRevenue.toLocaleString()}</p>
-                      <p className="text-[#0F172A] text-sm font-medium mt-1">Platform-wide Revenue — {historicalPlatformRevenue.label}</p>
-                      <p className="text-gray-400 text-xs mt-0.5">{historicalPlatformRevenue.chargeCount} successful charge{historicalPlatformRevenue.chargeCount === 1 ? "" : "s"} · sourced live from Stripe</p>
+                      <p className="text-[#0F172A] text-sm font-medium mb-3">Platform-wide Revenue — {historicalPlatformRevenue.label}</p>
+                      <div className="grid grid-cols-3 gap-3 mb-3">
+                        <div>
+                          <p className="text-xl lg:text-2xl font-bold text-[#0F172A]">${historicalPlatformRevenue.totalRevenue.toLocaleString()}</p>
+                          <p className="text-gray-500 text-xs mt-0.5">Gross Revenue</p>
+                        </div>
+                        <div>
+                          <p className="text-xl lg:text-2xl font-bold text-red-500">-${historicalPlatformRevenue.stripeFees.toLocaleString()}</p>
+                          <p className="text-gray-500 text-xs mt-0.5">Stripe Fees</p>
+                        </div>
+                        <div>
+                          <p className="text-xl lg:text-2xl font-bold text-blue-600">${historicalPlatformRevenue.netRevenue.toLocaleString()}</p>
+                          <p className="text-gray-500 text-xs mt-0.5">Net Revenue</p>
+                        </div>
+                      </div>
+                      <p className="text-gray-400 text-xs">{historicalPlatformRevenue.chargeCount} successful charge{historicalPlatformRevenue.chargeCount === 1 ? "" : "s"} · sourced live from Stripe</p>
                       <p className="text-gray-400 text-xs mt-3 max-w-md">
                         This is total revenue across the whole platform, not your personal cut — your earnings breakdown depends on which subscribers were tied to you at the time, which isn&apos;t tracked historically, so it&apos;s only available for the current month.
                       </p>

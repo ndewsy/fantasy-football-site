@@ -51,6 +51,20 @@ export async function POST(request) {
   // Auto-applies to everyone until the cutoff — no code required.
   const promoActive = isPromoActive();
 
+  // Session metadata alone doesn't propagate to the recurring charges a
+  // subscription generates later, or to the charge behind a one-time payment
+  // — so without also setting subscription_data/payment_intent_data, every
+  // future revenue report would have the exact same "no creator attribution"
+  // gap as historical data does today. subscription_data.metadata lands on
+  // the Subscription (readable via invoice.subscription on any future
+  // recurring charge); payment_intent_data.metadata lands directly on the
+  // one-time Charge itself.
+  const attributionMetadata = {
+    user_id: userId,
+    plan_type: promoActive ? 'promo_5mo' : 'flat_access',
+    referral_creator_id: referralCreatorId || '',
+  };
+
   const session = await stripe().checkout.sessions.create({
     payment_method_types: ['card'],
     ...(promoActive
@@ -67,17 +81,15 @@ export async function POST(request) {
             },
             quantity: 1,
           }],
+          payment_intent_data: { metadata: attributionMetadata },
         }
       : {
           mode: 'subscription',
           line_items: [{ price: 'price_1TrMBuA2rwv8VsfE9AOhxBis', quantity: 1 }],
+          subscription_data: { metadata: attributionMetadata },
         }),
     allow_promotion_codes: true,
-    metadata: {
-      user_id: userId,
-      plan_type: promoActive ? 'promo_5mo' : 'flat_access',
-      referral_creator_id: referralCreatorId || '',
-    },
+    metadata: attributionMetadata,
     success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/subscribe/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/subscribe`,
   });

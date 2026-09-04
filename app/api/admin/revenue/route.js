@@ -8,11 +8,21 @@ const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPAB
 // *current* state), so this is the only accurate source for past months.
 // Note: this returns platform-wide totals only. Per-creator/platform splits
 // depend on which plan/creator each subscriber was on at the time, which
-// isn't tracked historically anywhere (in the app or in Stripe's charge
-// metadata), so that breakdown stays live-only (computed from the current
-// subscriptions table, as it already was before this endpoint existed).
+// isn't tracked historically anywhere — checked both Stripe's charge/
+// subscription metadata (empty on every record; the checkout flow never
+// attaches referral_creator_id to anything Stripe-side) and the app's own
+// subscriptions table (only ever holds *current* state, no history) — so
+// that breakdown stays live-only, computed from the current subscriptions
+// table as it already was before this endpoint existed.
+//
+// This account settles in CAD, so balance_transaction.fee/net come back in
+// CAD cents even though charge.amount is in USD cents. Converting each fee
+// back to USD using that specific transaction's own exchange_rate (rather
+// than a separate/approximate rate) keeps gross/fees/net all comparable in
+// the same currency the rest of the UI already reports in.
 async function fetchStripeChargeTotal(gte, lt) {
-  let total = 0;
+  let grossCents = 0;
+  let feeUsdCents = 0;
   let count = 0;
   let startingAfter;
   for (;;) {
@@ -20,6 +30,7 @@ async function fetchStripeChargeTotal(gte, lt) {
       limit: '100',
       'created[gte]': String(gte),
       'created[lt]': String(lt),
+      'expand[]': 'data.balance_transaction',
     });
     if (startingAfter) params.set('starting_after', startingAfter);
 
@@ -31,15 +42,22 @@ async function fetchStripeChargeTotal(gte, lt) {
 
     for (const c of body.data) {
       if (c.status === 'succeeded' && !c.refunded) {
-        total += c.amount - (c.amount_refunded || 0);
+        grossCents += c.amount - (c.amount_refunded || 0);
         count++;
+        const bt = c.balance_transaction;
+        if (bt && typeof bt === 'object' && bt.fee != null) {
+          const rate = bt.exchange_rate || 1;
+          feeUsdCents += bt.fee / rate;
+        }
       }
     }
 
     if (!body.has_more || body.data.length === 0) break;
     startingAfter = body.data[body.data.length - 1].id;
   }
-  return { totalRevenue: total / 100, chargeCount: count };
+  const totalRevenue = grossCents / 100;
+  const stripeFees = Math.round(feeUsdCents) / 100;
+  return { totalRevenue, stripeFees, netRevenue: Math.round((grossCents - feeUsdCents)) / 100, chargeCount: count };
 }
 
 function monthRange(yyyyMm) {
@@ -80,8 +98,8 @@ export async function GET(request) {
   const { start, end, label } = period === 'ytd' ? ytdRange() : monthRange(period);
 
   try {
-    const { totalRevenue, chargeCount } = await fetchStripeChargeTotal(start, end);
-    return Response.json({ period, label, totalRevenue, chargeCount, source: 'stripe' });
+    const { totalRevenue, stripeFees, netRevenue, chargeCount } = await fetchStripeChargeTotal(start, end);
+    return Response.json({ period, label, totalRevenue, stripeFees, netRevenue, chargeCount, source: 'stripe' });
   } catch (err) {
     console.error('[/api/admin/revenue] failed:', err);
     return Response.json({ error: err.message }, { status: 500 });
