@@ -111,9 +111,15 @@ function PlayerSummaryCard({ result, isRecommended, hasRecommendation }) {
     : isRecommended
       ? "bg-green-100 text-green-700"
       : "bg-red-100 text-red-600";
+  const glow = hasGame && hasRecommendation ? color : null;
   return (
     <div className="flex flex-col items-center gap-2">
-      <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="xl" shape="square" teamColor={color} />
+      <div
+        className="rounded-xl transition-shadow"
+        style={glow ? { boxShadow: `0 0 0 3px ${glow}55, 0 0 22px 4px ${glow}70` } : undefined}
+      >
+        <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="xl" shape="square" teamColor={color} />
+      </div>
       <p className="font-bold text-sm text-[#0F172A] text-center max-w-[7rem] truncate">{player.name}</p>
       {label && (
         <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${labelCls}`}>
@@ -124,10 +130,14 @@ function PlayerSummaryCard({ result, isRecommended, hasRecommendation }) {
   );
 }
 
-function ProjectionCard({ result, opponentLabel }) {
+function ProjectionCard({ result, opponentLabel, isRecommended, hasRecommendation }) {
   const { player, hasGame, gameStartsAt, homeAway, projection, missingStats } = result;
+  const glow = hasGame && hasRecommendation ? (isRecommended ? "#16A34A" : "#DC2626") : null;
   return (
-    <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-5 relative">
+    <div
+      className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-5 relative transition-shadow"
+      style={glow ? { boxShadow: `0 0 0 2px ${glow}55, 0 0 28px 6px ${glow}45` } : undefined}
+    >
       <div className="flex items-center gap-3 mb-4">
         <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="lg" />
         <div className="min-w-0">
@@ -299,6 +309,8 @@ export default function StartSitPage() {
                         key={result.player.id}
                         result={result}
                         opponentLabel={opponentLabel}
+                        isRecommended={comparison.recommendedPlayerId === result.player.id}
+                        hasRecommendation={!!comparison.recommendedPlayerId}
                       />
                     );
                   })}
