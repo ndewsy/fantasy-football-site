@@ -111,22 +111,9 @@ function PdfThumbnail({ url, name }) {
   );
 }
 
-function PostAttachment({ url }) {
-  if (!url) return null;
+function NonImageAttachment({ url }) {
   const ext  = fileExt(url);
   const name = fileName(url);
-
-  if (IMAGE_EXTS.has(ext)) {
-    return (
-      <div className="mt-3">
-        <img
-          src={url}
-          alt={name}
-          className="max-w-full rounded-lg border border-gray-100 shadow-sm"
-        />
-      </div>
-    );
-  }
 
   if (PDF_EXTS.has(ext)) return <PdfThumbnail url={url} name={name} />;
 
@@ -174,6 +161,54 @@ function PostAttachment({ url }) {
   );
 }
 
+// Accepts up to 10 attachment URLs. Images render as a single full-width
+// photo when there's just one, or a clickable grid gallery when there are
+// several; non-image files (PDFs/docs/sheets) still render individually.
+function PostAttachment({ urls }) {
+  const list = (urls || []).filter(Boolean);
+  if (list.length === 0) return null;
+
+  const images = list.filter((u) => IMAGE_EXTS.has(fileExt(u)));
+  const others = list.filter((u) => !IMAGE_EXTS.has(fileExt(u)));
+
+  return (
+    <>
+      {images.length === 1 && (
+        <div className="mt-3">
+          <img
+            src={images[0]}
+            alt={fileName(images[0])}
+            className="max-w-full rounded-lg border border-gray-100 shadow-sm"
+          />
+        </div>
+      )}
+      {images.length > 1 && (
+        <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+          {images.map((url) => (
+            <a
+              key={url}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="block aspect-square"
+            >
+              <img
+                src={url}
+                alt={fileName(url)}
+                className="w-full h-full object-cover rounded-lg border border-gray-100 shadow-sm hover:opacity-90 transition-opacity"
+              />
+            </a>
+          ))}
+        </div>
+      )}
+      {others.map((url) => (
+        <NonImageAttachment key={url} url={url} />
+      ))}
+    </>
+  );
+}
+
 export default function PostCard({ post, isSubscribed }) {
   const dateStr = new Date(post.created_at).toLocaleDateString("en-US", {
     month: "short",
@@ -197,7 +232,7 @@ export default function PostCard({ post, isSubscribed }) {
               </ReactMarkdown>
             </div>
           )}
-          <PostAttachment url={post.file_url} />
+          <PostAttachment urls={post.file_urls?.length ? post.file_urls : (post.file_url ? [post.file_url] : [])} />
           <p className="text-gray-400 text-xs mt-3">{dateStr}</p>
         </>
       ) : (

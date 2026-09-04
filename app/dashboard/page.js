@@ -21,6 +21,8 @@ function getTierNumber(rank, tiers) {
 }
 const TAGS = ["Buy Now", "Sell Now", "Analysis", "Rankings"];
 const CREATOR_IDS = ["rookierager", "ffhuddle"];
+const MAX_POST_FILES = 10;
+const MAX_POST_FILE_BYTES = 20 * 1024 * 1024;
 
 const posColors = {
   WR: "bg-blue-100 text-blue-700",
@@ -85,7 +87,7 @@ export default function DashboardPage() {
   const [postTitle, setPostTitle] = useState("");
   const [postTag, setPostTag] = useState(TAGS[0]);
   const [postContent, setPostContent] = useState("");
-  const [postFile, setPostFile] = useState(null);
+  const [postFiles, setPostFiles] = useState([]); // up to MAX_POST_FILES
   const [fileDragging, setFileDragging] = useState(false);
   const [postSaving, setPostSaving] = useState(false);
   const [postError, setPostError] = useState("");
@@ -1030,39 +1032,47 @@ export default function DashboardPage() {
     e.preventDefault();
     setFileDragging(false);
     if (dropUploadStatus === 'uploading') return;
-    const file = e.dataTransfer.files[0];
-    if (!file) return;
+    const files = Array.from(e.dataTransfer.files || []);
+    if (files.length === 0) return;
 
-    const MAX_BYTES = 20 * 1024 * 1024;
-    if (file.size > MAX_BYTES) {
+    if (files.length > MAX_POST_FILES) {
       setDropUploadStatus('error');
-      setDropUploadError('File too large — max 20 MB');
+      setDropUploadError(`Too many files — max ${MAX_POST_FILES}`);
+      return;
+    }
+    const oversized = files.find((f) => f.size > MAX_POST_FILE_BYTES);
+    if (oversized) {
+      setDropUploadStatus('error');
+      setDropUploadError(`"${oversized.name}" is too large — max 20 MB per file`);
       return;
     }
 
-    // Auto-save: upload file and create post immediately on drop
+    // Auto-save: upload files and create post immediately on drop
     setDropUploadStatus('uploading');
     setDropUploadError('');
 
     const supabase = createClient();
-    const path = `${profile.creator_id}/${Date.now()}-${file.name}`;
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('posts')
-      .upload(path, file, { upsert: true });
-
-    if (uploadError) {
-      setDropUploadStatus('error');
-      setDropUploadError(`Upload failed: ${uploadError.message}`);
-      return;
+    const file_urls = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const path = `${profile.creator_id}/${Date.now()}-${i}-${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('posts')
+        .upload(path, file, { upsert: true });
+      if (uploadError) {
+        setDropUploadStatus('error');
+        setDropUploadError(`Upload failed: ${uploadError.message}`);
+        return;
+      }
+      const { data: urlData } = supabase.storage.from('posts').getPublicUrl(path);
+      file_urls.push(urlData.publicUrl);
     }
 
-    const { data: urlData } = supabase.storage.from('posts').getPublicUrl(path);
-    const file_url = urlData.publicUrl;
-    const title = file.name.replace(/\.[^.]+$/, '');
+    const title = files[0].name.replace(/\.[^.]+$/, '');
 
     const { data: newPost, error: insertError } = await supabase
       .from('posts')
-      .insert({ creator_id: profile.creator_id, title, tag: 'Analysis', content: '', file_url })
+      .insert({ creator_id: profile.creator_id, title, tag: 'Analysis', content: '', file_url: file_urls[0], file_urls })
       .select()
       .single();
 
@@ -1084,25 +1094,33 @@ export default function DashboardPage() {
     setPostError('');
 
     const supabase = createClient();
-    let file_url = null;
+    const file_urls = [];
 
-    if (postFile) {
-      const path = `${profile.creator_id}/${Date.now()}-${postFile.name}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
+    for (let i = 0; i < postFiles.length; i++) {
+      const file = postFiles[i];
+      const path = `${profile.creator_id}/${Date.now()}-${i}-${file.name}`;
+      const { error: uploadError } = await supabase.storage
         .from('posts')
-        .upload(path, postFile, { upsert: true });
+        .upload(path, file, { upsert: true });
       if (uploadError) {
         setPostError(`File upload failed: ${uploadError.message}`);
         setPostSaving(false);
         return;
       }
       const { data: urlData } = supabase.storage.from('posts').getPublicUrl(path);
-      file_url = urlData.publicUrl;
+      file_urls.push(urlData.publicUrl);
     }
 
     const { data: newPost, error: insertError } = await supabase
       .from('posts')
-      .insert({ creator_id: profile.creator_id, title: postTitle, tag: postTag.trim() || TAGS[0], content: postContent, file_url })
+      .insert({
+        creator_id: profile.creator_id,
+        title: postTitle,
+        tag: postTag.trim() || TAGS[0],
+        content: postContent,
+        file_url: file_urls[0] ?? null,
+        file_urls: file_urls.length > 0 ? file_urls : null,
+      })
       .select()
       .single();
 
@@ -1115,7 +1133,7 @@ export default function DashboardPage() {
     setPosts(prev => [newPost, ...prev]);
     setPostTitle('');
     setPostContent('');
-    setPostFile(null);
+    setPostFiles([]);
     setPostSaving(false);
   }
 
@@ -1125,13 +1143,16 @@ export default function DashboardPage() {
 
     const supabase = createClient();
 
-    if (post.file_url) {
+    const urls = post.file_urls?.length ? post.file_urls : (post.file_url ? [post.file_url] : []);
+    if (urls.length > 0) {
       const marker = '/storage/v1/object/public/posts/';
-      const idx = post.file_url.indexOf(marker);
-      if (idx !== -1) {
-        const storagePath = decodeURIComponent(post.file_url.slice(idx + marker.length));
-        await supabase.storage.from('posts').remove([storagePath]);
-      }
+      const storagePaths = urls
+        .map((url) => {
+          const idx = url.indexOf(marker);
+          return idx !== -1 ? decodeURIComponent(url.slice(idx + marker.length)) : null;
+        })
+        .filter(Boolean);
+      if (storagePaths.length > 0) await supabase.storage.from('posts').remove(storagePaths);
     }
 
     const { error } = await supabase.from('posts').delete().eq('id', post.id);
@@ -2992,10 +3013,10 @@ export default function DashboardPage() {
                   />
                 </div>
 
-                {/* File drop zone — drop auto-saves; click to attach to a typed post */}
+                {/* File drop zone — drop auto-saves; click to attach up to 10 to a typed post */}
                 <div>
                   <label className="block text-sm text-gray-500 mb-1">
-                    Attachment — <span className="text-gray-400">drop a file to publish it instantly, or attach below</span>
+                    Attachments (up to {MAX_POST_FILES}) — <span className="text-gray-400">drop files to publish instantly, or attach below</span>
                   </label>
                   <div
                     onDragOver={handleFileDragOver}
@@ -3024,28 +3045,50 @@ export default function DashboardPage() {
                         <p className="text-red-500 text-xs mt-1">{dropUploadError}</p>
                         <p className="text-gray-400 text-xs mt-2">Click to try again</p>
                       </div>
-                    ) : postFile ? (
-                      <div className="flex items-center justify-center gap-2">
-                        <span className="text-blue-600 text-sm font-medium">{postFile.name}</span>
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); setPostFile(null); }}
-                          className="text-gray-400 hover:text-red-500 text-xs ml-2"
-                        >
-                          ✕
-                        </button>
+                    ) : postFiles.length > 0 ? (
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                        {postFiles.map((f, i) => (
+                          <span
+                            key={`${f.name}-${i}`}
+                            className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-600 text-xs font-medium px-2 py-1 rounded"
+                          >
+                            {f.name}
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setPostFiles(prev => prev.filter((_, j) => j !== i)); }}
+                              className="text-blue-400 hover:text-red-500"
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        ))}
+                        {postFiles.length < MAX_POST_FILES && (
+                          <span className="text-gray-400 text-xs">click to add more</span>
+                        )}
                       </div>
                     ) : (
                       <p className="text-gray-400 text-sm">
-                        Drop a file to publish instantly, or <span className="text-blue-600">click to attach</span> to this post
+                        Drop files to publish instantly, or <span className="text-blue-600">click to attach</span> to this post
                       </p>
                     )}
                   </div>
                   <input
                     ref={fileInputRef}
                     type="file"
+                    multiple
                     className="hidden"
-                    onChange={(e) => { if (e.target.files[0]) setPostFile(e.target.files[0]); }}
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.files || []);
+                      if (selected.length === 0) return;
+                      setPostFiles(prev => {
+                        const combined = [...prev, ...selected];
+                        if (combined.length > MAX_POST_FILES) {
+                          setPostError(`You can attach up to ${MAX_POST_FILES} files — kept the first ${MAX_POST_FILES}.`);
+                        }
+                        return combined.slice(0, MAX_POST_FILES);
+                      });
+                      e.target.value = '';
+                    }}
                   />
                 </div>
 
@@ -3106,16 +3149,18 @@ export default function DashboardPage() {
                         <span className="text-gray-400 text-xs">
                           {new Date(post.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                         </span>
-                        {post.file_url && (
-                          <a
-                            href={post.file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 text-xs hover:text-blue-700"
-                          >
-                            📎 Attachment
-                          </a>
-                        )}
+                        {(() => {
+                          const urls = post.file_urls?.length ? post.file_urls : (post.file_url ? [post.file_url] : []);
+                          if (urls.length === 0) return null;
+                          if (urls.length === 1) {
+                            return (
+                              <a href={urls[0]} target="_blank" rel="noopener noreferrer" className="text-blue-600 text-xs hover:text-blue-700">
+                                📎 Attachment
+                              </a>
+                            );
+                          }
+                          return <span className="text-blue-600 text-xs">📎 {urls.length} attachments</span>;
+                        })()}
                       </div>
                     </div>
                   ))}
