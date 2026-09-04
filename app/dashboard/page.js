@@ -357,15 +357,24 @@ export default function DashboardPage() {
     if (tab === 'subscribers' && (profile?.role === 'admin' || profile?.is_creator)) loadSubscriberUsers();
   }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    if (revenuePeriod === "current") { setHistoricalRevenue(null); return; }
-    fetchRevenuePeriod(revenuePeriod, setHistoricalRevenueLoading, setHistoricalRevenue);
-  }, [revenuePeriod]); // eslint-disable-line react-hooks/exhaustive-deps
+  // "current" isn't a real Stripe period — resolve it to this month's actual
+  // YYYY-MM so the real Gross/Fees/Net breakdown shows for every period,
+  // including the ongoing month, not just past ones.
+  function resolvePeriod(period) {
+    if (period !== "current") return period;
+    const now = new Date();
+    return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+  }
 
   useEffect(() => {
-    if (earningsPeriod === "current") { setHistoricalPlatformRevenue(null); return; }
-    fetchRevenuePeriod(earningsPeriod, setHistoricalPlatformRevenueLoading, setHistoricalPlatformRevenue);
-  }, [earningsPeriod]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (tab !== 'payouts') return;
+    fetchRevenuePeriod(resolvePeriod(revenuePeriod), setHistoricalRevenueLoading, setHistoricalRevenue);
+  }, [tab, revenuePeriod]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (tab !== 'earnings') return;
+    fetchRevenuePeriod(resolvePeriod(earningsPeriod), setHistoricalPlatformRevenueLoading, setHistoricalPlatformRevenue);
+  }, [tab, earningsPeriod]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function updateFeedbackStatus(id, newStatus) {
     const supabase = createClient();
@@ -1680,65 +1689,62 @@ export default function DashboardPage() {
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
-              {revenuePeriod !== "current" && (
-                <div className="flex gap-1 ml-1">
-                  {["usd", "cad"].map((c) => (
-                    <button
-                      key={c}
-                      onClick={() => setRevenueCurrency(c)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase transition-colors ${
-                        revenueCurrency === c ? "bg-[#2563EB] text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                      }`}
-                    >
-                      {c}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <div className="flex gap-1 ml-1">
+                {["usd", "cad"].map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setRevenueCurrency(c)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase transition-colors ${
+                      revenueCurrency === c ? "bg-[#2563EB] text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                    }`}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {revenuePeriod !== "current" && (
-              <div className="bg-white/70 backdrop-blur-md border border-white/80 shadow-lg rounded-xl p-5 mb-8">
-                {historicalRevenueLoading ? (
-                  <p className="text-gray-400 text-sm">Loading real revenue history from Stripe...</p>
-                ) : historicalRevenue?.error ? (
-                  <p className="text-red-500 text-sm">{historicalRevenue.error}</p>
-                ) : historicalRevenue ? (
-                  <>
-                    <p className="text-[#0F172A] text-sm font-medium mb-3">{historicalRevenue.label}</p>
-                    <div className="grid grid-cols-3 gap-3 mb-3">
-                      <div>
-                        <p className="text-xl lg:text-2xl font-bold text-[#0F172A]">${historicalRevenue[revenueCurrency].totalRevenue.toLocaleString()}</p>
-                        <p className="text-gray-500 text-xs mt-0.5">Gross Revenue</p>
-                      </div>
-                      <div>
-                        <p className="text-xl lg:text-2xl font-bold text-red-500">-${historicalRevenue[revenueCurrency].stripeFees.toLocaleString()}</p>
-                        <p className="text-gray-500 text-xs mt-0.5">Stripe Fees</p>
-                      </div>
-                      <div>
-                        <p className="text-xl lg:text-2xl font-bold text-blue-600">${historicalRevenue[revenueCurrency].netRevenue.toLocaleString()}</p>
-                        <p className="text-gray-500 text-xs mt-0.5">Net Revenue</p>
-                      </div>
+            <div className="bg-white/70 backdrop-blur-md border border-white/80 shadow-lg rounded-xl p-5 mb-8">
+              {historicalRevenueLoading ? (
+                <p className="text-gray-400 text-sm">Loading real revenue history from Stripe...</p>
+              ) : historicalRevenue?.error ? (
+                <p className="text-red-500 text-sm">{historicalRevenue.error}</p>
+              ) : historicalRevenue ? (
+                <>
+                  <p className="text-[#0F172A] text-sm font-medium mb-3">{historicalRevenue.label}</p>
+                  <div className="grid grid-cols-3 gap-3 mb-3">
+                    <div>
+                      <p className="text-xl lg:text-2xl font-bold text-[#0F172A]">${historicalRevenue[revenueCurrency].totalRevenue.toLocaleString()}</p>
+                      <p className="text-gray-500 text-xs mt-0.5">Gross Revenue</p>
                     </div>
-                    <p className="text-gray-400 text-xs">
-                      {historicalRevenue.chargeCount} successful charge{historicalRevenue.chargeCount === 1 ? "" : "s"} · sourced live from Stripe
-                      {revenueCurrency === "usd"
-                        ? " (fees converted to USD at each charge's own settlement rate)"
-                        : " (native CAD settlement amounts — exactly what Stripe pays out, no conversion)"}
-                    </p>
+                    <div>
+                      <p className="text-xl lg:text-2xl font-bold text-red-500">-${historicalRevenue[revenueCurrency].stripeFees.toLocaleString()}</p>
+                      <p className="text-gray-500 text-xs mt-0.5">Stripe Fees</p>
+                    </div>
+                    <div>
+                      <p className="text-xl lg:text-2xl font-bold text-blue-600">${historicalRevenue[revenueCurrency].netRevenue.toLocaleString()}</p>
+                      <p className="text-gray-500 text-xs mt-0.5">Net Revenue</p>
+                    </div>
+                  </div>
+                  <p className="text-gray-400 text-xs">
+                    {historicalRevenue.chargeCount} successful charge{historicalRevenue.chargeCount === 1 ? "" : "s"} · sourced live from Stripe
+                    {revenueCurrency === "usd"
+                      ? " (fees converted to USD at each charge's own settlement rate)"
+                      : " (native CAD settlement amounts — exactly what Stripe pays out, no conversion)"}
+                  </p>
+                  {revenuePeriod !== "current" && (
                     <p className="text-gray-400 text-xs mt-3 max-w-md">
-                      Platform/creator payout splits aren&apos;t available for past periods — checked both Stripe (no referral/creator data was ever attached to charges or subscriptions) and the app&apos;s own database (only tracks each subscriber&apos;s <em>current</em> plan, not historical), so an accurate split can&apos;t be reconstructed.
+                      Platform/creator payout splits aren&apos;t available for past periods — checked both Stripe (no referral/creator data was ever attached to charges or subscriptions) and the app&apos;s own database (only tracks each subscriber&apos;s <em>current</em> plan, not historical), so an accurate split can&apos;t be reconstructed. The current month&apos;s live split is shown below.
                     </p>
-                  </>
-                ) : null}
-              </div>
-            )}
+                  )}
+                </>
+              ) : null}
+            </div>
 
             {revenuePeriod === "current" && (
               <>
-            <div className="grid grid-cols-3 gap-2 lg:gap-4 mb-8">
+            <div className="grid grid-cols-2 gap-2 lg:gap-4 mb-8">
               {[
-                { label: "Total Monthly Revenue", value: `$${totalRevenue.toLocaleString()}`, sub: `${revenueSubscriptions.length} active subscribers` },
                 { label: "Platform Revenue", value: `$${platformRevenue.toLocaleString()}`, sub: "after creator payouts" },
                 { label: "Creator Payouts", value: `$${creatorPayoutTotal.toLocaleString()}`, sub: "owed to creators" },
               ].map(({ label, value, sub }) => (
@@ -3164,59 +3170,57 @@ export default function DashboardPage() {
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
-                {earningsPeriod !== "current" && (
-                  <div className="flex gap-1 ml-1">
-                    {["usd", "cad"].map((c) => (
-                      <button
-                        key={c}
-                        onClick={() => setRevenueCurrency(c)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase transition-colors ${
-                          revenueCurrency === c ? "bg-[#2563EB] text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                        }`}
-                      >
-                        {c}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <div className="flex gap-1 ml-1">
+                  {["usd", "cad"].map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => setRevenueCurrency(c)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase transition-colors ${
+                        revenueCurrency === c ? "bg-[#2563EB] text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {earningsPeriod !== "current" && (
-                <div className="bg-white/70 backdrop-blur-md border border-white/80 shadow-lg rounded-xl p-5 mb-8">
-                  {historicalPlatformRevenueLoading ? (
-                    <p className="text-gray-400 text-sm">Loading real revenue history from Stripe...</p>
-                  ) : historicalPlatformRevenue?.error ? (
-                    <p className="text-red-500 text-sm">{historicalPlatformRevenue.error}</p>
-                  ) : historicalPlatformRevenue ? (
-                    <>
-                      <p className="text-[#0F172A] text-sm font-medium mb-3">Platform-wide Revenue — {historicalPlatformRevenue.label}</p>
-                      <div className="grid grid-cols-3 gap-3 mb-3">
-                        <div>
-                          <p className="text-xl lg:text-2xl font-bold text-[#0F172A]">${historicalPlatformRevenue[revenueCurrency].totalRevenue.toLocaleString()}</p>
-                          <p className="text-gray-500 text-xs mt-0.5">Gross Revenue</p>
-                        </div>
-                        <div>
-                          <p className="text-xl lg:text-2xl font-bold text-red-500">-${historicalPlatformRevenue[revenueCurrency].stripeFees.toLocaleString()}</p>
-                          <p className="text-gray-500 text-xs mt-0.5">Stripe Fees</p>
-                        </div>
-                        <div>
-                          <p className="text-xl lg:text-2xl font-bold text-blue-600">${historicalPlatformRevenue[revenueCurrency].netRevenue.toLocaleString()}</p>
-                          <p className="text-gray-500 text-xs mt-0.5">Net Revenue</p>
-                        </div>
+              <div className="bg-white/70 backdrop-blur-md border border-white/80 shadow-lg rounded-xl p-5 mb-8">
+                {historicalPlatformRevenueLoading ? (
+                  <p className="text-gray-400 text-sm">Loading real revenue history from Stripe...</p>
+                ) : historicalPlatformRevenue?.error ? (
+                  <p className="text-red-500 text-sm">{historicalPlatformRevenue.error}</p>
+                ) : historicalPlatformRevenue ? (
+                  <>
+                    <p className="text-[#0F172A] text-sm font-medium mb-3">Platform-wide Revenue — {historicalPlatformRevenue.label}</p>
+                    <div className="grid grid-cols-3 gap-3 mb-3">
+                      <div>
+                        <p className="text-xl lg:text-2xl font-bold text-[#0F172A]">${historicalPlatformRevenue[revenueCurrency].totalRevenue.toLocaleString()}</p>
+                        <p className="text-gray-500 text-xs mt-0.5">Gross Revenue</p>
                       </div>
-                      <p className="text-gray-400 text-xs">
-                        {historicalPlatformRevenue.chargeCount} successful charge{historicalPlatformRevenue.chargeCount === 1 ? "" : "s"} · sourced live from Stripe
-                        {revenueCurrency === "usd"
-                          ? " (fees converted to USD at each charge's own settlement rate)"
-                          : " (native CAD settlement amounts — exactly what Stripe pays out, no conversion)"}
-                      </p>
+                      <div>
+                        <p className="text-xl lg:text-2xl font-bold text-red-500">-${historicalPlatformRevenue[revenueCurrency].stripeFees.toLocaleString()}</p>
+                        <p className="text-gray-500 text-xs mt-0.5">Stripe Fees</p>
+                      </div>
+                      <div>
+                        <p className="text-xl lg:text-2xl font-bold text-blue-600">${historicalPlatformRevenue[revenueCurrency].netRevenue.toLocaleString()}</p>
+                        <p className="text-gray-500 text-xs mt-0.5">Net Revenue</p>
+                      </div>
+                    </div>
+                    <p className="text-gray-400 text-xs">
+                      {historicalPlatformRevenue.chargeCount} successful charge{historicalPlatformRevenue.chargeCount === 1 ? "" : "s"} · sourced live from Stripe
+                      {revenueCurrency === "usd"
+                        ? " (fees converted to USD at each charge's own settlement rate)"
+                        : " (native CAD settlement amounts — exactly what Stripe pays out, no conversion)"}
+                    </p>
+                    {earningsPeriod !== "current" && (
                       <p className="text-gray-400 text-xs mt-3 max-w-md">
-                        This is total revenue across the whole platform, not your personal cut — your earnings breakdown depends on which subscribers were tied to you at the time, which isn&apos;t tracked historically, so it&apos;s only available for the current month.
+                        This is total revenue across the whole platform, not your personal cut — your earnings breakdown depends on which subscribers were tied to you at the time, which isn&apos;t tracked historically, so it&apos;s only available for the current month (shown below).
                       </p>
-                    </>
-                  ) : null}
-                </div>
-              )}
+                    )}
+                  </>
+                ) : null}
+              </div>
 
               {earningsPeriod === "current" && (
               <>
