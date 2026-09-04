@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { computeProjection, SCORING_FORMATS } from '@/lib/fantasyProjection';
+import { computeProjection, missingStatLabels, SCORING_FORMATS } from '@/lib/fantasyProjection';
 
 let _supabase;
 const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY));
@@ -27,6 +27,7 @@ async function loadPlayer(playerId, scoring) {
   const nextEventId = lines[0].sgo_event_id;
   const nextLines = lines.filter((l) => l.sgo_event_id === nextEventId);
   const projection = computeProjection(nextLines, scoring);
+  const missingStats = missingStatLabels(player.position, nextLines);
 
   return {
     player,
@@ -35,6 +36,7 @@ async function loadPlayer(playerId, scoring) {
     opponentId: nextLines[0].opponent_id,
     homeAway: nextLines[0].home_away,
     projection,
+    missingStats,
   };
 }
 

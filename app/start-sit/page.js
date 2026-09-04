@@ -125,7 +125,7 @@ function PlayerSummaryCard({ result, isRecommended, hasRecommendation }) {
 }
 
 function ProjectionCard({ result, opponentLabel }) {
-  const { player, hasGame, gameStartsAt, homeAway, projection } = result;
+  const { player, hasGame, gameStartsAt, homeAway, projection, missingStats } = result;
   return (
     <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-5 relative">
       <div className="flex items-center gap-3 mb-4">
@@ -147,6 +147,11 @@ function ProjectionCard({ result, opponentLabel }) {
             <p className="text-3xl font-extrabold text-[#0F172A]">{projection.total}</p>
             <p className="text-xs text-gray-400">projected fantasy points</p>
           </div>
+          {missingStats?.length > 0 && (
+            <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mb-3 text-center">
+              Partial data — {missingStats.join(", ")} not posted yet
+            </p>
+          )}
           <div className="divide-y divide-gray-100">
             {projection.breakdown.map((b) => (
               <div key={b.statId} className="flex items-center justify-between py-1.5 text-sm">
