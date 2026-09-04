@@ -10,8 +10,11 @@ import { isPromoActive } from "@/lib/promo";
 import { anton } from "@/lib/fonts";
 import { riskColor } from "@/lib/riskColor";
 import ConsensusMovementWidget from "@/app/components/ConsensusMovementWidget";
+import { teamColors } from "@/lib/teamColors";
+import { DST_FORMAT, KICKER_FORMAT } from "@/lib/dstKickerFormats";
 
 const FORMATS = ["Redraft 1QB", "Redraft SF", "Dynasty 1QB", "Dynasty SF"];
+const FORMAT_TABS = [...FORMATS, "DST/K"];
 
 const CREATORS = [
   { id: "rookierager", name: "RookieRager", short: "RookieRager" },
@@ -34,6 +37,8 @@ const posColors = {
   RB: "bg-green-100 text-green-700",
   QB: "bg-red-100 text-red-700",
   TE: "bg-amber-100 text-amber-700",
+  DST: "bg-purple-100 text-purple-700",
+  K: "bg-teal-100 text-teal-700",
 };
 
 // Vivid variants for the player modal's dark banner, where posColors' light
@@ -44,29 +49,6 @@ const posBannerColors = {
   QB: "bg-red-500",
   TE: "bg-amber-500",
 };
-
-// Each team's primary/secondary brand colors, used for the player modal
-// banner (primary, as tonal shades of itself) and the team badge (secondary).
-// Falls back to the site's default blue for free agents / unknown teams.
-const TEAM_COLORS = {
-  ARI: ["#97233F", "#000000"], ATL: ["#A71930", "#000000"], BAL: ["#241773", "#000000"],
-  BUF: ["#00338D", "#C60C30"], CAR: ["#0085CA", "#101820"], CHI: ["#0B162A", "#C83803"],
-  CIN: ["#FB4F14", "#000000"], CLE: ["#311D00", "#FF3C00"], DAL: ["#041E42", "#869397"],
-  DEN: ["#FB4F14", "#002244"], DET: ["#0076B6", "#B0B7BC"], GB: ["#203731", "#FFB612"],
-  HOU: ["#03202F", "#A71930"], IND: ["#002C5F", "#A2AAAD"], JAX: ["#101820", "#006778"],
-  KC: ["#E31837", "#FFB81C"], LAC: ["#0080C6", "#FFC20E"], LAR: ["#003594", "#FFA300"],
-  LV: ["#000000", "#A5ACAF"], MIA: ["#008E97", "#FC4C02"], MIN: ["#4F2683", "#FFC62F"],
-  NE: ["#002244", "#C60C30"], NO: ["#101820", "#D3BC8D"], NYG: ["#0B2265", "#A71930"],
-  NYJ: ["#125740", "#000000"], PHI: ["#004C54", "#A5ACAF"], PIT: ["#101820", "#FFB612"],
-  SEA: ["#002244", "#69BE28"], SF: ["#AA0000", "#B3995D"], TB: ["#D50A0A", "#34302B"],
-  TEN: ["#0C2340", "#4B92DB"], WAS: ["#5A1414", "#FFB612"],
-};
-const DEFAULT_TEAM_COLORS = ["#2563EB", "#1E40AF"];
-
-function teamColors(team) {
-  const [primary, secondary] = TEAM_COLORS[team] || DEFAULT_TEAM_COLORS;
-  return { primary, secondary };
-}
 
 // Lightens (positive percent) or darkens (negative) a hex color.
 function shadeColor(hex, percent) {
@@ -196,6 +178,8 @@ function computeConsensus(formatData) {
 export default function Home() {
   const promoActive = isPromoActive();
   const [activeFormat, setActiveFormat] = useState(FORMATS[0]);
+  const [dstkSubTab, setDstkSubTab] = useState(DST_FORMAT);
+  const effectiveFormat = activeFormat === "DST/K" ? dstkSubTab : activeFormat;
   const [activeCreator, setActiveCreator] = useState("consensus");
   const [rankingsCache, setRankingsCache] = useState({});
   const [rankingsLoading, setRankingsLoading] = useState(false);
@@ -274,7 +258,7 @@ export default function Home() {
   }, [activeCreator]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    const cachedFormat = rankingsCache[activeFormat];
+    const cachedFormat = rankingsCache[effectiveFormat];
 
     if (activeCreator === "consensus") {
       // need all active creators — skip only if every one is already cached
@@ -288,7 +272,7 @@ export default function Home() {
     async function fetchRankings() {
       try {
         if (activeCreator === "consensus") {
-          const res = await fetch(`/api/rankings?format=${encodeURIComponent(activeFormat)}`);
+          const res = await fetch(`/api/rankings?format=${encodeURIComponent(effectiveFormat)}`);
           const { rankings } = await res.json();
           const formatMap = {};
           const updatedAtMap = {};
@@ -300,55 +284,55 @@ export default function Home() {
           }
           setRankingsCache(prev => ({
             ...prev,
-            [activeFormat]: { ...(prev[activeFormat] || {}), ...formatMap },
+            [effectiveFormat]: { ...(prev[effectiveFormat] || {}), ...formatMap },
           }));
           setUpdatedAtCache(prev => ({
             ...prev,
-            [activeFormat]: { ...(prev[activeFormat] || {}), ...updatedAtMap },
+            [effectiveFormat]: { ...(prev[effectiveFormat] || {}), ...updatedAtMap },
           }));
           setLockedCache(prev => ({
             ...prev,
-            [activeFormat]: { ...(prev[activeFormat] || {}), ...lockedMap },
+            [effectiveFormat]: { ...(prev[effectiveFormat] || {}), ...lockedMap },
           }));
-          fetch(`/api/rankings/movement?format=${encodeURIComponent(activeFormat)}`)
+          fetch(`/api/rankings/movement?format=${encodeURIComponent(effectiveFormat)}`)
             .then(r => r.ok ? r.json() : null)
             .then(data => {
-              if (data?.movement) setMovementCache(prev => ({ ...prev, [activeFormat]: { ...(prev[activeFormat] || {}), consensus: data.movement } }));
+              if (data?.movement) setMovementCache(prev => ({ ...prev, [effectiveFormat]: { ...(prev[effectiveFormat] || {}), consensus: data.movement } }));
             })
             .catch(() => {});
         } else {
           const res = await fetch(
-            `/api/rankings?creator_id=${encodeURIComponent(activeCreator)}&format=${encodeURIComponent(activeFormat)}`
+            `/api/rankings?creator_id=${encodeURIComponent(activeCreator)}&format=${encodeURIComponent(effectiveFormat)}`
           );
           const { players, tiers, updatedAt, locked, break_rank } = await res.json();
           setRankingsCache(prev => ({
             ...prev,
-            [activeFormat]: { ...(prev[activeFormat] || {}), [activeCreator]: players || [] },
+            [effectiveFormat]: { ...(prev[effectiveFormat] || {}), [activeCreator]: players || [] },
           }));
           if (tiers && tiers.length > 0) {
             setTiersCache(prev => ({
               ...prev,
-              [activeFormat]: { ...(prev[activeFormat] || {}), [activeCreator]: tiers },
+              [effectiveFormat]: { ...(prev[effectiveFormat] || {}), [activeCreator]: tiers },
             }));
           }
           if (updatedAt) {
             setUpdatedAtCache(prev => ({
               ...prev,
-              [activeFormat]: { ...(prev[activeFormat] || {}), [activeCreator]: updatedAt },
+              [effectiveFormat]: { ...(prev[effectiveFormat] || {}), [activeCreator]: updatedAt },
             }));
           }
           setLockedCache(prev => ({
             ...prev,
-            [activeFormat]: { ...(prev[activeFormat] || {}), [activeCreator]: locked || false },
+            [effectiveFormat]: { ...(prev[effectiveFormat] || {}), [activeCreator]: locked || false },
           }));
           setBreakRankCache(prev => ({
             ...prev,
-            [activeFormat]: { ...(prev[activeFormat] || {}), [activeCreator]: break_rank ?? null },
+            [effectiveFormat]: { ...(prev[effectiveFormat] || {}), [activeCreator]: break_rank ?? null },
           }));
-          fetch(`/api/rankings/movement?creator_id=${encodeURIComponent(activeCreator)}&format=${encodeURIComponent(activeFormat)}`)
+          fetch(`/api/rankings/movement?creator_id=${encodeURIComponent(activeCreator)}&format=${encodeURIComponent(effectiveFormat)}`)
             .then(r => r.ok ? r.json() : null)
             .then(data => {
-              if (data?.movement) setMovementCache(prev => ({ ...prev, [activeFormat]: { ...(prev[activeFormat] || {}), [activeCreator]: data.movement } }));
+              if (data?.movement) setMovementCache(prev => ({ ...prev, [effectiveFormat]: { ...(prev[effectiveFormat] || {}), [activeCreator]: data.movement } }));
             })
             .catch(() => {});
         }
@@ -358,21 +342,22 @@ export default function Home() {
       setRankingsLoading(false);
     }
     fetchRankings();
-  }, [activeFormat, activeCreator]);
+  }, [effectiveFormat, activeCreator]);
 
   function handleFormatChange(format) {
     setActiveFormat(format);
     setActiveCreator("consensus");
+    if (format === "DST/K") setDstkSubTab(DST_FORMAT);
   }
 
-  const formatData = rankingsCache[activeFormat];
+  const formatData = rankingsCache[effectiveFormat];
   const rankingsFetched = formatData !== undefined;
   const stillLoading = rankingsLoading || !rankingsFetched || !poolLoaded || !authLoaded;
 
   let displayPlayers = null;
   let hasData = false;
 
-  const lockedForFormat = lockedCache[activeFormat] || {};
+  const lockedForFormat = lockedCache[effectiveFormat] || {};
   // Individual creator tab locked for this viewer (admins/creators bypass)
   const isCreatorLocked = activeCreator !== "consensus" && !isDashboardUser && !!lockedForFormat[activeCreator];
 
@@ -512,12 +497,16 @@ export default function Home() {
     ? ["All", ...Array.from(new Set(displayPlayers.map(p => p.team).filter(Boolean))).sort()]
     : ["All"];
 
+  // On the DST/K tab, the DST/Kickers sub-tab IS the position filter — the
+  // QB/RB/WR/TE pill row is hidden there (see JSX below).
+  const effectivePosFilter = activeFormat === "DST/K" ? dstkSubTab : posFilter;
+
   let filteredPlayers = displayPlayers;
   if (filteredPlayers && search.trim()) {
     filteredPlayers = filteredPlayers.filter(p => p.name.toLowerCase().includes(search.toLowerCase().trim()));
   }
-  if (filteredPlayers && posFilter !== "All") {
-    filteredPlayers = filteredPlayers.filter(p => p.pos === posFilter);
+  if (filteredPlayers && effectivePosFilter !== "All") {
+    filteredPlayers = filteredPlayers.filter(p => p.pos === effectivePosFilter);
   }
   if (filteredPlayers && teamFilter !== "All") {
     filteredPlayers = filteredPlayers.filter(p => p.team === teamFilter);
@@ -526,8 +515,8 @@ export default function Home() {
   const lockedCount = filteredPlayers ? Math.max(0, filteredPlayers.length - FREE_ROWS) : 0;
   const activeTiers = activeCreator === "consensus"
     ? DEFAULT_TIERS
-    : (tiersCache[activeFormat]?.[activeCreator] || DEFAULT_TIERS);
-  const noFilters = !search.trim() && posFilter === "All" && teamFilter === "All";
+    : (tiersCache[effectiveFormat]?.[activeCreator] || DEFAULT_TIERS);
+  const noFilters = !search.trim() && effectivePosFilter === "All" && teamFilter === "All";
 
   const displayPosRanks = {};
   if (displayPlayers) {
@@ -540,7 +529,7 @@ export default function Home() {
 
   // Break rank only applies on individual creator tabs (not consensus)
   const breakRankForCreator = activeCreator !== "consensus"
-    ? (breakRankCache[activeFormat]?.[activeCreator] ?? null)
+    ? (breakRankCache[effectiveFormat]?.[activeCreator] ?? null)
     : null;
 
   // Map player name → 1-indexed position in the full unfiltered displayPlayers list
@@ -620,7 +609,7 @@ export default function Home() {
 
         {/* Format tabs */}
         <div className="flex flex-wrap gap-1 mb-5 lg:flex-nowrap lg:gap-2 lg:overflow-x-auto lg:pb-1">
-          {FORMATS.map(fmt => (
+          {FORMAT_TABS.map(fmt => (
             <button
               key={fmt}
               onClick={() => handleFormatChange(fmt)}
@@ -630,11 +619,21 @@ export default function Home() {
                   : "bg-white/60 backdrop-blur-sm text-gray-600 hover:bg-white/80 border border-white/70"
               }`}
             >
-              <span className="lg:hidden">{abbreviateFormat(fmt)}</span>
+              <span className="lg:hidden">{fmt === "DST/K" ? fmt : abbreviateFormat(fmt)}</span>
               <span className="hidden lg:inline">{fmt}</span>
             </button>
           ))}
         </div>
+
+        {/* DST vs Kickers sub-tab */}
+        {activeFormat === "DST/K" && (
+          <PillToggle
+            options={[{ id: DST_FORMAT, label: "DST" }, { id: KICKER_FORMAT, label: "Kickers" }]}
+            value={dstkSubTab}
+            onChange={setDstkSubTab}
+            className="mb-5"
+          />
+        )}
 
         {/* Creator tabs + toggle */}
         {(() => {
@@ -642,11 +641,11 @@ export default function Home() {
             let dateLabel = null;
             if (!creator.comingSoon) {
               if (creator.id === "consensus") {
-                const formatTimestamps = Object.values(updatedAtCache[activeFormat] || {}).filter(Boolean);
+                const formatTimestamps = Object.values(updatedAtCache[effectiveFormat] || {}).filter(Boolean);
                 const latest = formatTimestamps.sort().reverse()[0];
                 dateLabel = formatUpdatedAt(latest);
               } else {
-                dateLabel = formatUpdatedAt(updatedAtCache[activeFormat]?.[creator.id]);
+                dateLabel = formatUpdatedAt(updatedAtCache[effectiveFormat]?.[creator.id]);
               }
             }
             return { ...creator, dateLabel };
@@ -717,7 +716,7 @@ export default function Home() {
         {!stillLoading && hasData && (
           <>
             <div className="flex flex-wrap items-center gap-2 mb-3">
-              {["All", "QB", "RB", "WR", "TE"].map(pos => (
+              {activeFormat !== "DST/K" && ["All", "QB", "RB", "WR", "TE"].map(pos => (
                 <button
                   key={pos}
                   onClick={() => setPosFilter(pos)}
@@ -770,7 +769,7 @@ export default function Home() {
           <div className="bg-white/70 backdrop-blur-md rounded-xl border border-amber-200 shadow-lg py-16 text-center px-6">
             <p className="text-2xl mb-3">🔄</p>
             <p className="text-[#0F172A] font-semibold mb-1">Rankings in progress</p>
-            <p className="text-gray-500 text-sm">This creator is currently updating their {activeFormat} rankings. Check back soon.</p>
+            <p className="text-gray-500 text-sm">This creator is currently updating their {effectiveFormat} rankings. Check back soon.</p>
           </div>
         ) : !hasData ? (
           <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg py-16 text-center">
@@ -778,7 +777,7 @@ export default function Home() {
             <p className="text-gray-400 text-sm">
               {activeCreator === "consensus"
                 ? "No creators have published rankings for this format yet."
-                : `${CREATORS.find(c => c.id === activeCreator)?.name} hasn't published ${activeFormat} rankings yet.`}
+                : `${CREATORS.find(c => c.id === activeCreator)?.name} hasn't published ${effectiveFormat} rankings yet.`}
             </p>
           </div>
         ) : filteredPlayers && filteredPlayers.length === 0 ? (
@@ -840,10 +839,10 @@ export default function Home() {
                           </tr>
                         )}
                         <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                          <td className="px-2 py-1.5 lg:px-6 lg:py-4 text-gray-400 font-mono text-[10px] lg:text-sm">{rank}{(() => { const m = movementCache[activeFormat]?.[activeCreator]?.[player.name]; if (!m) return null; return <span className={`ml-1.5 text-xs font-semibold ${m > 0 ? "text-green-600" : "text-red-500"}`}>{m > 0 ? "▲" : "▼"}{Math.abs(m)}</span>; })()}</td>
+                          <td className="px-2 py-1.5 lg:px-6 lg:py-4 text-gray-400 font-mono text-[10px] lg:text-sm">{rank}{(() => { const m = movementCache[effectiveFormat]?.[activeCreator]?.[player.name]; if (!m) return null; return <span className={`ml-1.5 text-xs font-semibold ${m > 0 ? "text-green-600" : "text-red-500"}`}>{m > 0 ? "▲" : "▼"}{Math.abs(m)}</span>; })()}</td>
                           <td className="px-2 py-1.5 lg:px-6 lg:py-4 font-medium">
                             <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-1.5 lg:gap-2.5 text-xs lg:text-base min-w-0">
-                              <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="tableRow" shape="square" teamColor={teamColors(player.team).primary} />
+                              <PlayerHeadshot espnId={player.pos === "DST" ? null : player.espn_id} sleeperId={player.pos === "DST" ? null : player.sleeper_id} name={player.name} size="tableRow" shape="square" teamColor={teamColors(player.team).primary} label={player.pos === "DST" ? player.team : null} />
                               <span className="lg:hidden truncate min-w-0">{abbreviateFirstName(player.name)}</span>
                               <span className="hidden lg:inline">{player.name}</span>
                             </span>
@@ -887,10 +886,10 @@ export default function Home() {
                             </tr>
                           )}
                           <tr className="border-b border-gray-100">
-                            <td className="px-2 py-1.5 lg:px-6 lg:py-4 text-gray-400 font-mono text-[10px] lg:text-sm">{rank}{(() => { const m = movementCache[activeFormat]?.[activeCreator]?.[player.name]; if (!m) return null; return <span className={`ml-1.5 text-xs font-semibold ${m > 0 ? "text-green-600" : "text-red-500"}`}>{m > 0 ? "▲" : "▼"}{Math.abs(m)}</span>; })()}</td>
+                            <td className="px-2 py-1.5 lg:px-6 lg:py-4 text-gray-400 font-mono text-[10px] lg:text-sm">{rank}{(() => { const m = movementCache[effectiveFormat]?.[activeCreator]?.[player.name]; if (!m) return null; return <span className={`ml-1.5 text-xs font-semibold ${m > 0 ? "text-green-600" : "text-red-500"}`}>{m > 0 ? "▲" : "▼"}{Math.abs(m)}</span>; })()}</td>
                             <td className="px-2 py-1.5 lg:px-6 lg:py-4 font-medium">
                               <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-1.5 lg:gap-2.5 text-xs lg:text-base min-w-0">
-                                <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="tableRow" shape="square" teamColor={teamColors(player.team).primary} />
+                                <PlayerHeadshot espnId={player.pos === "DST" ? null : player.espn_id} sleeperId={player.pos === "DST" ? null : player.sleeper_id} name={player.name} size="tableRow" shape="square" teamColor={teamColors(player.team).primary} label={player.pos === "DST" ? player.team : null} />
                                 <span className="lg:hidden truncate min-w-0">{abbreviateFirstName(player.name)}</span>
                                 <span className="hidden lg:inline">{player.name}</span>
                               </span>
@@ -947,10 +946,10 @@ export default function Home() {
                           </tr>
                         )}
                         <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                          <td className="px-2 py-1.5 lg:px-6 lg:py-4 text-gray-400 font-mono text-[10px] lg:text-sm">{rank}{(() => { const m = movementCache[activeFormat]?.[activeCreator]?.[player.name]; if (!m) return null; return <span className={`ml-1.5 text-xs font-semibold ${m > 0 ? "text-green-600" : "text-red-500"}`}>{m > 0 ? "▲" : "▼"}{Math.abs(m)}</span>; })()}</td>
+                          <td className="px-2 py-1.5 lg:px-6 lg:py-4 text-gray-400 font-mono text-[10px] lg:text-sm">{rank}{(() => { const m = movementCache[effectiveFormat]?.[activeCreator]?.[player.name]; if (!m) return null; return <span className={`ml-1.5 text-xs font-semibold ${m > 0 ? "text-green-600" : "text-red-500"}`}>{m > 0 ? "▲" : "▼"}{Math.abs(m)}</span>; })()}</td>
                           <td className="px-2 py-1.5 lg:px-6 lg:py-4 font-medium">
                             <span onClick={() => openPlayerModal(player)} className="cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-1.5 lg:gap-2.5 text-xs lg:text-base min-w-0">
-                              <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="tableRow" shape="square" teamColor={teamColors(player.team).primary} />
+                              <PlayerHeadshot espnId={player.pos === "DST" ? null : player.espn_id} sleeperId={player.pos === "DST" ? null : player.sleeper_id} name={player.name} size="tableRow" shape="square" teamColor={teamColors(player.team).primary} label={player.pos === "DST" ? player.team : null} />
                               <span className="lg:hidden truncate min-w-0">{abbreviateFirstName(player.name)}</span>
                               <span className="hidden lg:inline">{player.name}</span>
                             </span>
@@ -1020,7 +1019,7 @@ export default function Home() {
         </div>
 
         <aside className="w-full lg:w-72 lg:shrink-0 lg:sticky lg:top-6 order-2">
-          <ConsensusMovementWidget format={activeFormat} />
+          <ConsensusMovementWidget format={effectiveFormat} />
         </aside>
 
       </div>
@@ -1048,7 +1047,7 @@ export default function Home() {
               className="relative p-6 rounded-t-2xl overflow-hidden flex items-end gap-4"
               style={{backgroundImage: modalBannerGradient(selectedPlayer.team)}}
             >
-              <PlayerHeadshot espnId={selectedPlayer.espn_id} sleeperId={selectedPlayer.sleeper_id} name={selectedPlayer.name} size="xl" shape="square" />
+              <PlayerHeadshot espnId={selectedPlayer.pos === "DST" ? null : selectedPlayer.espn_id} sleeperId={selectedPlayer.pos === "DST" ? null : selectedPlayer.sleeper_id} name={selectedPlayer.name} size="xl" shape="square" label={selectedPlayer.pos === "DST" ? selectedPlayer.team : null} />
               <div className="pb-0.5 min-w-0">
                 <h2 className={`${anton.className} text-2xl sm:text-3xl text-white uppercase tracking-tight leading-none mb-1.5 truncate`}>{selectedPlayer.name}</h2>
                 {(selectedPlayer.age || selectedPlayer.height_inches || selectedPlayer.weight_lbs) && (

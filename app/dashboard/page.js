@@ -9,8 +9,9 @@ import CreatorAvatar from "@/app/components/CreatorAvatar";
 import PlayerHeadshot from "@/app/components/PlayerHeadshot";
 import AuctionRankingsEditor from "@/app/components/AuctionRankingsEditor";
 import Cropper from "react-easy-crop";
+import { DST_FORMAT, KICKER_FORMAT } from "@/lib/dstKickerFormats";
 
-const FORMATS = ["Dynasty SF", "Dynasty 1QB", "Redraft 1QB", "Redraft SF"];
+const FORMATS = ["Dynasty SF", "Dynasty 1QB", "Redraft 1QB", "Redraft SF", DST_FORMAT, KICKER_FORMAT];
 const DEFAULT_TIERS = [1, 13, 25, 37, 49, 61, 73, 85, 97, 109, 121, 151];
 
 function getTierNumber(rank, tiers) {
@@ -29,6 +30,8 @@ const posColors = {
   RB: "bg-green-100 text-green-700",
   QB: "bg-red-100 text-red-700",
   TE: "bg-amber-100 text-amber-700",
+  DST: "bg-purple-100 text-purple-700",
+  K: "bg-teal-100 text-teal-700",
 };
 
 // Converts a player array from either integer IDs (new format) or objects (legacy)
@@ -826,8 +829,12 @@ export default function DashboardPage() {
     setAddPlayerSearch(query);
     if (!query.trim()) { setAddPlayerResults([]); return; }
     const usedNames = new Set((rankings[activeFormat] || []).map(p => p.name));
+    // DST/Kickers rankings shouldn't let a creator accidentally add a WR/RB/etc.
+    const posGate = activeFormat === DST_FORMAT ? (p => p.pos === "DST")
+      : activeFormat === KICKER_FORMAT ? (p => p.pos === "K")
+      : () => true;
     const results = playerPool
-      .filter(p => !usedNames.has(p.name) && p.name.toLowerCase().includes(query.toLowerCase().trim()))
+      .filter(p => !usedNames.has(p.name) && posGate(p) && p.name.toLowerCase().includes(query.toLowerCase().trim()))
       .slice(0, 10);
     setAddPlayerResults(results);
   }
@@ -2172,7 +2179,7 @@ export default function DashboardPage() {
                         <tr key={p.id} className="border-b border-gray-50 hover:bg-white/50">
                           <td className="px-4 py-2.5 font-medium text-[#0F172A]">
                             <div className="flex items-center gap-2">
-                              <PlayerHeadshot espnId={p.espn_id} sleeperId={p.sleeper_id} name={p.name} size="xs" />
+                              <PlayerHeadshot espnId={p.position === "DST" ? null : p.espn_id} sleeperId={p.position === "DST" ? null : p.sleeper_id} name={p.name} size="xs" label={p.position === "DST" ? p.team : null} />
                               {p.name}
                             </div>
                           </td>
@@ -2386,7 +2393,7 @@ export default function DashboardPage() {
                       >
                         <td className="px-4 py-2.5 font-medium text-sm">
                           <div className="flex items-center gap-2">
-                            <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="xs" />
+                            <PlayerHeadshot espnId={player.pos === "DST" ? null : player.espn_id} sleeperId={player.pos === "DST" ? null : player.sleeper_id} name={player.name} size="xs" label={player.pos === "DST" ? player.team : null} />
                             {player.name}
                           </div>
                         </td>
@@ -2441,7 +2448,7 @@ export default function DashboardPage() {
                           onClick={() => addPlayer(p)}
                           className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50 transition-colors text-left border-b border-gray-50 last:border-0"
                         >
-                          <PlayerHeadshot espnId={p.espn_id} sleeperId={p.sleeper_id} name={p.name} size="xs" />
+                          <PlayerHeadshot espnId={p.pos === "DST" ? null : p.espn_id} sleeperId={p.pos === "DST" ? null : p.sleeper_id} name={p.name} size="xs" label={p.pos === "DST" ? p.team : null} />
                           <span className={`px-1.5 py-0.5 rounded text-xs font-semibold ${posColors[p.pos] || "bg-gray-100 text-gray-500"}`}>{p.pos}</span>
                           <span className="font-medium text-sm">{p.name}</span>
                           <span className="text-gray-400 text-xs ml-auto">{p.team}</span>
@@ -2572,7 +2579,7 @@ export default function DashboardPage() {
                         </td>
                         <td className="px-4 py-3 font-medium">
                           <div className="flex items-center gap-2">
-                            <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="xs" />
+                            <PlayerHeadshot espnId={player.pos === "DST" ? null : player.espn_id} sleeperId={player.pos === "DST" ? null : player.sleeper_id} name={player.name} size="xs" label={player.pos === "DST" ? player.team : null} />
                             {player.name}
                           </div>
                         </td>

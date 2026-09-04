@@ -29,7 +29,7 @@ function contrastText(hex) {
 // empty for anyone with under ~6 years of NFL experience. Sleeper's own CDN (keyed
 // by sleeper_id, which every synced player has) fills that gap, so it's tried second.
 // Either can still 404 for an individual player, hence the initials fallback.
-export default function PlayerHeadshot({ espnId, sleeperId, name, size = "sm", shape = "circle", teamColor = null }) {
+export default function PlayerHeadshot({ espnId, sleeperId, name, size = "sm", shape = "circle", teamColor = null, label = null }) {
   const cls = SIZES[size] ?? SIZES.sm;
   const shapeCls = shape === "square" ? (size === "xl" ? "rounded-xl" : "rounded-md") : "rounded-full";
   const sources = [];
@@ -44,7 +44,7 @@ export default function PlayerHeadshot({ espnId, sleeperId, name, size = "sm", s
         className={`${cls} ${shapeCls} flex items-center justify-center font-bold flex-shrink-0 ${teamColor ? "" : "bg-gray-200 text-gray-500"}`}
         style={teamColor ? { backgroundColor: teamColor, color: contrastText(teamColor) } : undefined}
       >
-        {initials(name)}
+        {label || initials(name)}
       </div>
     );
   }
