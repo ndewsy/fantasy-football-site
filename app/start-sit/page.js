@@ -151,7 +151,7 @@ function ProjectionCard({ result, opponentLabel }) {
             {projection.breakdown.map((b) => (
               <div key={b.statId} className="flex items-center justify-between py-1.5 text-sm">
                 <span className="text-gray-500">{b.label}</span>
-                <span className="text-gray-400 font-mono text-xs">{b.line}</span>
+                <span className="text-gray-400 font-mono text-xs">{b.display ?? b.line}</span>
                 <span className="font-semibold text-[#0F172A]">{b.points} pt{b.points === 1 ? "" : "s"}</span>
               </div>
             ))}

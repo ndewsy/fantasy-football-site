@@ -5,16 +5,24 @@ const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPAB
 
 const SGO_BASE = 'https://api.sportsgameodds.com/v2';
 
-// The stat categories the Start/Sit tab projects fantasy points from.
+// The over/under stat categories the Start/Sit tab projects fantasy points
+// from. Touchdowns are handled separately below — SportsGameOdds doesn't
+// offer split rushing_touchdowns/receiving_touchdowns O/U markets for most
+// skill players, only a combined "anytime touchdown" Yes/No moneyline.
 const TARGET_STAT_IDS = new Set([
   'passing_yards',
   'passing_touchdowns',
   'rushing_yards',
-  'rushing_touchdowns',
   'receiving_yards',
-  'receiving_touchdowns',
   'receiving_receptions',
 ]);
+
+// American odds -> implied probability, e.g. +160 -> 0.3846, -114 -> 0.5327.
+function americanOddsToProbability(odds) {
+  const n = Number(odds);
+  if (!Number.isFinite(n) || n === 0) return null;
+  return n > 0 ? 100 / (n + 100) : -n / (-n + 100);
+}
 
 function normalize(name) {
   return name
@@ -118,23 +126,45 @@ export async function GET(request) {
     const odds = event.odds || {};
 
     for (const odd of Object.values(odds)) {
-      if (odd.sideID !== 'over') continue;
       if (odd.periodID !== 'game') continue; // full-game line only — skip 1q/2q/1h/etc sub-markets
-      if (!TARGET_STAT_IDS.has(odd.statID)) continue;
+
+      const isOverUnderStat = odd.sideID === 'over' && TARGET_STAT_IDS.has(odd.statID);
+      // Anytime-touchdown moneyline: the only broadly-offered TD market for
+      // skill players (rushing_touchdowns/receiving_touchdowns O/U markets
+      // barely exist). "yes" side gives DraftKings' probability of >=1 TD.
+      const isAnytimeTd = odd.statID === 'touchdowns' && odd.betTypeID === 'yn' && odd.sideID === 'yes';
+      if (!isOverUnderStat && !isAnytimeTd) continue;
+
       const sgoPlayerID = odd.playerID || odd.statEntityID;
       if (!sgoPlayerID || !eventPlayers[sgoPlayerID]) continue;
 
       // DraftKings specifically, per-book — bookOverUnder/fairOverUnder are
       // cross-book blends that can drift from what's actually on the site.
       const dk = odd.byBookmaker?.draftkings;
-      if (!dk?.available || dk.overUnder === undefined || dk.overUnder === null) {
+      if (!dk?.available) {
         skippedNoLine++;
         continue;
       }
-      const line = dk.overUnder;
 
-      const underOdd = odd.opposingOddID ? odds[odd.opposingOddID] : null;
-      const underDk = underOdd?.byBookmaker?.draftkings;
+      const statId = isAnytimeTd ? 'anytime_touchdowns' : odd.statID;
+      let line;
+      let overOdds;
+      let underOdds;
+
+      if (isAnytimeTd) {
+        const prob = americanOddsToProbability(dk.odds);
+        if (prob === null) { skippedNoLine++; continue; }
+        line = prob;
+        overOdds = dk.odds ?? null;
+        const noOdd = odd.opposingOddID ? odds[odd.opposingOddID] : null;
+        underOdds = noOdd?.byBookmaker?.draftkings?.odds ?? null;
+      } else {
+        if (dk.overUnder === undefined || dk.overUnder === null) { skippedNoLine++; continue; }
+        line = dk.overUnder;
+        overOdds = dk.odds ?? null;
+        const underOdd = odd.opposingOddID ? odds[odd.opposingOddID] : null;
+        underOdds = underOdd?.byBookmaker?.draftkings?.odds ?? null;
+      }
 
       const playerInfo = eventPlayers[sgoPlayerID];
       const playerTeamID = playerInfo.teamID;
@@ -149,21 +179,21 @@ export async function GET(request) {
         unmatchedRows.push({
           sgo_player_id: sgoPlayerID,
           sgo_event_id: event.eventID,
-          stat_id: odd.statID,
+          stat_id: statId,
           line: Number(line),
         });
         continue;
       }
 
-      const key = `${match.id}|${event.eventID}|${odd.statID}`;
+      const key = `${match.id}|${event.eventID}|${statId}`;
       lineRowsByKey.set(key, {
         player_id: match.id,
         sgo_player_id: sgoPlayerID,
         sgo_event_id: event.eventID,
-        stat_id: odd.statID,
+        stat_id: statId,
         line: Number(line),
-        over_odds: dk.odds ?? null,
-        under_odds: underDk?.odds ?? null,
+        over_odds: overOdds,
+        under_odds: underOdds,
         team_id: playerTeamID || null,
         opponent_id: opponentID || null,
         home_away: homeAway,
