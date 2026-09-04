@@ -128,6 +128,7 @@ export default function DashboardPage() {
   const [earningsPeriod, setEarningsPeriod] = useState("current");
   const [historicalPlatformRevenue, setHistoricalPlatformRevenue] = useState(null);
   const [historicalPlatformRevenueLoading, setHistoricalPlatformRevenueLoading] = useState(false);
+  const [revenueCurrency, setRevenueCurrency] = useState("usd");
 
   // Feedback state (admin only)
   const [feedbackItems, setFeedbackItems] = useState([]);
@@ -1668,7 +1669,7 @@ export default function DashboardPage() {
         {/* ── Revenue & Payouts Tab ── */}
         {tab === "payouts" && (
           <div>
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-4 flex-wrap">
               <label className="text-xs font-semibold text-gray-500">Period:</label>
               <select
                 value={revenuePeriod}
@@ -1679,6 +1680,21 @@ export default function DashboardPage() {
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
+              {revenuePeriod !== "current" && (
+                <div className="flex gap-1 ml-1">
+                  {["usd", "cad"].map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => setRevenueCurrency(c)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase transition-colors ${
+                        revenueCurrency === c ? "bg-[#2563EB] text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {revenuePeriod !== "current" && (
@@ -1692,19 +1708,24 @@ export default function DashboardPage() {
                     <p className="text-[#0F172A] text-sm font-medium mb-3">{historicalRevenue.label}</p>
                     <div className="grid grid-cols-3 gap-3 mb-3">
                       <div>
-                        <p className="text-xl lg:text-2xl font-bold text-[#0F172A]">${historicalRevenue.totalRevenue.toLocaleString()}</p>
+                        <p className="text-xl lg:text-2xl font-bold text-[#0F172A]">${historicalRevenue[revenueCurrency].totalRevenue.toLocaleString()}</p>
                         <p className="text-gray-500 text-xs mt-0.5">Gross Revenue</p>
                       </div>
                       <div>
-                        <p className="text-xl lg:text-2xl font-bold text-red-500">-${historicalRevenue.stripeFees.toLocaleString()}</p>
+                        <p className="text-xl lg:text-2xl font-bold text-red-500">-${historicalRevenue[revenueCurrency].stripeFees.toLocaleString()}</p>
                         <p className="text-gray-500 text-xs mt-0.5">Stripe Fees</p>
                       </div>
                       <div>
-                        <p className="text-xl lg:text-2xl font-bold text-blue-600">${historicalRevenue.netRevenue.toLocaleString()}</p>
+                        <p className="text-xl lg:text-2xl font-bold text-blue-600">${historicalRevenue[revenueCurrency].netRevenue.toLocaleString()}</p>
                         <p className="text-gray-500 text-xs mt-0.5">Net Revenue</p>
                       </div>
                     </div>
-                    <p className="text-gray-400 text-xs">{historicalRevenue.chargeCount} successful charge{historicalRevenue.chargeCount === 1 ? "" : "s"} · sourced live from Stripe (fees converted to USD at each charge&apos;s own settlement rate)</p>
+                    <p className="text-gray-400 text-xs">
+                      {historicalRevenue.chargeCount} successful charge{historicalRevenue.chargeCount === 1 ? "" : "s"} · sourced live from Stripe
+                      {revenueCurrency === "usd"
+                        ? " (fees converted to USD at each charge's own settlement rate)"
+                        : " (native CAD settlement amounts — exactly what Stripe pays out, no conversion)"}
+                    </p>
                     <p className="text-gray-400 text-xs mt-3 max-w-md">
                       Platform/creator payout splits aren&apos;t available for past periods — checked both Stripe (no referral/creator data was ever attached to charges or subscriptions) and the app&apos;s own database (only tracks each subscriber&apos;s <em>current</em> plan, not historical), so an accurate split can&apos;t be reconstructed.
                     </p>
@@ -3132,7 +3153,7 @@ export default function DashboardPage() {
 
           return (
             <div>
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center gap-2 mb-4 flex-wrap">
                 <label className="text-xs font-semibold text-gray-500">Period:</label>
                 <select
                   value={earningsPeriod}
@@ -3143,6 +3164,21 @@ export default function DashboardPage() {
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
+                {earningsPeriod !== "current" && (
+                  <div className="flex gap-1 ml-1">
+                    {["usd", "cad"].map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => setRevenueCurrency(c)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase transition-colors ${
+                          revenueCurrency === c ? "bg-[#2563EB] text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                        }`}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {earningsPeriod !== "current" && (
@@ -3156,19 +3192,24 @@ export default function DashboardPage() {
                       <p className="text-[#0F172A] text-sm font-medium mb-3">Platform-wide Revenue — {historicalPlatformRevenue.label}</p>
                       <div className="grid grid-cols-3 gap-3 mb-3">
                         <div>
-                          <p className="text-xl lg:text-2xl font-bold text-[#0F172A]">${historicalPlatformRevenue.totalRevenue.toLocaleString()}</p>
+                          <p className="text-xl lg:text-2xl font-bold text-[#0F172A]">${historicalPlatformRevenue[revenueCurrency].totalRevenue.toLocaleString()}</p>
                           <p className="text-gray-500 text-xs mt-0.5">Gross Revenue</p>
                         </div>
                         <div>
-                          <p className="text-xl lg:text-2xl font-bold text-red-500">-${historicalPlatformRevenue.stripeFees.toLocaleString()}</p>
+                          <p className="text-xl lg:text-2xl font-bold text-red-500">-${historicalPlatformRevenue[revenueCurrency].stripeFees.toLocaleString()}</p>
                           <p className="text-gray-500 text-xs mt-0.5">Stripe Fees</p>
                         </div>
                         <div>
-                          <p className="text-xl lg:text-2xl font-bold text-blue-600">${historicalPlatformRevenue.netRevenue.toLocaleString()}</p>
+                          <p className="text-xl lg:text-2xl font-bold text-blue-600">${historicalPlatformRevenue[revenueCurrency].netRevenue.toLocaleString()}</p>
                           <p className="text-gray-500 text-xs mt-0.5">Net Revenue</p>
                         </div>
                       </div>
-                      <p className="text-gray-400 text-xs">{historicalPlatformRevenue.chargeCount} successful charge{historicalPlatformRevenue.chargeCount === 1 ? "" : "s"} · sourced live from Stripe</p>
+                      <p className="text-gray-400 text-xs">
+                        {historicalPlatformRevenue.chargeCount} successful charge{historicalPlatformRevenue.chargeCount === 1 ? "" : "s"} · sourced live from Stripe
+                        {revenueCurrency === "usd"
+                          ? " (fees converted to USD at each charge's own settlement rate)"
+                          : " (native CAD settlement amounts — exactly what Stripe pays out, no conversion)"}
+                      </p>
                       <p className="text-gray-400 text-xs mt-3 max-w-md">
                         This is total revenue across the whole platform, not your personal cut — your earnings breakdown depends on which subscribers were tied to you at the time, which isn&apos;t tracked historically, so it&apos;s only available for the current month.
                       </p>
