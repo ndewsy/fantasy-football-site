@@ -98,7 +98,13 @@ export async function GET(request) {
     return Response.json({ error: err.message }, { status: 500 });
   }
 
-  const lineRows = [];
+  // Keyed by player_id|sgo_event_id|stat_id (the table's real unique
+  // constraint) — SportsGameOdds can return more than one "over" odd for the
+  // same player/event/stat (e.g. alternate-line markets alongside the main
+  // line), and Postgres' ON CONFLICT DO UPDATE errors out if a single upsert
+  // tries to touch the same conflict key twice, which was silently failing
+  // every cron run since the first one that hit a duplicate.
+  const lineRowsByKey = new Map();
   const unmatchedRows = [];
   let skippedNoLine = 0;
 
@@ -145,7 +151,8 @@ export async function GET(request) {
         continue;
       }
 
-      lineRows.push({
+      const key = `${match.id}|${event.eventID}|${odd.statID}`;
+      lineRowsByKey.set(key, {
         player_id: match.id,
         sgo_player_id: sgoPlayerID,
         sgo_event_id: event.eventID,
@@ -161,6 +168,8 @@ export async function GET(request) {
       });
     }
   }
+
+  const lineRows = [...lineRowsByKey.values()];
 
   if (lineRows.length > 0) {
     const { error } = await supabase()
