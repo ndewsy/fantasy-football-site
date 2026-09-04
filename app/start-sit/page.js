@@ -31,16 +31,12 @@ function PlayerPicker({ label, player, onSelect, onClear }) {
   const boxRef = useRef(null);
 
   useEffect(() => {
-    if (query.trim().length < 2) {
-      setResults([]);
-      return;
-    }
     const handle = setTimeout(() => {
       fetch(`/api/start-sit/search?q=${encodeURIComponent(query.trim())}`)
         .then((r) => (r.ok ? r.json() : { players: [] }))
         .then((d) => setResults(d.players || []))
         .catch(() => setResults([]));
-    }, 250);
+    }, 150);
     return () => clearTimeout(handle);
   }, [query]);
 
@@ -95,7 +91,7 @@ function PlayerPicker({ label, player, onSelect, onClear }) {
           ))}
         </div>
       )}
-      {open && query.trim().length >= 2 && results.length === 0 && (
+      {open && query.trim().length >= 1 && results.length === 0 && (
         <div className="absolute z-10 mt-1 w-full bg-white rounded-xl border border-gray-200 shadow-xl px-4 py-3 text-sm text-gray-400">
           No players with an upcoming game match &ldquo;{query}&rdquo;.
         </div>

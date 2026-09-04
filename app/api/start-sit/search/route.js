@@ -8,17 +8,21 @@ const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPAB
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const q = (searchParams.get('q') || '').trim();
-  if (q.length < 2) return Response.json({ players: [] });
 
   // Single query: name match + an inner join on player_prop_lines filtered
   // to upcoming games, in one round trip. A player can have multiple prop
   // lines for the same game (one row per stat), so dedupe by id after.
-  const { data, error } = await supabase()
+  // With no query yet (just focused the box), skip the name filter so
+  // browsing shows the full available pool instead of an empty box.
+  let query = supabase()
     .from('players')
     .select('id, name, position, team, espn_id, sleeper_id, player_prop_lines!inner(game_starts_at)')
-    .ilike('name', `%${q}%`)
     .gt('player_prop_lines.game_starts_at', new Date().toISOString())
+    .order('name')
     .limit(50);
+  if (q.length > 0) query = query.ilike('name', `%${q}%`);
+
+  const { data, error } = await query;
   if (error) return Response.json({ error: error.message }, { status: 500 });
 
   const seen = new Set();
