@@ -38,13 +38,30 @@ export async function POST(request) {
       (c) => c.referral_code && c.referral_code.toLowerCase() === trimmedCode.toLowerCase()
     );
 
-    if (!match) {
-      return Response.json(
-        { error: "That code doesn't match any active creator. Double-check it or leave the field blank." },
-        { status: 400 }
-      );
+    if (match) {
+      referralCreatorId = match.creator_id;
+    } else {
+      // Fallback: a creator can have more than one code via
+      // referral_code_aliases (profiles.referral_code only holds one).
+      // Still only accepted if it points at a currently-active creator.
+      const { data: alias, error: aliasError } = await supabase()
+        .from('referral_code_aliases')
+        .select('creator_id')
+        .ilike('code', trimmedCode)
+        .maybeSingle();
+      if (aliasError) {
+        console.error('[/api/checkout] referral alias lookup failed:', aliasError);
+        return Response.json({ error: 'Something went wrong validating your code. Please try again.' }, { status: 500 });
+      }
+      const aliasIsActive = alias && (activeCreators || []).some((c) => c.creator_id === alias.creator_id);
+      if (!aliasIsActive) {
+        return Response.json(
+          { error: "That code doesn't match any active creator. Double-check it or leave the field blank." },
+          { status: 400 }
+        );
+      }
+      referralCreatorId = alias.creator_id;
     }
-    referralCreatorId = match.creator_id;
   }
 
   // August promo: $10 one-time for 5 months instead of $10/month recurring.
