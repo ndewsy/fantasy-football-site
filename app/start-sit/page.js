@@ -233,7 +233,7 @@ export default function StartSitPage() {
       <div className="max-w-4xl mx-auto px-6 py-12">
         <PageTitle title="Start/Sit" subtitle="Tool" />
         <p className="text-gray-500 text-center mb-8 max-w-xl mx-auto">
-          Fantasy point projections built from live DraftKings player prop lines — pick two players and see who projects higher.
+          Fantasy point projections built from live DraftKings and FanDuel player prop lines — pick two players and see who projects higher.
         </p>
 
         {isPreLaunchSubscriber && (
@@ -306,7 +306,7 @@ export default function StartSitPage() {
             )}
 
             <div className="mt-10 pt-6 border-t border-gray-100 text-center">
-              <p className="text-xs text-gray-400 mb-3">Projections are derived from DraftKings player prop lines. Check live odds:</p>
+              <p className="text-xs text-gray-400 mb-3">Projections are derived from DraftKings and FanDuel player prop lines. Check live odds:</p>
               <div className="flex flex-wrap items-center justify-center gap-3">
                 {SPORTSBOOKS.map((b) => (
                   <a

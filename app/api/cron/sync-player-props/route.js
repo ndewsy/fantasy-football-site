@@ -24,6 +24,40 @@ function americanOddsToProbability(odds) {
   return n > 0 ? 100 / (n + 100) : -n / (-n + 100);
 }
 
+// Inverse, for displaying a blended probability as odds.
+function probabilityToAmericanOdds(p) {
+  if (!(p > 0) || !(p < 1)) return null;
+  const odds = p >= 0.5 ? -100 * p / (1 - p) : 100 * (1 - p) / p;
+  const rounded = Math.round(odds);
+  return rounded > 0 ? `+${rounded}` : `${rounded}`;
+}
+
+const TRACKED_BOOKS = ['draftkings', 'fanduel'];
+
+// Average whichever of the tracked books have a number for this odd — using
+// more than one sharp book smooths out a single book's noise/bias. Falls
+// back to whatever's available if only one book has this market.
+function blendedLine(byBookmaker) {
+  const values = TRACKED_BOOKS
+    .map((book) => byBookmaker?.[book])
+    .filter((b) => b?.available && b.overUnder !== undefined && b.overUnder !== null)
+    .map((b) => Number(b.overUnder));
+  if (values.length === 0) return null;
+  return values.reduce((a, b) => a + b, 0) / values.length;
+}
+
+// Same idea for a Yes/No moneyline, but odds don't average linearly — blend
+// in probability space, then convert back for display.
+function blendedProbability(byBookmaker) {
+  const probs = TRACKED_BOOKS
+    .map((book) => byBookmaker?.[book])
+    .filter((b) => b?.available)
+    .map((b) => americanOddsToProbability(b.odds))
+    .filter((p) => p !== null);
+  if (probs.length === 0) return null;
+  return probs.reduce((a, b) => a + b, 0) / probs.length;
+}
+
 function normalize(name) {
   return name
     .toLowerCase()
@@ -131,20 +165,12 @@ export async function GET(request) {
       const isOverUnderStat = odd.sideID === 'over' && TARGET_STAT_IDS.has(odd.statID);
       // Anytime-touchdown moneyline: the only broadly-offered TD market for
       // skill players (rushing_touchdowns/receiving_touchdowns O/U markets
-      // barely exist). "yes" side gives DraftKings' probability of >=1 TD.
+      // barely exist). "yes" side gives the blended probability of >=1 TD.
       const isAnytimeTd = odd.statID === 'touchdowns' && odd.betTypeID === 'yn' && odd.sideID === 'yes';
       if (!isOverUnderStat && !isAnytimeTd) continue;
 
       const sgoPlayerID = odd.playerID || odd.statEntityID;
       if (!sgoPlayerID || !eventPlayers[sgoPlayerID]) continue;
-
-      // DraftKings specifically, per-book — bookOverUnder/fairOverUnder are
-      // cross-book blends that can drift from what's actually on the site.
-      const dk = odd.byBookmaker?.draftkings;
-      if (!dk?.available) {
-        skippedNoLine++;
-        continue;
-      }
 
       const statId = isAnytimeTd ? 'anytime_touchdowns' : odd.statID;
       let line;
@@ -152,18 +178,20 @@ export async function GET(request) {
       let underOdds;
 
       if (isAnytimeTd) {
-        const prob = americanOddsToProbability(dk.odds);
+        const prob = blendedProbability(odd.byBookmaker);
         if (prob === null) { skippedNoLine++; continue; }
         line = prob;
-        overOdds = dk.odds ?? null;
+        overOdds = probabilityToAmericanOdds(prob);
         const noOdd = odd.opposingOddID ? odds[odd.opposingOddID] : null;
-        underOdds = noOdd?.byBookmaker?.draftkings?.odds ?? null;
+        const noProb = noOdd ? blendedProbability(noOdd.byBookmaker) : null;
+        underOdds = noProb !== null ? probabilityToAmericanOdds(noProb) : null;
       } else {
-        if (dk.overUnder === undefined || dk.overUnder === null) { skippedNoLine++; continue; }
-        line = dk.overUnder;
-        overOdds = dk.odds ?? null;
+        const blended = blendedLine(odd.byBookmaker);
+        if (blended === null) { skippedNoLine++; continue; }
+        line = blended;
+        overOdds = odd.byBookmaker?.draftkings?.odds ?? odd.byBookmaker?.fanduel?.odds ?? null;
         const underOdd = odd.opposingOddID ? odds[odd.opposingOddID] : null;
-        underOdds = underOdd?.byBookmaker?.draftkings?.odds ?? null;
+        underOdds = underOdd?.byBookmaker?.draftkings?.odds ?? underOdd?.byBookmaker?.fanduel?.odds ?? null;
       }
 
       const playerInfo = eventPlayers[sgoPlayerID];
