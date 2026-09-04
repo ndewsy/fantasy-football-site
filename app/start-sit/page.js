@@ -86,8 +86,11 @@ function PlayerPicker({ label, player, onSelect, onClear }) {
               onClick={() => { onSelect(p); setQuery(""); setResults([]); setOpen(false); }}
               className="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-gray-50 text-left"
             >
-              <span className="text-sm font-medium text-[#0F172A]">{p.name}</span>
-              <span className="text-xs text-gray-400">{p.position} · {p.team}</span>
+              <PlayerHeadshot espnId={p.espn_id} sleeperId={p.sleeper_id} name={p.name} size="sm" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-[#0F172A] truncate">{p.name}</p>
+                <p className="text-xs text-gray-400">{p.position} · {p.team}</p>
+              </div>
             </button>
           ))}
         </div>
