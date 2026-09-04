@@ -13,7 +13,7 @@ jobs:
         run: |
           status=$(curl -sS -o /tmp/response.json -w "%{http_code}" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            "https://fantasycollective.ca/api/cron/sync-player-props")
+            "https://www.fantasycollective.ca/api/cron/sync-player-props")
           cat /tmp/response.json
           if [ "$status" -ge 300 ]; then
             echo "Request failed with status $status"
