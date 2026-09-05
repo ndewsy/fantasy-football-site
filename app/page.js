@@ -1048,13 +1048,19 @@ export default function Home() {
             className="bg-card/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-card/80 w-full max-w-lg relative"
             onClick={e => e.stopPropagation()}
           >
-            {/* Close */}
+            {/* Close — stays outside the scrollable body below so it's always reachable */}
             <button
               onClick={() => setPlayerModalOpen(false)}
               className="absolute top-4 right-4 z-10 text-white/80 hover:text-white transition-colors text-lg leading-none font-medium"
             >
               ✕
             </button>
+
+            {/* Scrollable body — on mobile this content can be taller than the
+                viewport, and the page behind is scroll-locked while the modal
+                is open, so without its own scroll region the bottom of the
+                card was simply unreachable. */}
+            <div className="max-h-[85vh] overflow-y-auto rounded-2xl">
 
             {/* Header */}
             <div
@@ -1229,6 +1235,8 @@ export default function Home() {
                   </div>
                 </div>
               )}
+            </div>
+
             </div>
           </div>
         </div>
