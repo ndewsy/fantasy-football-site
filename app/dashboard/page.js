@@ -1395,6 +1395,12 @@ export default function DashboardPage() {
   const platformRevenue = totalRevenue - creatorPayoutTotal;
   const currentPeriod = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
+  const adminTabs = [["admin", "Admin Overview"], ["subscribers", "Subscribers"], ["payouts", "Revenue & Payouts"], ["feedback", "Feedback"], ["players", "Add Players"], ["playerdb", "Player Database"], ["admin-auction", "Auction Rankings"], ["waiver-wire-admin", "Waiver Wire"]];
+  const creatorTabs = ["rankings", "auction", "waiver-wire", "posts", "earnings", "analytics", "subscribers", "profile"].map((t) => [
+    t,
+    t === "rankings" ? "My Rankings" : t === "auction" ? "My Auction" : t === "waiver-wire" ? "My Waiver Wire" : t === "posts" ? "My Posts" : t === "earnings" ? "My Earnings" : t === "analytics" ? "My Analytics" : t === "subscribers" ? "Subscribers" : "My Profile",
+  ]);
+
   return (
     <>
     <main className="min-h-screen text-[#0F172A] lg:pl-56">
@@ -1433,10 +1439,53 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Row 1 — Dashboard tabs */}
-        <div className="flex gap-1.5 mb-6 overflow-x-auto pb-1">
+        <div className="lg:flex lg:gap-8 lg:items-start">
+          {/* Desktop: dashboard tabs as a second, left-side column */}
+          <nav className="hidden lg:flex lg:flex-col lg:gap-1.5 lg:w-52 lg:shrink-0 lg:sticky lg:top-10">
+            {profile.role === "admin" && (
+              <>
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 pt-1 pb-0.5">Admin</p>
+                {adminTabs.map(([t, label]) => (
+                  <button
+                    key={t}
+                    onClick={() => setTab(t)}
+                    className={`text-left px-3 py-2 text-xs font-semibold rounded-lg transition-colors ${
+                      tab === t
+                        ? "bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white"
+                        : "bg-white/60 backdrop-blur-sm text-gray-500 hover:bg-white/80 border border-white/70"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </>
+            )}
+            {profile.is_creator && (
+              <>
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 pt-3 pb-0.5">Creator</p>
+                {creatorTabs.map(([t, label]) => (
+                  <button
+                    key={t}
+                    onClick={() => setTab(t)}
+                    className={`text-left px-3 py-2 text-xs font-semibold rounded-lg transition-colors ${
+                      tab === t
+                        ? "bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white"
+                        : "bg-white/60 backdrop-blur-sm text-gray-500 hover:bg-white/80 border border-white/70"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </>
+            )}
+          </nav>
+
+          <div className="flex-1 min-w-0">
+
+        {/* Row 1 — Dashboard tabs (mobile only — desktop uses the left column above) */}
+        <div className="lg:hidden flex gap-1.5 mb-6 overflow-x-auto pb-1">
           {profile.role === "admin" && (
-            [["admin", "Admin Overview"], ["subscribers", "Subscribers"], ["payouts", "Revenue & Payouts"], ["feedback", "Feedback"], ["players", "Add Players"], ["playerdb", "Player Database"], ["admin-auction", "Auction Rankings"], ["waiver-wire-admin", "Waiver Wire"]].map(([t, label]) => (
+            adminTabs.map(([t, label]) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -1451,7 +1500,7 @@ export default function DashboardPage() {
             ))
           )}
           {profile.is_creator && (
-            ["rankings", "auction", "waiver-wire", "posts", "earnings", "analytics", "subscribers", "profile"].map((t) => (
+            creatorTabs.map(([t, label]) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -1461,7 +1510,7 @@ export default function DashboardPage() {
                     : "bg-white/60 backdrop-blur-sm text-gray-500 hover:bg-white/80 border border-white/70"
                 }`}
               >
-                {t === "rankings" ? "My Rankings" : t === "auction" ? "My Auction" : t === "waiver-wire" ? "My Waiver Wire" : t === "posts" ? "My Posts" : t === "earnings" ? "My Earnings" : t === "analytics" ? "My Analytics" : t === "subscribers" ? "Subscribers" : "My Profile"}
+                {label}
               </button>
             ))
           )}
@@ -3619,6 +3668,9 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
+
+          </div>
+        </div>
 
       </div>
     </main>
