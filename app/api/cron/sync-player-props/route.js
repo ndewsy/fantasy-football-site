@@ -250,6 +250,17 @@ export async function GET(request) {
     if (error) console.error('[sync-player-props] upsert unmatched failed:', error);
   }
 
+  // Belt-and-suspenders cleanup: these two stat_ids predate anytime_touchdowns
+  // and are no longer written above, but upsert never removes rows for a
+  // category that's stopped being synced — any left over from before this
+  // change would silently double-count touchdowns alongside the anytime-TD
+  // line in a player's projection.
+  const { error: purgeError } = await supabase()
+    .from('player_prop_lines')
+    .delete()
+    .in('stat_id', ['rushing_touchdowns', 'receiving_touchdowns']);
+  if (purgeError) console.error('[sync-player-props] purge legacy TD stat_ids failed:', purgeError);
+
   console.log(`[sync-player-props] events=${events.length} lines=${lineRows.length} unmatched=${unmatchedRows.length} skippedNoLine=${skippedNoLine}`);
   return Response.json({
     ok: true,
