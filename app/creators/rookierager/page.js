@@ -59,7 +59,7 @@ export default function DynastyDavePage() {
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading...</div>;
 
   return (
-    <main className="min-h-screen text-[#0F172A] lg:pl-56">
+    <main className="min-h-screen text-ink lg:pl-56">
       <NavBar activePath="/creators/rookierager" />
 
       <div className="max-w-5xl mx-auto px-6 py-12">
@@ -77,7 +77,7 @@ export default function DynastyDavePage() {
             {creatorProfile?.bio && <p className="text-gray-500 text-sm mt-2 max-w-sm">{creatorProfile.bio}</p>}
           </div>
           {!isSubscribed && (
-            <div className="w-full sm:w-auto sm:ml-auto text-center bg-white/70 backdrop-blur-md rounded-xl p-4 border border-white/80 shadow-lg">
+            <div className="w-full sm:w-auto sm:ml-auto text-center bg-card/70 backdrop-blur-md rounded-xl p-4 border border-card/80 shadow-lg">
               <p className="text-gray-500 text-sm mb-2">Get access</p>
               <a href="/subscribe" className="bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold px-6 py-2 rounded-lg inline-block transition-all">{promoActive ? <>Subscribe — <PromoPrice /></> : "Subscribe — $10/mo"}</a>
             </div>
@@ -107,7 +107,7 @@ export default function DynastyDavePage() {
         <h2 className="text-xl font-bold mb-4">Latest Content</h2>
 
         {posts.length === 0 ? (
-          <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg py-12 text-center">
+          <div className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg py-12 text-center">
             <p className="text-gray-500 font-medium mb-1">No posts yet</p>
             <p className="text-gray-400 text-sm">Check back soon for new content.</p>
           </div>

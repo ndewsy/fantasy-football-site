@@ -568,7 +568,7 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen text-[#0F172A] lg:pl-56">
+    <main className="min-h-screen text-ink lg:pl-56">
       <NavBar activePath="/" />
 
       {/* Landing page — non-subscribers only */}
@@ -580,7 +580,7 @@ export default function Home() {
               <span className="inline-block bg-blue-50 text-blue-700 text-sm font-semibold px-4 py-1.5 rounded-full mb-6 border border-blue-100">
                 Rankings updated weekly all season
               </span>
-              <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold mb-6 text-[#0F172A] leading-tight">
+              <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold mb-6 text-ink leading-tight">
                 Expert Fantasy Football Rankings from Top Creators
               </h2>
               <p className="text-gray-500 text-lg sm:text-xl mb-10 max-w-2xl mx-auto leading-relaxed">
@@ -592,7 +592,7 @@ export default function Home() {
                 </a>
                 <button
                   onClick={scrollToRankings}
-                  className="w-full sm:w-auto bg-white/70 backdrop-blur-sm border border-white/80 text-[#0F172A] font-semibold px-8 py-4 rounded-xl text-lg hover:bg-white/90 transition-all"
+                  className="w-full sm:w-auto bg-card/70 backdrop-blur-sm border border-card/80 text-ink font-semibold px-8 py-4 rounded-xl text-lg hover:bg-card/90 transition-all"
                 >
                   See Rankings ↓
                 </button>
@@ -602,7 +602,7 @@ export default function Home() {
 
           {/* Bridge to rankings */}
           <div className="max-w-5xl mx-auto px-6 pb-4 text-center">
-            <h3 className="text-2xl font-bold mb-1 text-[#0F172A]">Preview the Rankings</h3>
+            <h3 className="text-2xl font-bold mb-1 text-ink">Preview the Rankings</h3>
             <p className="text-gray-500 text-sm">First 12 players are free. Subscribe to unlock the full list.</p>
           </div>
         </div>
@@ -611,7 +611,7 @@ export default function Home() {
       {/* Subscriber header — shown instead of the full landing */}
       {authLoaded && (isSubscribed || isDashboardUser) && (
         <div className="w-full px-6 lg:px-8 pt-10 pb-2">
-          <h2 className={`${anton.className} text-4xl uppercase tracking-tight text-[#0F172A]`}>Rankings</h2>
+          <h2 className={`${anton.className} text-4xl uppercase tracking-tight text-ink`}>Rankings</h2>
           <p className="text-gray-500 mt-1">Expert consensus rankings across all formats.</p>
         </div>
       )}
@@ -630,7 +630,7 @@ export default function Home() {
               className={`flex-1 lg:flex-none text-center px-2 py-2.5 text-xs lg:px-4 lg:py-2 lg:text-sm rounded-lg font-medium transition-colors lg:shrink-0 ${
                 activeFormat === fmt
                   ? "bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white"
-                  : "bg-white/60 backdrop-blur-sm text-gray-600 hover:bg-white/80 border border-white/70"
+                  : "bg-card/60 backdrop-blur-sm text-gray-600 hover:bg-card/80 border border-card/70"
               }`}
             >
               <span className="lg:hidden">{fmt === "DST/K" ? fmt : abbreviateFormat(fmt)}</span>
@@ -672,7 +672,7 @@ export default function Home() {
                 <select
                   value={activeCreator}
                   onChange={e => setActiveCreator(e.target.value)}
-                  className="w-full bg-white/60 backdrop-blur-sm border border-white/70 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full bg-card/60 backdrop-blur-sm border border-card/70 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
                   {creatorTabItems.map(creator => (
                     <option key={creator.id} value={creator.id} disabled={creator.comingSoon}>
@@ -716,7 +716,7 @@ export default function Home() {
                   className={`hidden sm:block -mb-px shrink-0 px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
                     showCreatorColumns
                       ? "bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white"
-                      : "bg-white/60 backdrop-blur-sm text-gray-600 border border-white/70 hover:bg-white/80"
+                      : "bg-card/60 backdrop-blur-sm text-gray-600 border border-card/70 hover:bg-card/80"
                   }`}
                 >
                   {showCreatorColumns ? "Hide Creator Rankings" : "Show Creator Rankings"}
@@ -737,7 +737,7 @@ export default function Home() {
                   className={`px-2.5 py-1 text-xs lg:px-3 lg:py-1.5 lg:text-sm rounded-lg font-medium transition-colors shrink-0 ${
                     posFilter === pos
                       ? "bg-blue-600 text-white"
-                      : "bg-white/60 backdrop-blur-sm text-gray-600 border border-white/70 hover:bg-white/80"
+                      : "bg-card/60 backdrop-blur-sm text-gray-600 border border-card/70 hover:bg-card/80"
                   }`}
                 >
                   {pos}
@@ -749,7 +749,7 @@ export default function Home() {
                 className={`px-2.5 py-1 text-xs lg:px-3 lg:py-1.5 lg:text-sm rounded-lg font-medium transition-colors border cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500 ${
                   teamFilter !== "All"
                     ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white/60 backdrop-blur-sm text-gray-600 border-white/70 hover:bg-white/80"
+                    : "bg-card/60 backdrop-blur-sm text-gray-600 border-card/70 hover:bg-card/80"
                 }`}
               >
                 {teamOptions.map(t => (
@@ -763,7 +763,7 @@ export default function Home() {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search players..."
-                className="w-full bg-white/60 backdrop-blur-sm border border-white/70 rounded-xl px-4 py-2.5 text-[#0F172A] placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="w-full bg-card/60 backdrop-blur-sm border border-card/70 rounded-xl px-4 py-2.5 text-ink placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
             </div>
           </>
@@ -771,22 +771,22 @@ export default function Home() {
 
         {/* Table area */}
         {stillLoading ? (
-          <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg py-16 text-center text-gray-400">
+          <div className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg py-16 text-center text-gray-400">
             Loading...
           </div>
         ) : CREATORS.find(c => c.id === activeCreator)?.comingSoon ? (
-          <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg py-16 text-center">
+          <div className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg py-16 text-center">
             <p className="text-gray-500 font-medium mb-1">Creator coming soon</p>
             <p className="text-gray-400 text-sm">This creator spot is opening up. Stay tuned.</p>
           </div>
         ) : isCreatorLocked ? (
-          <div className="bg-white/70 backdrop-blur-md rounded-xl border border-amber-200 shadow-lg py-16 text-center px-6">
+          <div className="bg-card/70 backdrop-blur-md rounded-xl border border-amber-200 shadow-lg py-16 text-center px-6">
             <p className="text-2xl mb-3">🔄</p>
-            <p className="text-[#0F172A] font-semibold mb-1">Rankings in progress</p>
+            <p className="text-ink font-semibold mb-1">Rankings in progress</p>
             <p className="text-gray-500 text-sm">This creator is currently updating their {effectiveFormat} rankings. Check back soon.</p>
           </div>
         ) : !hasData ? (
-          <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg py-16 text-center">
+          <div className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg py-16 text-center">
             <p className="text-gray-500 font-medium mb-1">Rankings coming soon</p>
             <p className="text-gray-400 text-sm">
               {activeCreator === "consensus"
@@ -795,7 +795,7 @@ export default function Home() {
             </p>
           </div>
         ) : filteredPlayers && filteredPlayers.length === 0 ? (
-          <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg py-16 text-center">
+          <div className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg py-16 text-center">
             <p className="text-gray-500 font-medium mb-1">No players match your filters</p>
             <button
               onClick={() => { setSearch(""); setPosFilter("All"); setTeamFilter("All"); }}
@@ -806,9 +806,9 @@ export default function Home() {
           </div>
         ) : (
           <div className="relative">
-            <div className="bg-white/60 backdrop-blur-md rounded-xl overflow-hidden border border-white/70 shadow-lg">
+            <div className="bg-card/60 backdrop-blur-md rounded-xl overflow-hidden border border-card/70 shadow-lg">
               <table className="w-full">
-                <thead className="bg-white/40 text-gray-500 text-xs lg:text-sm">
+                <thead className="bg-card/40 text-gray-500 text-xs lg:text-sm">
                   <tr>
                     <th className="text-left px-2 py-2 lg:px-6 lg:py-3 w-8 lg:w-16">Rank</th>
                     <th className="text-left px-2 py-2 lg:px-6 lg:py-3 w-full lg:w-auto">Player</th>
@@ -1016,7 +1016,7 @@ export default function Home() {
             {/* Gradient + lock CTA over blurred rows */}
             {!unlocked && lockedCount > 0 && (
               <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-white/95 via-white/60 to-transparent flex flex-col items-center justify-end pb-10 gap-3 pointer-events-none rounded-b-xl">
-                <p className="text-[#0F172A] font-semibold text-base pointer-events-auto">
+                <p className="text-ink font-semibold text-base pointer-events-auto">
                   🔒 {lockedCount} more players locked
                 </p>
                 <a
@@ -1045,7 +1045,7 @@ export default function Home() {
           onClick={() => setPlayerModalOpen(false)}
         >
           <div
-            className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/80 w-full max-w-lg relative"
+            className="bg-card/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-card/80 w-full max-w-lg relative"
             onClick={e => e.stopPropagation()}
           >
             {/* Close */}
@@ -1074,7 +1074,7 @@ export default function Home() {
                   </p>
                 )}
                 <div className="flex items-center gap-2">
-                  <span className={`px-2.5 py-1 rounded-lg text-sm font-semibold text-white ${posBannerColors[selectedPlayer.pos] || "bg-white/20"}`}>
+                  <span className={`px-2.5 py-1 rounded-lg text-sm font-semibold text-white ${posBannerColors[selectedPlayer.pos] || "bg-card/20"}`}>
                     {displayPosRanks[selectedPlayer.name] || selectedPlayer.pos}
                   </span>
                   <span
@@ -1142,7 +1142,7 @@ export default function Home() {
                   style={{ background: `linear-gradient(to right, ${riskColor(1)}, ${riskColor(10)})` }}
                 >
                   <div
-                    className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white border-2 shadow"
+                    className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-card border-2 shadow"
                     style={{
                       left: `calc(${((selectedPlayer.risk_rating - 1) / 9) * 100}% - 7px)`,
                       borderColor: riskColor(selectedPlayer.risk_rating),
@@ -1163,7 +1163,7 @@ export default function Home() {
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{seasonStats.season} Season</h3>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-[#0F172A]">{seasonStats.fantasy_points} pts</span>
+                    <span className="text-xs font-bold text-ink">{seasonStats.fantasy_points} pts</span>
                     {seasonStats.fantasy_finish && (
                       <span className="text-[10px] font-bold uppercase bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
                         {seasonStats.position}{seasonStats.fantasy_finish}
@@ -1174,7 +1174,7 @@ export default function Home() {
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                   {seasonStatLine(seasonStats.position, seasonStats.stats).map((s) => (
                     <div key={s.label} className="bg-gray-50 rounded-lg px-2 py-1.5 text-center">
-                      <p className="text-sm font-bold text-[#0F172A]">{s.value}</p>
+                      <p className="text-sm font-bold text-ink">{s.value}</p>
                       <p className="text-[9px] text-gray-400 uppercase tracking-wide">{s.label}</p>
                     </div>
                   ))}
@@ -1217,7 +1217,7 @@ export default function Home() {
                                   : "border-gray-100 hover:bg-gray-50"
                               }`}
                             >
-                              <td className="px-4 py-3 font-medium text-[#0F172A]">{fmt}</td>
+                              <td className="px-4 py-3 font-medium text-ink">{fmt}</td>
                               <td className="px-4 py-3 text-center text-gray-600">{row.consensus ?? "—"}</td>
                               <td className="px-4 py-3 text-center text-gray-600">{row.rookierager ?? "—"}</td>
                               <td className="px-4 py-3 text-center text-gray-600">{row.ffhuddle ?? "—"}</td>
@@ -1237,7 +1237,7 @@ export default function Home() {
       {showScrollTop && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="fixed bottom-20 sm:bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/80 backdrop-blur-md border border-white/80 shadow-lg text-gray-500 hover:text-gray-900 hover:bg-white transition-all text-sm font-medium"
+          className="fixed bottom-20 sm:bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-card/80 backdrop-blur-md border border-card/80 shadow-lg text-gray-500 hover:text-gray-900 hover:bg-card transition-all text-sm font-medium"
           aria-label="Scroll to top"
         >
           <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

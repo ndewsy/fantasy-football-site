@@ -68,11 +68,11 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <a href="/" className="text-2xl font-bold text-blue-600" style={{fontFamily: "'Fredoka One', cursive"}}>Fantasy Collective</a>
-            <h2 className="text-3xl font-bold mt-4 text-[#0F172A]">Reset Password</h2>
+            <h2 className="text-3xl font-bold mt-4 text-ink">Reset Password</h2>
             <p className="text-gray-500 mt-2">We'll send a reset link to your email.</p>
           </div>
 
-          <div className="bg-white/70 backdrop-blur-md rounded-xl p-8 border border-white/80 shadow-lg">
+          <div className="bg-card/70 backdrop-blur-md rounded-xl p-8 border border-card/80 shadow-lg">
             {resetSent ? (
               <div className="text-center py-4">
                 <div className="text-4xl mb-4">📬</div>
@@ -96,7 +96,7 @@ export default function LoginPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleForgot()}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-[#0F172A] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-ink focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     placeholder="you@example.com"
                     autoFocus
                   />
@@ -137,18 +137,18 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <a href="/" className="text-2xl font-bold text-blue-600" style={{fontFamily: "'Fredoka One', cursive"}}>Fantasy Collective</a>
-          <h2 className="text-3xl font-bold mt-4 text-[#0F172A]">{isSignup ? "Create Account" : "Welcome Back"}</h2>
+          <h2 className="text-3xl font-bold mt-4 text-ink">{isSignup ? "Create Account" : "Welcome Back"}</h2>
           <p className="text-gray-500 mt-2">{isSignup ? "Sign up to get started" : "Sign in to your account"}</p>
         </div>
 
-        <div className="bg-white/70 backdrop-blur-md rounded-xl p-8 border border-white/80 shadow-lg">
+        <div className="bg-card/70 backdrop-blur-md rounded-xl p-8 border border-card/80 shadow-lg">
           <div className="mb-4">
             <label className="block text-sm text-gray-500 mb-2">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-[#0F172A] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-ink focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               placeholder="you@example.com"
             />
           </div>
@@ -160,7 +160,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-[#0F172A] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-ink focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               placeholder="••••••••"
             />
           </div>

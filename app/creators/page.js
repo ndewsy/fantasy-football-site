@@ -29,7 +29,7 @@ export default function CreatorsPage() {
   }, []);
 
   return (
-    <main className="min-h-screen text-[#0F172A] lg:pl-56">
+    <main className="min-h-screen text-ink lg:pl-56">
       <NavBar activePath="/creators" />
       <div className="max-w-5xl mx-auto px-6 py-16">
         <PageTitle title="Our Creators" />
@@ -43,7 +43,7 @@ export default function CreatorsPage() {
               ? creator.bio
               : (db?.bio || "New creator joining the platform.");
             return (
-            <div key={creator.id} className={`bg-white/70 backdrop-blur-md rounded-xl p-6 border border-white/80 shadow-lg transition-shadow ${creator.comingSoon ? "opacity-70" : "hover:shadow-xl"}`}>
+            <div key={creator.id} className={`bg-card/70 backdrop-blur-md rounded-xl p-6 border border-card/80 shadow-lg transition-shadow ${creator.comingSoon ? "opacity-70" : "hover:shadow-xl"}`}>
               <div className="flex items-center gap-4 mb-4">
                 <CreatorAvatar
                   logoUrl={db?.logo_url}

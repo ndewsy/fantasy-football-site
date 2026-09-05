@@ -69,9 +69,9 @@ export default function LeaderboardPage() {
         ) : gamesGraded === 0 ? (
 
           /* Pre-season state */
-          <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg px-6 py-12 text-center">
+          <div className="bg-card/60 backdrop-blur-md rounded-xl border border-card/70 shadow-lg px-6 py-12 text-center">
             <p className="text-4xl mb-4">🏈</p>
-            <h2 className="text-lg font-bold text-[#0F172A] mb-2">Leaderboard opens once Week 1 kicks off</h2>
+            <h2 className="text-lg font-bold text-ink mb-2">Leaderboard opens once Week 1 kicks off</h2>
             <p className="text-gray-400 text-sm max-w-sm mx-auto">
               Head over to the Schedule tab, lock in your picks for all 272 games, and come back after the first game goes final.
             </p>
@@ -80,8 +80,8 @@ export default function LeaderboardPage() {
         ) : entries.length === 0 ? (
 
           /* Season started but no one has all 272 picks yet */
-          <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg px-6 py-12 text-center">
-            <h2 className="text-lg font-bold text-[#0F172A] mb-2">No qualifying entries yet</h2>
+          <div className="bg-card/60 backdrop-blur-md rounded-xl border border-card/70 shadow-lg px-6 py-12 text-center">
+            <h2 className="text-lg font-bold text-ink mb-2">No qualifying entries yet</h2>
             <p className="text-gray-400 text-sm max-w-sm mx-auto">
               Nobody has submitted all 272 picks so far. Be the first to complete your ballot.
             </p>
@@ -109,9 +109,9 @@ export default function LeaderboardPage() {
             </p>
 
             {/* Leaderboard table */}
-            <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden">
+            <div className="bg-card/60 backdrop-blur-md rounded-xl border border-card/70 shadow-lg overflow-hidden">
               {/* Column headers */}
-              <div className="grid grid-cols-[2rem_1fr_auto_auto_auto] items-center gap-3 px-4 py-2.5 border-b border-gray-100/80 bg-white/40">
+              <div className="grid grid-cols-[2rem_1fr_auto_auto_auto] items-center gap-3 px-4 py-2.5 border-b border-gray-100/80 bg-card/40">
                 <span />
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Player</span>
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right">Correct</span>
@@ -126,19 +126,19 @@ export default function LeaderboardPage() {
                     <div
                       key={entry.user_id}
                       className={`grid grid-cols-[2rem_1fr_auto_auto_auto] items-center gap-3 px-4 py-3 transition-colors ${
-                        isSelf ? 'bg-blue-50/50 border-l-2 border-[#2563EB]' : i % 2 === 0 ? 'bg-white/20' : ''
+                        isSelf ? 'bg-blue-50/50 border-l-2 border-[#2563EB]' : i % 2 === 0 ? 'bg-card/20' : ''
                       }`}
                     >
                       <RankBadge rank={entry.rank} />
 
                       <div className="min-w-0">
-                        <p className={`text-sm font-semibold truncate ${isSelf ? 'text-[#2563EB]' : 'text-[#0F172A]'}`}>
+                        <p className={`text-sm font-semibold truncate ${isSelf ? 'text-[#2563EB]' : 'text-ink'}`}>
                           {entry.display_name}
                           {isSelf && <span className="ml-1.5 text-[10px] font-bold text-[#2563EB] bg-blue-100 rounded px-1 py-0.5">you</span>}
                         </p>
                       </div>
 
-                      <span className={`text-sm font-bold tabular-nums text-right ${isSelf ? 'text-[#2563EB]' : 'text-[#0F172A]'}`}>
+                      <span className={`text-sm font-bold tabular-nums text-right ${isSelf ? 'text-[#2563EB]' : 'text-ink'}`}>
                         {entry.correct}
                       </span>
 
@@ -146,7 +146,7 @@ export default function LeaderboardPage() {
                         {entry.graded}
                       </span>
 
-                      <span className={`text-sm font-bold tabular-nums text-right min-w-[3.5rem] ${isSelf ? 'text-[#2563EB]' : 'text-[#0F172A]'}`}>
+                      <span className={`text-sm font-bold tabular-nums text-right min-w-[3.5rem] ${isSelf ? 'text-[#2563EB]' : 'text-ink'}`}>
                         {pctDisplay(entry.pct)}
                       </span>
                     </div>

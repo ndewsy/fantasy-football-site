@@ -26,6 +26,7 @@ export async function POST(request) {
   if ('bio'           in body) update.bio           = body.bio           || null;
   if ('announcement'  in body) update.announcement  = body.announcement  || null;
   if ('logo_url'      in body) update.logo_url      = body.logo_url      || null;
+  if (body.theme === 'light' || body.theme === 'dark') update.theme = body.theme;
 
   if (Object.keys(update).length === 0) {
     return Response.json({ error: 'No fields to update' }, { status: 400 });

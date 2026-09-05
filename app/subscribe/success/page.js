@@ -66,7 +66,7 @@ export default function SuccessPage() {
           <a href="/" className="bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold py-3 rounded-xl transition-all">
             View Rankings
           </a>
-          <a href="/creators" className="bg-white/70 backdrop-blur-md hover:bg-white/90 text-gray-700 font-bold py-3 rounded-xl transition-all border border-white/80">
+          <a href="/creators" className="bg-card/70 backdrop-blur-md hover:bg-card/90 text-gray-700 font-bold py-3 rounded-xl transition-all border border-card/80">
             Browse Creator Communities
           </a>
         </div>

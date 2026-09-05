@@ -69,7 +69,7 @@ export default function FeedbackPage() {
   const ph = PLACEHOLDERS[activeTab];
 
   return (
-    <main className="min-h-screen text-[#0F172A] lg:pl-56">
+    <main className="min-h-screen text-ink lg:pl-56">
       <NavBar activePath="/feedback" />
 
       <div className="max-w-2xl mx-auto px-6 py-16">
@@ -93,7 +93,7 @@ export default function FeedbackPage() {
           ))}
         </div>
 
-        <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-6">
+        <div className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg p-6">
           {submitted ? (
             <div className="py-8 text-center">
               <div className="w-14 h-14 rounded-full bg-green-50 border border-green-200 flex items-center justify-center mx-auto mb-4">
@@ -126,7 +126,7 @@ export default function FeedbackPage() {
                     value={name}
                     onChange={e => setName(e.target.value)}
                     placeholder="Your name"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-[#0F172A] placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-ink placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
                   />
                 </div>
                 <div>
@@ -139,7 +139,7 @@ export default function FeedbackPage() {
                     onChange={e => setEmail(e.target.value)}
                     placeholder="you@example.com"
                     required
-                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-[#0F172A] placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-ink placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
                   />
                 </div>
               </div>
@@ -151,7 +151,7 @@ export default function FeedbackPage() {
                   value={subject}
                   onChange={e => setSubject(e.target.value)}
                   placeholder={ph.subject}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-[#0F172A] placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-ink placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
                 />
               </div>
 
@@ -165,7 +165,7 @@ export default function FeedbackPage() {
                   placeholder={ph.message}
                   rows={5}
                   required
-                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-[#0F172A] placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm resize-none"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-ink placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm resize-none"
                 />
               </div>
 

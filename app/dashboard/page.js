@@ -1424,7 +1424,7 @@ export default function DashboardPage() {
 
   return (
     <>
-    <main className="min-h-screen text-[#0F172A] lg:pl-56">
+    <main className="min-h-screen text-ink lg:pl-56">
       <NavBar activePath="/dashboard" />
 
       <div className="max-w-[1600px] mx-auto px-6 py-10">
@@ -1473,7 +1473,7 @@ export default function DashboardPage() {
                     className={`text-left px-3 py-2 text-xs font-semibold rounded-lg transition-colors ${
                       tab === t
                         ? "bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white"
-                        : "bg-white/60 backdrop-blur-sm text-gray-500 hover:bg-white/80 border border-white/70"
+                        : "bg-card/60 backdrop-blur-sm text-gray-500 hover:bg-card/80 border border-card/70"
                     }`}
                   >
                     {label}
@@ -1491,7 +1491,7 @@ export default function DashboardPage() {
                     className={`text-left px-3 py-2 text-xs font-semibold rounded-lg transition-colors ${
                       tab === t
                         ? "bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white"
-                        : "bg-white/60 backdrop-blur-sm text-gray-500 hover:bg-white/80 border border-white/70"
+                        : "bg-card/60 backdrop-blur-sm text-gray-500 hover:bg-card/80 border border-card/70"
                     }`}
                   >
                     {label}
@@ -1513,7 +1513,7 @@ export default function DashboardPage() {
                 className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap shrink-0 ${
                   tab === t
                     ? "bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white"
-                    : "bg-white/60 backdrop-blur-sm text-gray-500 hover:bg-white/80 border border-white/70"
+                    : "bg-card/60 backdrop-blur-sm text-gray-500 hover:bg-card/80 border border-card/70"
                 }`}
               >
                 {label}
@@ -1528,7 +1528,7 @@ export default function DashboardPage() {
                 className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap shrink-0 ${
                   tab === t
                     ? "bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white"
-                    : "bg-white/60 backdrop-blur-sm text-gray-500 hover:bg-white/80 border border-white/70"
+                    : "bg-card/60 backdrop-blur-sm text-gray-500 hover:bg-card/80 border border-card/70"
                 }`}
               >
                 {label}
@@ -1547,7 +1547,7 @@ export default function DashboardPage() {
                 { label: "Creators", value: adminProfiles.filter(p => p.is_creator).length },
                 { label: "Subscribers", value: adminSubCount },
               ].map(({ label, value }) => (
-                <div key={label} className="bg-white/70 backdrop-blur-md border border-white/80 shadow-lg rounded-xl p-2 lg:p-5 text-center">
+                <div key={label} className="bg-card/70 backdrop-blur-md border border-card/80 shadow-lg rounded-xl p-2 lg:p-5 text-center">
                   <p className="text-lg lg:text-3xl font-bold text-blue-600">{value}</p>
                   <p className="text-gray-500 text-[10px] lg:text-sm mt-0.5 lg:mt-1">{label}</p>
                 </div>
@@ -1556,10 +1556,10 @@ export default function DashboardPage() {
 
             {/* Users table */}
             <h2 className="text-lg font-bold mb-3">Users</h2>
-            <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden mb-8">
+            <div className="bg-card/60 backdrop-blur-md rounded-xl border border-card/70 shadow-lg overflow-hidden mb-8">
               <div className="overflow-x-auto">
               <table className="w-full max-sm:[&_th]:px-2 max-sm:[&_th]:py-1.5 max-sm:[&_th]:text-[10px] max-sm:[&_td]:px-2 max-sm:[&_td]:py-1.5 max-sm:[&_td]:text-xs">
-                <thead className="bg-white/40 text-gray-500 text-sm">
+                <thead className="bg-card/40 text-gray-500 text-sm">
                   <tr>
                     <th className="text-left px-4 py-3">Name</th>
                     <th className="text-left px-4 py-3">Role</th>
@@ -1590,7 +1590,7 @@ export default function DashboardPage() {
                           value={p.role}
                           disabled={roleUpdating === p.id}
                           onChange={(e) => updateRole(p.id, e.target.value)}
-                          className="bg-gray-50 border border-gray-200 rounded px-2 py-1 text-sm text-[#0F172A] focus:outline-none focus:border-blue-500 disabled:opacity-50"
+                          className="bg-gray-50 border border-gray-200 rounded px-2 py-1 text-sm text-ink focus:outline-none focus:border-blue-500 disabled:opacity-50"
                         >
                           <option value="subscriber">subscriber</option>
                           <option value="creator">creator</option>
@@ -1605,7 +1605,7 @@ export default function DashboardPage() {
                             p.is_creator ? "bg-blue-600" : "bg-gray-200"
                           }`}
                         >
-                          <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${
+                          <span className={`inline-block h-3.5 w-3.5 rounded-full bg-card transition-transform ${
                             p.is_creator ? "translate-x-4" : "translate-x-1"
                           }`} />
                         </button>
@@ -1616,7 +1616,7 @@ export default function DashboardPage() {
                             value={p.creator_id || ""}
                             disabled={roleUpdating === p.id}
                             onChange={(e) => updateCreatorId(p.id, e.target.value)}
-                            className={`bg-gray-50 border rounded px-2 py-1 text-sm text-[#0F172A] focus:outline-none focus:border-blue-500 disabled:opacity-50 ${
+                            className={`bg-gray-50 border rounded px-2 py-1 text-sm text-ink focus:outline-none focus:border-blue-500 disabled:opacity-50 ${
                               p.creator_id ? "border-gray-200" : "border-amber-400"
                             }`}
                           >
@@ -1642,7 +1642,7 @@ export default function DashboardPage() {
                                 if (val !== (p.referral_code || "")) updateReferralCode(p.id, val);
                               }}
                               placeholder="e.g. HUDDLE"
-                              className="bg-gray-50 border border-gray-200 rounded px-2 py-1 text-sm text-[#0F172A] focus:outline-none focus:border-blue-500 disabled:opacity-50 w-28"
+                              className="bg-gray-50 border border-gray-200 rounded px-2 py-1 text-sm text-ink focus:outline-none focus:border-blue-500 disabled:opacity-50 w-28"
                             />
                             {referralCodeErrors[p.id] && (
                               <p className="text-red-500 text-xs mt-1">{referralCodeErrors[p.id]}</p>
@@ -1668,7 +1668,7 @@ export default function DashboardPage() {
             <h2 className="text-lg font-bold mb-3">Recent Posts</h2>
             <div className="flex flex-col gap-3">
               {adminPosts.slice(0, 10).map((post) => (
-                <div key={post.id} className="bg-white/70 backdrop-blur-md rounded-xl p-4 border border-white/80 shadow-lg flex items-start justify-between gap-4">
+                <div key={post.id} className="bg-card/70 backdrop-blur-md rounded-xl p-4 border border-card/80 shadow-lg flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <p className="font-semibold text-sm truncate">{post.title}</p>
                     <p className="text-gray-400 text-xs mt-0.5">
@@ -1679,7 +1679,7 @@ export default function DashboardPage() {
                 </div>
               ))}
               {adminPosts.length === 0 && (
-                <div className="bg-white/70 backdrop-blur-md rounded-xl p-8 border border-white/80 shadow-lg text-center">
+                <div className="bg-card/70 backdrop-blur-md rounded-xl p-8 border border-card/80 shadow-lg text-center">
                   <p className="text-gray-400 text-sm">No posts published yet.</p>
                 </div>
               )}
@@ -1719,7 +1719,7 @@ export default function DashboardPage() {
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors shrink-0 ${
                     subscriberCategoryFilters.has(cat)
                       ? CATEGORY_ACTIVE_CLASS[cat]
-                      : "bg-white/60 backdrop-blur-sm text-gray-400 border border-white/70"
+                      : "bg-card/60 backdrop-blur-sm text-gray-400 border border-card/70"
                   }`}
                 >
                   {CATEGORY_LABELS[cat]}
@@ -1730,14 +1730,14 @@ export default function DashboardPage() {
                 placeholder="Search by name or email…"
                 value={subscriberSearch}
                 onChange={e => setSubscriberSearch(e.target.value)}
-                className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-[#0F172A] placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 min-w-52 ml-auto"
+                className="bg-card border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-ink placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 min-w-52 ml-auto"
               />
             </div>
 
-            <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden">
+            <div className="bg-card/60 backdrop-blur-md rounded-xl border border-card/70 shadow-lg overflow-hidden">
               <div className="overflow-x-auto">
               <table className="w-full max-sm:[&_th]:px-2 max-sm:[&_th]:py-1.5 max-sm:[&_th]:text-[10px] max-sm:[&_td]:px-2 max-sm:[&_td]:py-1.5 max-sm:[&_td]:text-xs">
-                <thead className="bg-white/40 text-gray-500 text-sm">
+                <thead className="bg-card/40 text-gray-500 text-sm">
                   <tr>
                     <th className="text-left px-4 py-3">Name</th>
                     <th className="text-left px-4 py-3">Role</th>
@@ -1808,7 +1808,7 @@ export default function DashboardPage() {
               <select
                 value={revenuePeriod}
                 onChange={(e) => setRevenuePeriod(e.target.value)}
-                className="bg-white rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                className="bg-card rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {REVENUE_PERIOD_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -1829,17 +1829,17 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="bg-white/70 backdrop-blur-md border border-white/80 shadow-lg rounded-xl p-5 mb-8">
+            <div className="bg-card/70 backdrop-blur-md border border-card/80 shadow-lg rounded-xl p-5 mb-8">
               {historicalRevenueLoading ? (
                 <p className="text-gray-400 text-sm">Loading real revenue history from Stripe...</p>
               ) : historicalRevenue?.error ? (
                 <p className="text-red-500 text-sm">{historicalRevenue.error}</p>
               ) : historicalRevenue ? (
                 <>
-                  <p className="text-[#0F172A] text-sm font-medium mb-3">{historicalRevenue.label}</p>
+                  <p className="text-ink text-sm font-medium mb-3">{historicalRevenue.label}</p>
                   <div className="grid grid-cols-3 gap-3 mb-3">
                     <div>
-                      <p className="text-xl lg:text-2xl font-bold text-[#0F172A]">${historicalRevenue[revenueCurrency].totalRevenue.toLocaleString()}</p>
+                      <p className="text-xl lg:text-2xl font-bold text-ink">${historicalRevenue[revenueCurrency].totalRevenue.toLocaleString()}</p>
                       <p className="text-gray-500 text-xs mt-0.5">Gross Revenue</p>
                     </div>
                     <div>
@@ -1873,19 +1873,19 @@ export default function DashboardPage() {
                 { label: "Platform Revenue", value: `$${platformRevenue.toLocaleString()}`, sub: "after creator payouts" },
                 { label: "Creator Payouts", value: `$${creatorPayoutTotal.toLocaleString()}`, sub: "owed to creators" },
               ].map(({ label, value, sub }) => (
-                <div key={label} className="bg-white/70 backdrop-blur-md border border-white/80 shadow-lg rounded-xl p-2 lg:p-5">
+                <div key={label} className="bg-card/70 backdrop-blur-md border border-card/80 shadow-lg rounded-xl p-2 lg:p-5">
                   <p className="text-sm lg:text-2xl font-bold text-blue-600">{value}</p>
-                  <p className="text-[#0F172A] text-[10px] lg:text-sm font-medium mt-0.5 lg:mt-1">{label}</p>
+                  <p className="text-ink text-[10px] lg:text-sm font-medium mt-0.5 lg:mt-1">{label}</p>
                   <p className="hidden lg:block text-gray-400 text-xs mt-0.5">{sub}</p>
                 </div>
               ))}
             </div>
 
             <h2 className="text-lg font-bold mb-3">Creator Payouts — {currentPeriod}</h2>
-            <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden mb-8">
+            <div className="bg-card/60 backdrop-blur-md rounded-xl border border-card/70 shadow-lg overflow-hidden mb-8">
               <div className="overflow-x-auto">
               <table className="w-full max-sm:[&_th]:px-2 max-sm:[&_th]:py-1.5 max-sm:[&_th]:text-[10px] max-sm:[&_td]:px-2 max-sm:[&_td]:py-1.5 max-sm:[&_td]:text-xs">
-                <thead className="bg-white/40 text-gray-500 text-sm">
+                <thead className="bg-card/40 text-gray-500 text-sm">
                   <tr>
                     <th className="text-left px-4 py-3">Creator</th>
                     <th className="text-left px-4 py-3">Included subs</th>
@@ -1940,7 +1940,7 @@ export default function DashboardPage() {
                             <button
                               onClick={() => markAsPaid(creatorId, earnings, currentPeriod)}
                               disabled={isSaving || earnings === 0}
-                              className="bg-white hover:bg-gray-50 border border-gray-200 text-[#0F172A] text-sm font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                              className="bg-card hover:bg-gray-50 border border-gray-200 text-ink text-sm font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               {isSaving ? "Saving..." : "Mark as Paid"}
                             </button>
@@ -1958,14 +1958,14 @@ export default function DashboardPage() {
 
             <h2 className="text-lg font-bold mb-3">Payout History</h2>
             {payouts.length === 0 ? (
-              <div className="bg-white/70 backdrop-blur-md rounded-xl p-8 border border-white/80 shadow-lg text-center">
+              <div className="bg-card/70 backdrop-blur-md rounded-xl p-8 border border-card/80 shadow-lg text-center">
                 <p className="text-gray-400 text-sm">No payouts recorded yet.</p>
               </div>
             ) : (
-              <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden">
+              <div className="bg-card/60 backdrop-blur-md rounded-xl border border-card/70 shadow-lg overflow-hidden">
                 <div className="overflow-x-auto">
                 <table className="w-full max-sm:[&_th]:px-2 max-sm:[&_th]:py-1.5 max-sm:[&_th]:text-[10px] max-sm:[&_td]:px-2 max-sm:[&_td]:py-1.5 max-sm:[&_td]:text-xs">
-                  <thead className="bg-white/40 text-gray-500 text-sm">
+                  <thead className="bg-card/40 text-gray-500 text-sm">
                     <tr>
                       <th className="text-left px-4 py-3">Creator</th>
                       <th className="text-left px-4 py-3">Period</th>
@@ -2034,16 +2034,16 @@ export default function DashboardPage() {
               };
               if (rows.length === 0) {
                 return (
-                  <div className="bg-white/70 backdrop-blur-md rounded-xl p-10 border border-white/80 shadow-lg text-center">
+                  <div className="bg-card/70 backdrop-blur-md rounded-xl p-10 border border-card/80 shadow-lg text-center">
                     <p className="text-gray-400 text-sm">No {feedbackSubTab === "help" ? "help requests" : "ideas"} yet.</p>
                   </div>
                 );
               }
               return (
-                <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden">
+                <div className="bg-card/60 backdrop-blur-md rounded-xl border border-card/70 shadow-lg overflow-hidden">
                   <div className="overflow-x-auto">
                   <table className="w-full max-sm:[&_th]:px-2 max-sm:[&_th]:py-1.5 max-sm:[&_th]:text-[10px] max-sm:[&_td]:px-2 max-sm:[&_td]:py-1.5 max-sm:[&_td]:text-xs">
-                    <thead className="bg-white/40 text-gray-500 text-xs uppercase tracking-wider">
+                    <thead className="bg-card/40 text-gray-500 text-xs uppercase tracking-wider">
                       <tr>
                         <th className="text-left px-4 py-3">Name</th>
                         <th className="text-left px-4 py-3">Email</th>
@@ -2075,7 +2075,7 @@ export default function DashboardPage() {
                               <select
                                 value={f.status || "new"}
                                 onChange={(e) => updateFeedbackStatus(f.id, e.target.value)}
-                                className="text-xs bg-gray-50 border border-gray-200 rounded px-1.5 py-1 text-[#0F172A] focus:outline-none focus:border-blue-500"
+                                className="text-xs bg-gray-50 border border-gray-200 rounded px-1.5 py-1 text-ink focus:outline-none focus:border-blue-500"
                               >
                                 <option value="new">New</option>
                                 <option value="in_progress">In Progress</option>
@@ -2099,7 +2099,7 @@ export default function DashboardPage() {
           <div>
             <h2 className="text-xl font-bold mb-1">Player Database</h2>
             <p className="text-gray-500 text-sm mb-6">Add players to the shared database. New players appear in every creator's Unranked list automatically.</p>
-            <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg p-5 max-w-lg">
+            <div className="bg-card/60 backdrop-blur-md rounded-xl border border-card/70 shadow-lg p-5 max-w-lg">
               {adminPlayerSaved && (
                 <div className="mb-4 px-4 py-2.5 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm font-medium">
                   "{adminPlayerSaved}" added to player database.
@@ -2124,7 +2124,7 @@ export default function DashboardPage() {
                         onChange={e => handleAdminPlayerNameChange(e.target.value)}
                         placeholder="e.g. Marvin Harrison Jr."
                         autoFocus
-                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-[#0F172A] placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                        className="w-full bg-card border border-gray-200 rounded-lg px-3 py-2 text-sm text-ink placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
                     <div>
@@ -2132,7 +2132,7 @@ export default function DashboardPage() {
                       <select
                         value={adminPlayerPos}
                         onChange={e => setAdminPlayerPos(e.target.value)}
-                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-[#0F172A] focus:outline-none focus:border-blue-500"
+                        className="w-full bg-card border border-gray-200 rounded-lg px-3 py-2 text-sm text-ink focus:outline-none focus:border-blue-500"
                       >
                         {["QB", "RB", "WR", "TE"].map(p => <option key={p} value={p}>{p}</option>)}
                       </select>
@@ -2145,7 +2145,7 @@ export default function DashboardPage() {
                         onChange={e => setAdminPlayerTeam(e.target.value.toUpperCase())}
                         placeholder="e.g. DAL"
                         maxLength={4}
-                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-[#0F172A] placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                        className="w-full bg-card border border-gray-200 rounded-lg px-3 py-2 text-sm text-ink placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
                   </div>
@@ -2157,7 +2157,7 @@ export default function DashboardPage() {
                         {adminPlayerNearDups.map(p => (
                           <div key={p.id} className="flex items-center gap-2 text-sm">
                             <span className={`px-1.5 py-0.5 rounded text-xs font-semibold ${posColors[p.pos] || "bg-gray-100 text-gray-500"}`}>{p.pos}</span>
-                            <span className="font-medium text-[#0F172A]">{p.name}</span>
+                            <span className="font-medium text-ink">{p.name}</span>
                             <span className="text-gray-500">{p.team}</span>
                           </div>
                         ))}
@@ -2242,12 +2242,12 @@ export default function DashboardPage() {
                   placeholder="Search by name or team…"
                   value={playerDbSearch}
                   onChange={e => setPlayerDbSearch(e.target.value)}
-                  className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-[#0F172A] placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 min-w-52"
+                  className="bg-card border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-ink placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 min-w-52"
                 />
                 <select
                   value={playerDbPosFilter}
                   onChange={e => setPlayerDbPosFilter(e.target.value)}
-                  className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-[#0F172A] focus:outline-none focus:border-blue-500"
+                  className="bg-card border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-ink focus:outline-none focus:border-blue-500"
                 >
                   <option value="">All Positions</option>
                   {['QB', 'RB', 'WR', 'TE'].map(pos => <option key={pos} value={pos}>{pos}</option>)}
@@ -2258,11 +2258,11 @@ export default function DashboardPage() {
               {playerDbLoading ? (
                 <p className="text-gray-400 text-sm py-8 text-center">Loading…</p>
               ) : (
-                <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden">
+                <div className="bg-card/60 backdrop-blur-md rounded-xl border border-card/70 shadow-lg overflow-hidden">
                   <div className="overflow-x-auto">
                   <table className="w-full text-sm max-sm:[&_th]:px-2 max-sm:[&_th]:py-1.5 max-sm:[&_th]:text-[10px] max-sm:[&_td]:px-2 max-sm:[&_td]:py-1.5 max-sm:[&_td]:text-xs">
                     <thead>
-                      <tr className="border-b border-gray-100 bg-white/40">
+                      <tr className="border-b border-gray-100 bg-card/40">
                         <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Name</th>
                         <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Pos</th>
                         <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Team</th>
@@ -2273,8 +2273,8 @@ export default function DashboardPage() {
                     </thead>
                     <tbody>
                       {filtered.map(p => (
-                        <tr key={p.id} className="border-b border-gray-50 hover:bg-white/50">
-                          <td className="px-4 py-2.5 font-medium text-[#0F172A]">
+                        <tr key={p.id} className="border-b border-gray-50 hover:bg-card/50">
+                          <td className="px-4 py-2.5 font-medium text-ink">
                             <div className="flex items-center gap-2">
                               <PlayerHeadshot espnId={p.position === "DST" ? null : p.espn_id} sleeperId={p.position === "DST" ? null : p.sleeper_id} name={p.name} size="xs" label={p.position === "DST" ? p.team : null} />
                               {p.name}
@@ -2329,13 +2329,13 @@ export default function DashboardPage() {
           const creators = adminProfiles.filter(p => p.is_creator && p.creator_id);
           return (
             <div>
-              <h2 className="text-lg font-bold text-[#0F172A] mb-4">Auction Rankings — Admin</h2>
+              <h2 className="text-lg font-bold text-ink mb-4">Auction Rankings — Admin</h2>
               <div className="flex items-center gap-2 mb-4">
                 <label className="text-xs font-semibold text-gray-500">Creator:</label>
                 <select
                   value={auctionAdminCreatorId}
                   onChange={(e) => setAuctionAdminCreatorId(e.target.value)}
-                  className="bg-white rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                  className="bg-card rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select a creator...</option>
                   {creators.map(c => (
@@ -2360,13 +2360,13 @@ export default function DashboardPage() {
           const creators = adminProfiles.filter(p => p.is_creator && p.creator_id);
           return (
             <div>
-              <h2 className="text-lg font-bold text-[#0F172A] mb-4">Waiver Wire — Admin</h2>
+              <h2 className="text-lg font-bold text-ink mb-4">Waiver Wire — Admin</h2>
               <div className="flex items-center gap-2 mb-4">
                 <label className="text-xs font-semibold text-gray-500">Creator:</label>
                 <select
                   value={waiverAdminCreatorId}
                   onChange={(e) => setWaiverAdminCreatorId(e.target.value)}
-                  className="bg-white rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                  className="bg-card rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select a creator...</option>
                   {creators.map(c => (
@@ -2399,7 +2399,7 @@ export default function DashboardPage() {
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors shrink-0 ${
                     activeFormat === fmt
                       ? "bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white"
-                      : "bg-white/60 backdrop-blur-sm text-gray-600 hover:bg-white/80 border border-white/70"
+                      : "bg-card/60 backdrop-blur-sm text-gray-600 hover:bg-card/80 border border-card/70"
                   }`}
                 >
                   {fmt}
@@ -2416,7 +2416,7 @@ export default function DashboardPage() {
                 className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg font-medium transition-colors border shrink-0 ${
                   lockedFormats[activeFormat]
                     ? "bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100"
-                    : "bg-white/60 backdrop-blur-sm text-gray-500 hover:text-gray-700 border-white/70 hover:bg-white/80"
+                    : "bg-card/60 backdrop-blur-sm text-gray-500 hover:text-gray-700 border-card/70 hover:bg-card/80"
                 }`}
               >
                 {lockedFormats[activeFormat] ? "🔒 Under Review" : "🔓 Lock for editing"}
@@ -2431,12 +2431,12 @@ export default function DashboardPage() {
                   value={breakRankInput}
                   onChange={e => setBreakRankInput(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter") saveBreakRank(activeFormat, breakRankInput); }}
-                  className="w-16 bg-white/60 border border-white/70 rounded-lg px-2 py-1.5 text-xs text-center text-[#0F172A] focus:outline-none focus:border-blue-400"
+                  className="w-16 bg-card/60 border border-card/70 rounded-lg px-2 py-1.5 text-xs text-center text-ink focus:outline-none focus:border-blue-400"
                 />
                 <button
                   type="button"
                   onClick={() => saveBreakRank(activeFormat, breakRankInput)}
-                  className="text-xs px-2.5 py-1.5 rounded-lg font-medium bg-white/60 border border-white/70 text-gray-600 hover:bg-white/80 transition-colors"
+                  className="text-xs px-2.5 py-1.5 rounded-lg font-medium bg-card/60 border border-card/70 text-gray-600 hover:bg-card/80 transition-colors"
                 >Set</button>
                 {breakRankByFormat[activeFormat] != null && (
                   <button
@@ -2457,13 +2457,13 @@ export default function DashboardPage() {
                       disabled={otherSavedFormats.length === 0}
                       title={otherSavedFormats.length === 0 ? "No other rankings to copy from yet" : undefined}
                       onClick={() => setShowCopyMenu(prev => !prev)}
-                      className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 bg-white/60 backdrop-blur-sm border border-white/70 hover:bg-white/80 px-3 py-2 rounded-lg font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 bg-card/60 backdrop-blur-sm border border-card/70 hover:bg-card/80 px-3 py-2 rounded-lg font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                       Copy Rankings
                     </button>
                     {showCopyMenu && otherSavedFormats.length > 0 && (
-                      <div className="absolute left-0 top-full mt-1 z-50 bg-white rounded-xl shadow-xl border border-gray-100 py-1 min-w-44">
+                      <div className="absolute left-0 top-full mt-1 z-50 bg-card rounded-xl shadow-xl border border-gray-100 py-1 min-w-44">
                         <p className="text-xs text-gray-400 px-3 pt-1 pb-1">Copy from:</p>
                         {otherSavedFormats.map(fmt => (
                           <button
@@ -2481,7 +2481,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={() => { setShowImport(true); setImportRows([]); setImportError(""); setImportSkipped([]); }}
-                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 bg-white/60 backdrop-blur-sm border border-white/70 hover:bg-white/80 px-3 py-2 rounded-lg font-medium transition-colors shrink-0"
+                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 bg-card/60 backdrop-blur-sm border border-card/70 hover:bg-card/80 px-3 py-2 rounded-lg font-medium transition-colors shrink-0"
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 Import Excel
@@ -2509,7 +2509,7 @@ export default function DashboardPage() {
 
             {/* Unranked Players panel */}
             {showUnranked && unrankedPlayers.length > 0 && (
-              <div className="mb-4 bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden">
+              <div className="mb-4 bg-card/60 backdrop-blur-md rounded-xl border border-card/70 shadow-lg overflow-hidden">
                 <div className="overflow-x-auto">
                 <table className="w-full max-sm:[&_th]:px-2 max-sm:[&_th]:py-1.5 max-sm:[&_th]:text-[10px] max-sm:[&_td]:px-2 max-sm:[&_td]:py-1.5 max-sm:[&_td]:text-xs">
                   <tbody>
@@ -2547,7 +2547,7 @@ export default function DashboardPage() {
             )}
 
             {/* Add Player */}
-            <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg p-4 relative mb-4">
+            <div className="bg-card/60 backdrop-blur-md rounded-xl border border-card/70 shadow-lg p-4 relative mb-4">
               {!showAddPlayer ? (
                 <button
                   type="button"
@@ -2565,10 +2565,10 @@ export default function DashboardPage() {
                     onChange={(e) => handleAddPlayerSearch(e.target.value)}
                     placeholder="Search players to add..."
                     autoFocus
-                    className="w-full bg-white border border-gray-200 rounded-lg px-4 py-2.5 text-[#0F172A] placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
+                    className="w-full bg-card border border-gray-200 rounded-lg px-4 py-2.5 text-ink placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
                   />
                   {addPlayerResults.length > 0 && (
-                    <div className="absolute left-4 right-4 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-20 overflow-hidden">
+                    <div className="absolute left-4 right-4 mt-1 bg-card border border-gray-200 rounded-xl shadow-xl z-20 overflow-hidden">
                       {addPlayerResults.map(p => (
                         <button
                           key={p.name}
@@ -2599,14 +2599,14 @@ export default function DashboardPage() {
                 value={rankingsSearch}
                 onChange={e => setRankingsSearch(e.target.value)}
                 placeholder="Search players..."
-                className="w-full bg-white/60 backdrop-blur-sm border border-white/70 rounded-xl px-4 py-2.5 text-[#0F172A] placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="w-full bg-card/60 backdrop-blur-sm border border-card/70 rounded-xl px-4 py-2.5 text-ink placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
             </div>
 
-            <div className="bg-white/60 backdrop-blur-md rounded-xl overflow-hidden border border-white/70 shadow-lg mb-4">
+            <div className="bg-card/60 backdrop-blur-md rounded-xl overflow-hidden border border-card/70 shadow-lg mb-4">
               <div className="overflow-x-auto">
               <table className="w-full max-sm:[&_th]:px-2 max-sm:[&_th]:py-1.5 max-sm:[&_th]:text-[10px] max-sm:[&_td]:px-2 max-sm:[&_td]:py-1.5 max-sm:[&_td]:text-xs">
-                <thead className="bg-white/40 text-gray-500 text-sm">
+                <thead className="bg-card/40 text-gray-500 text-sm">
                   <tr>
                     <th className="text-left px-4 py-3 w-12">#</th>
                     <th className="text-left px-4 py-3">Player</th>
@@ -2687,7 +2687,7 @@ export default function DashboardPage() {
                                   rankEditTimerRef.current = setTimeout(() => movePlayerToRank(player.name, n), 800);
                                 }
                               }}
-                              className="w-[46px] border border-gray-200 rounded px-1 py-1 text-sm text-center bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                              className="w-[46px] border border-gray-200 rounded px-1 py-1 text-sm text-center bg-card focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                             />
                             <div className="flex flex-col gap-0">
                               <button
@@ -2765,7 +2765,7 @@ export default function DashboardPage() {
 
             {/* Floating multi-select action bar */}
             {selectedPlayers.size > 0 && (
-              <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-white rounded-xl shadow-2xl border border-gray-200 px-5 py-3 flex items-center gap-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+              <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-card rounded-xl shadow-2xl border border-gray-200 px-5 py-3 flex items-center gap-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                 <span className="text-sm font-medium text-gray-700">{selectedPlayers.size} player{selectedPlayers.size !== 1 ? "s" : ""} selected</span>
                 <button
                   type="button"
@@ -2788,13 +2788,13 @@ export default function DashboardPage() {
                 onClick={() => { setShowImport(false); setImportRows([]); setImportError(""); setImportSkipped([]); }}
               >
                 <div
-                  className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
+                  className="bg-card rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
                   onClick={e => e.stopPropagation()}
                 >
                   {/* Header */}
                   <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                     <div>
-                      <h2 className="text-lg font-bold text-[#0F172A]">
+                      <h2 className="text-lg font-bold text-ink">
                         {importSkipped.length > 0 ? "Import complete" : "Import Rankings from Excel"}
                       </h2>
                       <p className="text-gray-400 text-sm mt-0.5">Format: {activeFormat}</p>
@@ -2855,7 +2855,7 @@ export default function DashboardPage() {
                       return (
                         <>
                           <div className="flex items-center justify-between mb-3">
-                            <p className="text-sm font-semibold text-[#0F172A]">{importRows.length} players parsed</p>
+                            <p className="text-sm font-semibold text-ink">{importRows.length} players parsed</p>
                             {unmatched.length > 0 && (
                               <span className="text-xs bg-amber-50 border border-amber-200 text-amber-700 px-2 py-1 rounded-full font-medium">
                                 {unmatched.length} not in player pool — will be skipped
@@ -2935,7 +2935,7 @@ export default function DashboardPage() {
             {/* Copy Rankings overwrite confirmation */}
             {copyConfirm && (
               <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setCopyConfirm(null)}>
-                <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
+                <div className="bg-card rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
                   <h3 className="font-bold text-lg mb-2">Replace {activeFormat} rankings?</h3>
                   <p className="text-gray-500 text-sm mb-4">This will overwrite your current <span className="font-medium text-gray-700">{activeFormat}</span> rankings with a copy of <span className="font-medium text-gray-700">{copyConfirm.sourceFormat}</span>. Your changes won't be saved until you edit or drag a player.</p>
                   <div className="flex gap-3">
@@ -2957,7 +2957,7 @@ export default function DashboardPage() {
             {/* Add Tier modal */}
             {showAddTierModal && (
               <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setShowAddTierModal(false)}>
-                <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
+                <div className="bg-card rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
                   <h3 className="font-bold text-lg mb-1">Add Tier Break</h3>
                   <p className="text-gray-500 text-sm mb-4">Enter the rank after which the new tier should start.</p>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Insert tier after rank</label>
@@ -2992,7 +2992,7 @@ export default function DashboardPage() {
             {/* Bulk move-to-unranked confirmation modal */}
             {bulkMoveConfirm && (
               <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center" onClick={(e) => { e.stopPropagation(); setBulkMoveConfirm(false); }}>
-                <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
+                <div className="bg-card rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
                   <h3 className="font-bold text-lg mb-2">Move {selectedPlayers.size} player{selectedPlayers.size !== 1 ? "s" : ""} to Unranked?</h3>
                   <div className="flex gap-3">
                     <button
@@ -3016,7 +3016,7 @@ export default function DashboardPage() {
             )}
             <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2" onClick={(e) => e.stopPropagation()}>
               {showFloatingSearch && (
-                <div className="bg-white/90 backdrop-blur-md border border-white/80 shadow-xl rounded-2xl p-3 w-72">
+                <div className="bg-card/90 backdrop-blur-md border border-card/80 shadow-xl rounded-2xl p-3 w-72">
                   <input
                     autoFocus
                     type="text"
@@ -3024,7 +3024,7 @@ export default function DashboardPage() {
                     onChange={(e) => setRankingsSearch(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Escape") setShowFloatingSearch(false); }}
                     placeholder="Search players..."
-                    className="w-full bg-white/60 border border-gray-200 rounded-xl px-3 py-2 text-sm text-[#0F172A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full bg-card/60 border border-gray-200 rounded-xl px-3 py-2 text-sm text-ink placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   {rankingsSearch.trim() && (
                     <p className="text-xs text-gray-400 mt-1.5 px-1">{filteredCurrentPlayers.length} match{filteredCurrentPlayers.length !== 1 ? "es" : ""}</p>
@@ -3035,7 +3035,7 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => setShowFloatingSearch(prev => !prev)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-full backdrop-blur-md border shadow-lg transition-all text-sm font-medium ${showFloatingSearch ? "bg-blue-600 border-blue-600 text-white hover:bg-blue-700" : "bg-white/80 border-white/80 text-gray-500 hover:text-gray-900 hover:bg-white"}`}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-full backdrop-blur-md border shadow-lg transition-all text-sm font-medium ${showFloatingSearch ? "bg-blue-600 border-blue-600 text-white hover:bg-blue-700" : "bg-card/80 border-card/80 text-gray-500 hover:text-gray-900 hover:bg-card"}`}
                   aria-label="Find player"
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -3045,7 +3045,7 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/80 backdrop-blur-md border border-white/80 shadow-lg text-gray-500 hover:text-gray-900 hover:bg-white transition-all text-sm font-medium"
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-card/80 backdrop-blur-md border border-card/80 shadow-lg text-gray-500 hover:text-gray-900 hover:bg-card transition-all text-sm font-medium"
                     aria-label="Scroll to top"
                   >
                     <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 12 9 6 15 12"/></svg>
@@ -3074,7 +3074,7 @@ export default function DashboardPage() {
             {/* Create post form */}
             <div>
               <h2 className="text-lg font-bold mb-4">New Post</h2>
-              <form onSubmit={handleCreatePost} className="bg-white/70 backdrop-blur-md rounded-xl p-6 border border-white/80 shadow-lg flex flex-col gap-4">
+              <form onSubmit={handleCreatePost} className="bg-card/70 backdrop-blur-md rounded-xl p-6 border border-card/80 shadow-lg flex flex-col gap-4">
                 <div>
                   <label className="block text-sm text-gray-500 mb-1">Title</label>
                   <input
@@ -3082,7 +3082,7 @@ export default function DashboardPage() {
                     value={postTitle}
                     onChange={(e) => setPostTitle(e.target.value)}
                     placeholder="Post title..."
-                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-[#0F172A] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     required
                   />
                 </div>
@@ -3096,7 +3096,7 @@ export default function DashboardPage() {
                     onFocus={() => setTagDropdownOpen(true)}
                     onBlur={() => setTimeout(() => setTagDropdownOpen(false), 150)}
                     placeholder="Choose or type a tag…"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-[#0F172A] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   />
                   {tagDropdownOpen && (() => {
                     const normalised = postTag.trim().toLowerCase();
@@ -3104,13 +3104,13 @@ export default function DashboardPage() {
                     const suggestions = usedTags.filter(t => !normalised || t.toLowerCase().includes(normalised));
                     if (!suggestions.length) return null;
                     return (
-                      <ul className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                      <ul className="absolute z-20 left-0 right-0 mt-1 bg-card border border-gray-200 rounded-lg shadow-lg overflow-hidden">
                         {suggestions.map(t => (
                           <li key={t}>
                             <button
                               type="button"
                               onMouseDown={() => { setPostTag(t); setTagDropdownOpen(false); }}
-                              className="w-full text-left px-4 py-2 text-sm text-[#0F172A] hover:bg-blue-50 hover:text-blue-700"
+                              className="w-full text-left px-4 py-2 text-sm text-ink hover:bg-blue-50 hover:text-blue-700"
                             >
                               {t}
                             </button>
@@ -3135,7 +3135,7 @@ export default function DashboardPage() {
                           type="button"
                           title={title}
                           onMouseDown={(e) => { e.preventDefault(); action(); }}
-                          className={`w-7 h-7 flex items-center justify-center rounded text-gray-500 hover:text-[#0F172A] hover:bg-gray-100 text-sm transition-colors ${cls}`}
+                          className={`w-7 h-7 flex items-center justify-center rounded text-gray-500 hover:text-ink hover:bg-gray-100 text-sm transition-colors ${cls}`}
                         >
                           {label}
                         </button>
@@ -3148,7 +3148,7 @@ export default function DashboardPage() {
                     onChange={(e) => setPostContent(e.target.value)}
                     placeholder="Write your post…"
                     rows={5}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-[#0F172A] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none font-mono text-sm"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none font-mono text-sm"
                     required
                   />
                 </div>
@@ -3172,7 +3172,7 @@ export default function DashboardPage() {
                         ? "border-red-400 bg-red-50/60 cursor-pointer"
                         : fileDragging
                         ? "border-blue-500 bg-blue-50/80 backdrop-blur-sm cursor-copy"
-                        : "border-white/70 hover:border-blue-300 bg-white/40 backdrop-blur-sm cursor-pointer"
+                        : "border-card/70 hover:border-blue-300 bg-card/40 backdrop-blur-sm cursor-pointer"
                     }`}
                   >
                     {dropUploadStatus === 'uploading' ? (
@@ -3252,13 +3252,13 @@ export default function DashboardPage() {
                 Published Posts <span className="text-gray-400 font-normal text-sm">({posts.length})</span>
               </h2>
               {posts.length === 0 ? (
-                <div className="bg-white/70 backdrop-blur-md rounded-xl p-8 border border-white/80 shadow-lg text-center">
+                <div className="bg-card/70 backdrop-blur-md rounded-xl p-8 border border-card/80 shadow-lg text-center">
                   <p className="text-gray-400 text-sm">No posts yet. Create your first one.</p>
                 </div>
               ) : (
                 <div className="flex flex-col gap-3">
                   {posts.map((post) => (
-                    <div key={post.id} className="bg-white/70 backdrop-blur-md rounded-xl p-4 border border-white/80 shadow-lg">
+                    <div key={post.id} className="bg-card/70 backdrop-blur-md rounded-xl p-4 border border-card/80 shadow-lg">
                       <div className="flex items-start justify-between gap-2 mb-1">
                         <h3 className="font-semibold text-sm leading-tight">{post.title}</h3>
                         <div className="flex items-center gap-2 shrink-0">
@@ -3349,7 +3349,7 @@ export default function DashboardPage() {
                 <select
                   value={earningsPeriod}
                   onChange={(e) => setEarningsPeriod(e.target.value)}
-                  className="bg-white rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                  className="bg-card rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {REVENUE_PERIOD_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -3370,17 +3370,17 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="bg-white/70 backdrop-blur-md border border-white/80 shadow-lg rounded-xl p-5 mb-8">
+              <div className="bg-card/70 backdrop-blur-md border border-card/80 shadow-lg rounded-xl p-5 mb-8">
                 {historicalPlatformRevenueLoading ? (
                   <p className="text-gray-400 text-sm">Loading real revenue history from Stripe...</p>
                 ) : historicalPlatformRevenue?.error ? (
                   <p className="text-red-500 text-sm">{historicalPlatformRevenue.error}</p>
                 ) : historicalPlatformRevenue ? (
                   <>
-                    <p className="text-[#0F172A] text-sm font-medium mb-3">Platform-wide Revenue — {historicalPlatformRevenue.label}</p>
+                    <p className="text-ink text-sm font-medium mb-3">Platform-wide Revenue — {historicalPlatformRevenue.label}</p>
                     <div className="grid grid-cols-3 gap-3 mb-3">
                       <div>
-                        <p className="text-xl lg:text-2xl font-bold text-[#0F172A]">${historicalPlatformRevenue[revenueCurrency].totalRevenue.toLocaleString()}</p>
+                        <p className="text-xl lg:text-2xl font-bold text-ink">${historicalPlatformRevenue[revenueCurrency].totalRevenue.toLocaleString()}</p>
                         <p className="text-gray-500 text-xs mt-0.5">Gross Revenue</p>
                       </div>
                       <div>
@@ -3411,17 +3411,17 @@ export default function DashboardPage() {
               <>
               {/* Summary cards */}
               <div className="grid grid-cols-3 gap-2 lg:gap-4 mb-8">
-                <div className="bg-white/70 backdrop-blur-md border border-white/80 shadow-lg rounded-xl p-2 lg:p-5">
-                  <p className="text-lg lg:text-3xl font-bold text-[#0F172A]">{includedCount}</p>
+                <div className="bg-card/70 backdrop-blur-md border border-card/80 shadow-lg rounded-xl p-2 lg:p-5">
+                  <p className="text-lg lg:text-3xl font-bold text-ink">{includedCount}</p>
                   <p className="text-gray-700 text-[10px] lg:text-sm font-medium mt-0.5 lg:mt-1">Included subscribers</p>
                   <p className="hidden lg:block text-gray-400 text-xs mt-0.5">× $8/mo each</p>
                 </div>
-                <div className="bg-white/70 backdrop-blur-md border border-white/80 shadow-lg rounded-xl p-2 lg:p-5">
-                  <p className="text-lg lg:text-3xl font-bold text-[#0F172A]">{addonCount}</p>
+                <div className="bg-card/70 backdrop-blur-md border border-card/80 shadow-lg rounded-xl p-2 lg:p-5">
+                  <p className="text-lg lg:text-3xl font-bold text-ink">{addonCount}</p>
                   <p className="text-gray-700 text-[10px] lg:text-sm font-medium mt-0.5 lg:mt-1">Add-on subscribers</p>
                   <p className="hidden lg:block text-gray-400 text-xs mt-0.5">× $4/mo each</p>
                 </div>
-                <div className="bg-white/70 backdrop-blur-md border border-white/80 shadow-lg rounded-xl p-2 lg:p-5">
+                <div className="bg-card/70 backdrop-blur-md border border-card/80 shadow-lg rounded-xl p-2 lg:p-5">
                   <p className={`text-lg lg:text-3xl font-bold ${monthlyTotal > 0 ? "text-blue-600" : "text-gray-300"}`}>
                     ${monthlyTotal}
                   </p>
@@ -3432,10 +3432,10 @@ export default function DashboardPage() {
 
               {/* Breakdown table */}
               <h2 className="text-lg font-bold mb-3">Earnings Breakdown</h2>
-              <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden mb-8">
+              <div className="bg-card/60 backdrop-blur-md rounded-xl border border-card/70 shadow-lg overflow-hidden mb-8">
                 <div className="overflow-x-auto">
                 <table className="w-full max-sm:[&_th]:px-2 max-sm:[&_th]:py-1.5 max-sm:[&_th]:text-[10px] max-sm:[&_td]:px-2 max-sm:[&_td]:py-1.5 max-sm:[&_td]:text-xs">
-                  <thead className="bg-white/40 text-gray-500 text-sm">
+                  <thead className="bg-card/40 text-gray-500 text-sm">
                     <tr>
                       <th className="text-left px-4 py-3">Source</th>
                       <th className="text-left px-4 py-3">Subscribers</th>
@@ -3484,14 +3484,14 @@ export default function DashboardPage() {
               {/* Payout history */}
               <h2 className="text-lg font-bold mb-3">Payout History</h2>
               {paidPayouts.length === 0 ? (
-                <div className="bg-white/70 backdrop-blur-md rounded-xl p-8 border border-white/80 shadow-lg text-center">
+                <div className="bg-card/70 backdrop-blur-md rounded-xl p-8 border border-card/80 shadow-lg text-center">
                   <p className="text-gray-400 text-sm">No payouts recorded yet.</p>
                 </div>
               ) : (
-                <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden">
+                <div className="bg-card/60 backdrop-blur-md rounded-xl border border-card/70 shadow-lg overflow-hidden">
                   <div className="overflow-x-auto">
                   <table className="w-full max-sm:[&_th]:px-2 max-sm:[&_th]:py-1.5 max-sm:[&_th]:text-[10px] max-sm:[&_td]:px-2 max-sm:[&_td]:py-1.5 max-sm:[&_td]:text-xs">
-                    <thead className="bg-white/40 text-gray-500 text-sm">
+                    <thead className="bg-card/40 text-gray-500 text-sm">
                       <tr>
                         <th className="text-left px-4 py-3">Period</th>
                         <th className="text-left px-4 py-3">Amount</th>
@@ -3544,7 +3544,7 @@ export default function DashboardPage() {
             <div>
               <h2 className="text-lg font-bold mb-4">Page Views</h2>
               <div className="grid grid-cols-2 gap-2 lg:gap-4 mb-8">
-                <div className="bg-white/70 backdrop-blur-md border border-white/80 shadow-lg rounded-xl p-3 lg:p-5">
+                <div className="bg-card/70 backdrop-blur-md border border-card/80 shadow-lg rounded-xl p-3 lg:p-5">
                   <p className="text-xl lg:text-3xl font-bold text-blue-600">{thisWeekViews}</p>
                   <p className="text-gray-500 text-xs lg:text-sm mt-0.5 lg:mt-1">This week</p>
                   {viewDelta !== 0 && (
@@ -3553,7 +3553,7 @@ export default function DashboardPage() {
                     </p>
                   )}
                 </div>
-                <div className="bg-white/70 backdrop-blur-md border border-white/80 shadow-lg rounded-xl p-3 lg:p-5">
+                <div className="bg-card/70 backdrop-blur-md border border-card/80 shadow-lg rounded-xl p-3 lg:p-5">
                   <p className="text-xl lg:text-3xl font-bold text-gray-400">{lastWeekViews}</p>
                   <p className="text-gray-500 text-xs lg:text-sm mt-0.5 lg:mt-1">Last week</p>
                 </div>
@@ -3561,14 +3561,14 @@ export default function DashboardPage() {
 
               <h2 className="text-lg font-bold mb-4">Most Clicked Players</h2>
               {top10.length === 0 ? (
-                <div className="bg-white/70 backdrop-blur-md rounded-xl p-8 border border-white/80 shadow-lg text-center">
+                <div className="bg-card/70 backdrop-blur-md rounded-xl p-8 border border-card/80 shadow-lg text-center">
                   <p className="text-gray-400 text-sm">No player clicks recorded yet.</p>
                 </div>
               ) : (
-                <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden">
+                <div className="bg-card/60 backdrop-blur-md rounded-xl border border-card/70 shadow-lg overflow-hidden">
                   <div className="overflow-x-auto">
                   <table className="w-full max-sm:[&_th]:px-2 max-sm:[&_th]:py-1.5 max-sm:[&_th]:text-[10px] max-sm:[&_td]:px-2 max-sm:[&_td]:py-1.5 max-sm:[&_td]:text-xs">
-                    <thead className="bg-white/40 text-gray-500 text-sm">
+                    <thead className="bg-card/40 text-gray-500 text-sm">
                       <tr>
                         <th className="text-left px-4 py-3 w-10">#</th>
                         <th className="text-left px-4 py-3">Player</th>
@@ -3598,7 +3598,7 @@ export default function DashboardPage() {
         {tab === "profile" && (
           <div className="max-w-lg">
             <h2 className="text-lg font-bold mb-6">My Profile</h2>
-            <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-6 flex flex-col gap-5">
+            <div className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg p-6 flex flex-col gap-5">
 
               {/* Logo upload */}
               <div>
@@ -3640,7 +3640,7 @@ export default function DashboardPage() {
                   value={profileName}
                   onChange={(e) => setProfileName(e.target.value)}
                   placeholder="Your creator name"
-                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-[#0F172A] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -3650,7 +3650,7 @@ export default function DashboardPage() {
                   value={profileHandle}
                   onChange={(e) => setProfileHandle(e.target.value)}
                   placeholder="@yourhandle"
-                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-[#0F172A] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 />
                 <p className="text-gray-400 text-xs mt-1">Shown on your public creator page.</p>
               </div>
@@ -3661,7 +3661,7 @@ export default function DashboardPage() {
                   onChange={(e) => setProfileBio(e.target.value)}
                   placeholder="Tell subscribers what you specialize in..."
                   rows={4}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-[#0F172A] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
                 />
               </div>
               <div>
@@ -3671,7 +3671,7 @@ export default function DashboardPage() {
                   onChange={(e) => setProfileAnnouncement(e.target.value)}
                   placeholder="Pin a message to the top of your community page..."
                   rows={3}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-[#0F172A] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
                 />
                 <p className="text-gray-400 text-xs mt-1">Leave blank to hide the banner.</p>
               </div>
@@ -3699,9 +3699,9 @@ export default function DashboardPage() {
     {/* ── Logo Crop Modal ── */}
     {cropSrc && (
       <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+        <div className="bg-card rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100">
-            <h3 className="font-semibold text-[#0F172A]">Adjust Photo</h3>
+            <h3 className="font-semibold text-ink">Adjust Photo</h3>
             <p className="text-gray-400 text-xs mt-0.5">Drag to reposition · scroll or slide to zoom</p>
           </div>
           <div className="relative bg-gray-900" style={{ height: 300 }}>

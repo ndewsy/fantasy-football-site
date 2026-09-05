@@ -50,10 +50,10 @@ function PlayerPicker({ label, player, onSelect, onClear }) {
 
   if (player) {
     return (
-      <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-3 sm:p-4 flex items-center gap-2.5 sm:gap-3">
+      <div className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg p-3 sm:p-4 flex items-center gap-2.5 sm:gap-3">
         <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="md" />
         <div className="min-w-0 flex-1">
-          <p className="font-bold text-[#0F172A] text-sm sm:text-base truncate">{player.name}</p>
+          <p className="font-bold text-ink text-sm sm:text-base truncate">{player.name}</p>
           <p className="text-xs text-gray-400">{player.position} · {player.team}</p>
         </div>
         <button onClick={onClear} className="text-gray-400 hover:text-gray-600 text-xs sm:text-sm font-medium shrink-0">
@@ -72,10 +72,10 @@ function PlayerPicker({ label, player, onSelect, onClear }) {
         onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
         onFocus={() => setOpen(true)}
         placeholder="Search a player with an upcoming game..."
-        className="w-full bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-full bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500"
       />
       {open && results.length > 0 && (
-        <div className="absolute z-10 mt-1 w-full bg-white rounded-xl border border-gray-200 shadow-xl max-h-72 overflow-y-auto">
+        <div className="absolute z-10 mt-1 w-full bg-card rounded-xl border border-gray-200 shadow-xl max-h-72 overflow-y-auto">
           {results.map((p) => (
             <button
               key={p.id}
@@ -84,7 +84,7 @@ function PlayerPicker({ label, player, onSelect, onClear }) {
             >
               <PlayerHeadshot espnId={p.espn_id} sleeperId={p.sleeper_id} name={p.name} size="sm" />
               <div className="min-w-0">
-                <p className="text-sm font-medium text-[#0F172A] truncate">{p.name}</p>
+                <p className="text-sm font-medium text-ink truncate">{p.name}</p>
                 <p className="text-xs text-gray-400">{p.position} · {p.team}</p>
               </div>
             </button>
@@ -92,7 +92,7 @@ function PlayerPicker({ label, player, onSelect, onClear }) {
         </div>
       )}
       {open && query.trim().length >= 1 && results.length === 0 && (
-        <div className="absolute z-10 mt-1 w-full bg-white rounded-xl border border-gray-200 shadow-xl px-4 py-3 text-sm text-gray-400">
+        <div className="absolute z-10 mt-1 w-full bg-card rounded-xl border border-gray-200 shadow-xl px-4 py-3 text-sm text-gray-400">
           No players with an upcoming game match &ldquo;{query}&rdquo;.
         </div>
       )}
@@ -120,7 +120,7 @@ function PlayerSummaryCard({ result, isRecommended, hasRecommendation }) {
       >
         <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="xl" shape="square" teamColor={color} />
       </div>
-      <p className="font-bold text-sm text-[#0F172A] text-center max-w-[7rem] truncate">{player.name}</p>
+      <p className="font-bold text-sm text-ink text-center max-w-[7rem] truncate">{player.name}</p>
       {label && (
         <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${labelCls}`}>
           {label}
@@ -135,13 +135,13 @@ function ProjectionCard({ result, opponentLabel, isRecommended, hasRecommendatio
   const glow = hasGame && hasRecommendation ? (isRecommended ? "#16A34A" : "#DC2626") : null;
   return (
     <div
-      className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-4 sm:p-5 relative transition-shadow"
+      className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg p-4 sm:p-5 relative transition-shadow"
       style={glow ? { boxShadow: `0 0 0 2px ${glow}55, 0 0 28px 6px ${glow}45` } : undefined}
     >
       <div className="flex items-center gap-2.5 sm:gap-3 mb-3 sm:mb-4">
         <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="lg" />
         <div className="min-w-0">
-          <p className="font-bold text-[#0F172A] text-base sm:text-lg truncate">{player.name}</p>
+          <p className="font-bold text-ink text-base sm:text-lg truncate">{player.name}</p>
           <p className="text-xs text-gray-400">{player.position} · {player.team}</p>
         </div>
       </div>
@@ -161,7 +161,7 @@ function ProjectionCard({ result, opponentLabel, isRecommended, hasRecommendatio
             </p>
           )}
           <div className="text-center mb-4">
-            <p className="text-3xl font-extrabold text-[#0F172A]">{projection.total}</p>
+            <p className="text-3xl font-extrabold text-ink">{projection.total}</p>
             <p className="text-xs text-gray-400">projected fantasy points</p>
           </div>
           {missingStats?.length > 0 && (
@@ -179,7 +179,7 @@ function ProjectionCard({ result, opponentLabel, isRecommended, hasRecommendatio
                 <span className={`w-12 sm:w-14 shrink-0 text-right font-mono tabular-nums text-[10px] sm:text-xs ${b.winsStat ? "text-green-700 font-semibold" : "text-gray-400"}`}>
                   {b.display ?? b.line}
                 </span>
-                <span className="w-14 sm:w-16 shrink-0 text-right font-semibold text-[#0F172A] tabular-nums">
+                <span className="w-14 sm:w-16 shrink-0 text-right font-semibold text-ink tabular-nums">
                   {b.points} pt{b.points === 1 ? "" : "s"}
                 </span>
               </div>
@@ -256,7 +256,7 @@ export default function StartSitPage() {
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading...</div>;
 
   return (
-    <main className="min-h-screen text-[#0F172A] lg:pl-56">
+    <main className="min-h-screen text-ink lg:pl-56">
       <NavBar activePath="/start-sit" />
 
       <div className="max-w-4xl mx-auto px-6 py-12">
@@ -314,9 +314,9 @@ export default function StartSitPage() {
 
                 {comparison.confidence !== null && comparison.confidence !== undefined && (
                   <div className="flex justify-center mb-6">
-                    <span className="inline-flex items-center gap-1.5 bg-white/70 backdrop-blur-md border border-white/80 shadow-lg rounded-full px-4 py-1.5 text-sm">
+                    <span className="inline-flex items-center gap-1.5 bg-card/70 backdrop-blur-md border border-card/80 shadow-lg rounded-full px-4 py-1.5 text-sm">
                       <span className="text-gray-400">Confidence:</span>
-                      <span className="font-bold text-[#0F172A]">{comparison.confidence}%</span>
+                      <span className="font-bold text-ink">{comparison.confidence}%</span>
                     </span>
                   </div>
                 )}

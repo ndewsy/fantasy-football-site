@@ -6,7 +6,7 @@ import { anton } from "@/lib/fonts";
 export default function PageTitle({ title, subtitle, className = "" }) {
   return (
     <div className={`text-center mb-2 ${className}`}>
-      <h1 className={`${anton.className} text-4xl sm:text-5xl uppercase tracking-tight leading-none text-[#0F172A]`}>
+      <h1 className={`${anton.className} text-4xl sm:text-5xl uppercase tracking-tight leading-none text-ink`}>
         {title}
       </h1>
       {subtitle && (

@@ -1,5 +1,11 @@
 import { Geist, Geist_Mono } from "next/font/google";
+import ThemeInitializer from "@/app/components/ThemeInitializer";
 import "./globals.css";
+
+// Runs before paint (inline, in <head>) so a repeat visitor's saved dark
+// mode applies immediately instead of flashing light-then-dark. Reads a
+// plain cookie rather than localStorage so it works identically here.
+const THEME_INIT_SCRIPT = `(function(){try{var m=document.cookie.match(/(?:^|; )theme=([^;]+)/);if(m&&m[1]==='dark')document.documentElement.classList.add('dark');}catch(e){}})();`;
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,8 +30,10 @@ export default function RootLayout({ children }) {
     >
       <head>
         <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet" />
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body className="min-h-full flex flex-col">
+        <ThemeInitializer />
         {/* Background orbs */}
         <div style={{ position: "fixed", inset: 0, zIndex: -1, overflow: "hidden", pointerEvents: "none" }}>
           <div style={{ position: "absolute", top: "-8%", right: "-4%", width: "680px", height: "680px", borderRadius: "50%", background: "rgba(59,130,246,0.15)", filter: "blur(90px)" }} />

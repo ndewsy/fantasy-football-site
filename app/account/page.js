@@ -6,6 +6,7 @@ import NavBar from "@/app/components/NavBar";
 import PageTitle from "@/app/components/PageTitle";
 import PromoPrice from "@/app/components/PromoPrice";
 import { isPromoActive } from "@/lib/promo";
+import { applyTheme } from "@/lib/theme";
 
 const CREATOR_INFO = {
   rookierager:          { name: "RookieRager",            path: "/creators/rookierager" },
@@ -35,6 +36,8 @@ export default function AccountPage() {
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState("");
   const [passwordIsError, setPasswordIsError] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+  const [themeSaving, setThemeSaving] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -45,14 +48,33 @@ export default function AccountPage() {
 
       const [{ data: sub }, { data: prof }] = await Promise.all([
         supabase.from("subscriptions").select("*").eq("user_id", user.id).eq("status", "active").maybeSingle(),
-        supabase.from("profiles").select("role, is_creator").eq("id", user.id).maybeSingle(),
+        supabase.from("profiles").select("role, is_creator, theme").eq("id", user.id).maybeSingle(),
       ]);
       setSubscription(sub || null);
       setIsAdminOrCreator(!!(prof && (prof.role === "admin" || prof.is_creator)));
+      setDarkMode(prof?.theme === "dark");
       setLoading(false);
     }
     load();
   }, [router]);
+
+  async function handleToggleDarkMode() {
+    const next = !darkMode;
+    setDarkMode(next);
+    applyTheme(next ? "dark" : "light");
+    setThemeSaving(true);
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      await fetch("/api/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ theme: next ? "dark" : "light" }),
+      });
+    } finally {
+      setThemeSaving(false);
+    }
+  }
 
   async function handleChangePassword() {
     if (!currentPassword) {
@@ -145,14 +167,14 @@ export default function AccountPage() {
     : null;
 
   return (
-    <main className="min-h-screen text-[#0F172A] lg:pl-56">
+    <main className="min-h-screen text-ink lg:pl-56">
       <NavBar activePath="/account" />
 
       <div className="max-w-2xl mx-auto px-6 py-16">
         <PageTitle title="My Account" className="mb-10" />
 
         {/* Profile card */}
-        <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-6 mb-6">
+        <div className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg p-6 mb-6">
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Profile</h2>
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
@@ -166,8 +188,30 @@ export default function AccountPage() {
           </div>
         </div>
 
+        {/* Appearance */}
+        <div className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg p-6 mb-6">
+          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Appearance</h2>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-sm">Dark Mode</p>
+              <p className="text-gray-400 text-xs mt-0.5">Applies across the whole site, on every device you're signed into.</p>
+            </div>
+            <button
+              onClick={handleToggleDarkMode}
+              disabled={themeSaving}
+              role="switch"
+              aria-checked={darkMode}
+              className={`relative shrink-0 w-12 h-7 rounded-full transition-colors disabled:opacity-60 ${darkMode ? "bg-blue-600" : "bg-gray-200"}`}
+            >
+              <span
+                className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow-md transition-transform ${darkMode ? "translate-x-5" : "translate-x-0"}`}
+              />
+            </button>
+          </div>
+        </div>
+
         {/* Subscription card */}
-        <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-6 mb-6">
+        <div className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg p-6 mb-6">
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Subscription</h2>
 
           {!subscription && isAdminOrCreator ? (
@@ -334,7 +378,7 @@ export default function AccountPage() {
                   <button
                     onClick={handleManageSubscription}
                     disabled={portalLoading}
-                    className="mt-2 w-full bg-white hover:bg-gray-50 border border-gray-200 text-[#0F172A] font-semibold py-3 rounded-xl transition-colors disabled:opacity-50"
+                    className="mt-2 w-full bg-card hover:bg-gray-50 border border-gray-200 text-ink font-semibold py-3 rounded-xl transition-colors disabled:opacity-50"
                   >
                     {portalLoading ? "Redirecting..." : "Manage Subscription"}
                   </button>
@@ -348,7 +392,7 @@ export default function AccountPage() {
         </div>
 
         {/* Quick links */}
-        <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-6 mb-6">
+        <div className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg p-6 mb-6">
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Quick Links</h2>
           <div className="flex flex-col gap-3">
             <a href="/" className="flex items-center justify-between text-gray-600 hover:text-gray-900 transition-colors text-sm">
@@ -372,7 +416,7 @@ export default function AccountPage() {
         </div>
 
         {/* Change Password */}
-        <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-6 mb-6">
+        <div className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg p-6 mb-6">
           <div className="flex items-center justify-between">
             <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Password</h2>
             <button
@@ -397,7 +441,7 @@ export default function AccountPage() {
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-[#0F172A] text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-ink text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   placeholder="••••••••"
                   autoFocus
                 />
@@ -408,7 +452,7 @@ export default function AccountPage() {
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-[#0F172A] text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-ink text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   placeholder="••••••••"
                 />
               </div>
@@ -419,7 +463,7 @@ export default function AccountPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleChangePassword()}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-[#0F172A] text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-ink text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   placeholder="••••••••"
                 />
               </div>
@@ -450,7 +494,7 @@ export default function AccountPage() {
             await supabase.auth.signOut();
             router.push("/");
           }}
-          className="w-full bg-white/70 backdrop-blur-md hover:bg-red-50/80 border border-white/80 hover:border-red-200 shadow-lg text-red-500 hover:text-red-600 font-medium py-3 rounded-xl transition-colors text-sm"
+          className="w-full bg-card/70 backdrop-blur-md hover:bg-red-50/80 border border-card/80 hover:border-red-200 shadow-lg text-red-500 hover:text-red-600 font-medium py-3 rounded-xl transition-colors text-sm"
         >
           Log Out
         </button>

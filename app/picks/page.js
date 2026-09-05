@@ -264,7 +264,7 @@ function SignupModal({ onClose }) {
       style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6 relative">
+      <div className="w-full max-w-sm bg-card rounded-2xl shadow-2xl p-6 relative">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
@@ -278,7 +278,7 @@ function SignupModal({ onClose }) {
         {done ? (
           <div className="text-center py-2">
             <p className="text-4xl mb-3">📬</p>
-            <h2 className="text-lg font-bold text-[#0F172A] mb-2">Check your email</h2>
+            <h2 className="text-lg font-bold text-ink mb-2">Check your email</h2>
             <p className="text-sm text-gray-500 max-w-xs mx-auto">
               We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account, then come back to make your picks.
             </p>
@@ -289,7 +289,7 @@ function SignupModal({ onClose }) {
         ) : (
           <>
             <div className="mb-5 pr-6">
-              <h2 className="text-xl font-bold text-[#0F172A]">
+              <h2 className="text-xl font-bold text-ink">
                 {mode === 'signup' ? 'Make your picks — it\'s free' : 'Welcome back'}
               </h2>
               <p className="text-sm text-gray-500 mt-1">
@@ -303,7 +303,7 @@ function SignupModal({ onClose }) {
               <label className="block text-xs text-gray-500 mb-1.5">Email</label>
               <input
                 type="email" value={email} onChange={e => setEmail(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-[#0F172A] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-ink focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 placeholder="you@example.com" autoFocus
               />
             </div>
@@ -313,7 +313,7 @@ function SignupModal({ onClose }) {
               <input
                 type="password" value={password} onChange={e => setPassword(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-[#0F172A] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-ink focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 placeholder="••••••••"
               />
             </div>
@@ -462,21 +462,21 @@ export default function PicksPage() {
         {/* Header */}
         <div className="flex items-start justify-between flex-wrap gap-4 mb-6">
           <div>
-            <h1 className={`${anton.className} text-3xl uppercase tracking-tight text-[#0F172A]`}>Season Picks</h1>
+            <h1 className={`${anton.className} text-3xl uppercase tracking-tight text-ink`}>Season Picks</h1>
             <p className="text-gray-500 text-sm mt-0.5">Pick the winner of every 2026 NFL regular season game.</p>
           </div>
           <div className="flex gap-3 flex-wrap">
             {finalGames.length > 0 && (
-              <div className="bg-white/60 backdrop-blur-sm border border-white/70 rounded-xl px-4 py-2.5 text-center shadow">
+              <div className="bg-card/60 backdrop-blur-sm border border-card/70 rounded-xl px-4 py-2.5 text-center shadow">
                 <p className="text-xs text-gray-400 font-medium">Correct</p>
-                <p className="text-lg font-bold text-[#0F172A]">
+                <p className="text-lg font-bold text-ink">
                   {correct}<span className="text-sm font-normal text-gray-400">/{finalGames.length}</span>
                 </p>
               </div>
             )}
-            <div className="bg-white/60 backdrop-blur-sm border border-white/70 rounded-xl px-4 py-2.5 text-center shadow">
+            <div className="bg-card/60 backdrop-blur-sm border border-card/70 rounded-xl px-4 py-2.5 text-center shadow">
               <p className="text-xs text-gray-400 font-medium">Picks Made</p>
-              <p className="text-lg font-bold text-[#0F172A]">
+              <p className="text-lg font-bold text-ink">
                 {totalPicks}<span className="text-sm font-normal text-gray-400">/272</span>
               </p>
             </div>
@@ -505,7 +505,7 @@ export default function PicksPage() {
                   className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
                     viewMode === mode
                       ? 'bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white'
-                      : 'bg-white/60 backdrop-blur-sm text-gray-500 hover:bg-white/80 border border-white/70'
+                      : 'bg-card/60 backdrop-blur-sm text-gray-500 hover:bg-card/80 border border-card/70'
                   }`}
                 >
                   {label}
@@ -528,7 +528,7 @@ export default function PicksPage() {
                         className={`w-full flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-colors ${
                           active
                             ? 'bg-gradient-to-br from-[#2563EB] to-[#1E40AF] text-white'
-                            : 'bg-white/60 backdrop-blur-sm text-gray-500 hover:bg-white/80 border border-white/70'
+                            : 'bg-card/60 backdrop-blur-sm text-gray-500 hover:bg-card/80 border border-card/70'
                         }`}
                       >
                         <span className="text-[11px] font-bold leading-none">W{w}</span>
@@ -566,10 +566,10 @@ export default function PicksPage() {
 
                     return (
                       <div key={game.id}
-                        className={`bg-white/60 backdrop-blur-md rounded-xl border shadow-lg transition-colors ${
+                        className={`bg-card/60 backdrop-blur-md rounded-xl border shadow-lg transition-colors ${
                           isCorrect ? 'border-green-200 bg-green-50/40' :
                           isWrong   ? 'border-red-100 bg-red-50/30'     :
-                                      'border-white/70'
+                                      'border-card/70'
                         }`}
                       >
                         <div className="flex items-center justify-between px-4 pt-3.5 pb-0">
@@ -619,8 +619,8 @@ export default function PicksPage() {
             {viewMode === 'byteam' && (
               <>
                 {/* Team selector — 8 division rows */}
-                <div className="mb-5 bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden">
-                  <div className="px-4 py-2.5 border-b border-gray-100/80 bg-white/40">
+                <div className="mb-5 bg-card/60 backdrop-blur-md rounded-xl border border-card/70 shadow-lg overflow-hidden">
+                  <div className="px-4 py-2.5 border-b border-gray-100/80 bg-card/40">
                     <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Select a team</p>
                   </div>
                   <div className="p-3 flex flex-col gap-2">
@@ -670,12 +670,12 @@ export default function PicksPage() {
                     <div className="flex items-center gap-3 mb-4">
                       <TeamChip abbr={selectedTeam} dim={[48, 60]} />
                       <div>
-                        <h2 className="text-lg font-bold text-[#0F172A]">{TEAM_NAMES[selectedTeam]}</h2>
+                        <h2 className="text-lg font-bold text-ink">{TEAM_NAMES[selectedTeam]}</h2>
                         <p className="text-xs text-gray-400">{TEAM_DIV[selectedTeam]}</p>
                       </div>
                       <div className="ml-auto text-right shrink-0">
                         <p className="text-[11px] text-gray-400">Picked</p>
-                        <p className="text-sm font-bold text-[#0F172A] tabular-nums">
+                        <p className="text-sm font-bold text-ink tabular-nums">
                           {teamGames.filter(g => picks[g.id]).length}
                           <span className="font-normal text-gray-400">/{teamGames.length}</span>
                         </p>
@@ -693,10 +693,10 @@ export default function PicksPage() {
                         const isWrong   = isFinal && pick && pick !== game.winner;
                         return (
                           <div key={game.id}
-                            className={`bg-white/60 backdrop-blur-md rounded-xl border shadow-lg transition-colors ${
+                            className={`bg-card/60 backdrop-blur-md rounded-xl border shadow-lg transition-colors ${
                               isCorrect ? 'border-green-200 bg-green-50/40' :
                               isWrong   ? 'border-red-100 bg-red-50/30'     :
-                                          'border-white/70'
+                                          'border-card/70'
                             }`}
                           >
                             <div className="flex items-center justify-between px-4 pt-3.5 pb-0">
@@ -764,9 +764,9 @@ export default function PicksPage() {
                       <div key={conf} className="flex flex-col gap-3">
 
                         {/* Playoff picture card */}
-                        <div className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden">
-                          <div className="px-4 py-3 border-b border-gray-100/80 bg-white/40">
-                            <h3 className="text-sm font-bold text-[#0F172A]">{conf} Playoff Picture</h3>
+                        <div className="bg-card/60 backdrop-blur-md rounded-xl border border-card/70 shadow-lg overflow-hidden">
+                          <div className="px-4 py-3 border-b border-gray-100/80 bg-card/40">
+                            <h3 className="text-sm font-bold text-ink">{conf} Playoff Picture</h3>
                           </div>
 
                           {/* Seeds 1–4: division winners */}
@@ -779,10 +779,10 @@ export default function PicksPage() {
                                   <span className="text-sm font-black text-[#2563EB] w-4 text-center shrink-0">{i + 1}</span>
                                   <TeamChip abbr={team} />
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-[13px] font-semibold text-[#0F172A] truncate">{TEAM_NAMES[team]}</p>
+                                    <p className="text-[13px] font-semibold text-ink truncate">{TEAM_NAMES[team]}</p>
                                     <p className="text-[10px] text-[#2563EB] font-semibold">{divShort} Div</p>
                                   </div>
-                                  <span className="text-sm font-bold text-[#0F172A] tabular-nums shrink-0">{rec.wins}–{rec.losses}</span>
+                                  <span className="text-sm font-bold text-ink tabular-nums shrink-0">{rec.wins}–{rec.losses}</span>
                                 </div>
                               );
                             })}
@@ -800,9 +800,9 @@ export default function PicksPage() {
                                   <span className="text-sm font-semibold text-gray-400 w-4 text-center shrink-0">{i + 5}</span>
                                   <TeamChip abbr={team} />
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-[13px] font-semibold text-[#0F172A] truncate">{TEAM_NAMES[team]}</p>
+                                    <p className="text-[13px] font-semibold text-ink truncate">{TEAM_NAMES[team]}</p>
                                   </div>
-                                  <span className="text-sm font-bold text-[#0F172A] tabular-nums shrink-0">{rec.wins}–{rec.losses}</span>
+                                  <span className="text-sm font-bold text-ink tabular-nums shrink-0">{rec.wins}–{rec.losses}</span>
                                 </div>
                               );
                             })}
@@ -834,8 +834,8 @@ export default function PicksPage() {
 
                         {/* Division standings cards */}
                         {Object.entries(sortedDivs).map(([divName, teams]) => (
-                          <div key={divName} className="bg-white/60 backdrop-blur-md rounded-xl border border-white/70 shadow-lg overflow-hidden">
-                            <div className="px-4 py-2.5 border-b border-gray-100/80 bg-white/40">
+                          <div key={divName} className="bg-card/60 backdrop-blur-md rounded-xl border border-card/70 shadow-lg overflow-hidden">
+                            <div className="px-4 py-2.5 border-b border-gray-100/80 bg-card/40">
                               <h4 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">{divName}</h4>
                             </div>
                             <div className="divide-y divide-gray-100/60">
@@ -848,10 +848,10 @@ export default function PicksPage() {
                                     </span>
                                     <TeamChip abbr={team} dim={[36, 45]} />
                                     <div className="flex-1 min-w-0">
-                                      <p className="text-xs font-semibold text-[#0F172A] truncate">{TEAM_NAMES[team]}</p>
+                                      <p className="text-xs font-semibold text-ink truncate">{TEAM_NAMES[team]}</p>
                                     </div>
                                     <div className="text-right shrink-0">
-                                      <p className="text-xs font-bold text-[#0F172A] tabular-nums">{rec.wins}–{rec.losses}</p>
+                                      <p className="text-xs font-bold text-ink tabular-nums">{rec.wins}–{rec.losses}</p>
                                       <p className="text-[10px] text-gray-400 tabular-nums">{pctStr(rec)}</p>
                                     </div>
                                   </div>

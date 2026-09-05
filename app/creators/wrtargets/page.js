@@ -48,7 +48,7 @@ export default function WRTargetsPage() {
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading...</div>;
 
   return (
-    <main className="min-h-screen text-[#0F172A] lg:pl-56">
+    <main className="min-h-screen text-ink lg:pl-56">
       <NavBar activePath="/creators/wrtargets" />
 
       <div className="max-w-5xl mx-auto px-6 py-12">
@@ -67,7 +67,7 @@ export default function WRTargetsPage() {
         </div>
 
         <h2 className="text-xl font-bold mb-4">Latest Content</h2>
-        <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg py-12 text-center">
+        <div className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg py-12 text-center">
           <p className="text-gray-500 font-medium mb-1">No posts yet</p>
           <p className="text-gray-400 text-sm">Check back soon for new content.</p>
         </div>

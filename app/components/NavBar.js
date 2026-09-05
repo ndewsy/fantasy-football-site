@@ -152,7 +152,7 @@ export default function NavBar({ activePath = "/" }) {
   return (
     <>
       {/* Desktop sidebar */}
-      <nav className="hidden lg:flex fixed left-0 top-0 h-screen w-56 flex-col bg-white border-r border-gray-100 z-50">
+      <nav className="hidden lg:flex fixed left-0 top-0 h-screen w-56 flex-col bg-card border-r border-gray-100 z-50">
         <a href="/" className={`${montserrat.className} text-lg font-bold text-blue-600 leading-tight px-6 pt-7 pb-8 block`}>
           Fantasy<br />Collective
         </a>
@@ -174,7 +174,7 @@ export default function NavBar({ activePath = "/" }) {
 
       {/* Mobile top bar — light/white to match the desktop sidebar, opens a drawer
           styled identically to it rather than a plain-text dropdown. */}
-      <nav ref={navRef} className="lg:hidden relative sticky top-0 z-50 px-4 py-3 flex items-center justify-between bg-white border-b border-gray-100">
+      <nav ref={navRef} className="lg:hidden relative sticky top-0 z-50 px-4 py-3 flex items-center justify-between bg-card border-b border-gray-100">
         <a href="/" className={`${montserrat.className} text-lg font-bold text-blue-600 shrink-0`}>Fantasy Collective</a>
 
         <button
@@ -205,7 +205,7 @@ export default function NavBar({ activePath = "/" }) {
 
         {/* Drawer — same nav items, same styling, same logo as the desktop sidebar */}
         <div
-          className={`fixed top-0 left-0 h-screen w-72 max-w-[80vw] bg-white z-50 shadow-2xl flex flex-col transition-transform duration-200 ${
+          className={`fixed top-0 left-0 h-screen w-72 max-w-[80vw] bg-card z-50 shadow-2xl flex flex-col transition-transform duration-200 ${
             menuOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >

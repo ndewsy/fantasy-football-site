@@ -27,8 +27,8 @@ function TermBadge({ term }) {
 
 function CreatorCategoryCard({ creatorName, entries }) {
   return (
-    <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-5">
-      <h3 className="font-bold text-[#0F172A] mb-4">{creatorName}</h3>
+    <div className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg p-5">
+      <h3 className="font-bold text-ink mb-4">{creatorName}</h3>
       {entries.length === 0 ? (
         <p className="text-sm text-gray-400">Nothing posted yet.</p>
       ) : (
@@ -38,12 +38,12 @@ function CreatorCategoryCard({ creatorName, entries }) {
               <span className="text-xs text-gray-400 font-mono w-5 shrink-0 text-right">{i + 1}</span>
               <PlayerHeadshot espnId={e.players?.espn_id} sleeperId={e.players?.sleeper_id} name={e.players?.name} size="sm" />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-[#0F172A] truncate">{e.players?.name || `#${e.player_id}`}</p>
+                <p className="text-sm font-medium text-ink truncate">{e.players?.name || `#${e.player_id}`}</p>
                 <p className="text-xs text-gray-400">{e.players?.position} · {e.players?.team}</p>
               </div>
               <TermBadge term={e.term} />
               {e.faab_pct !== null && e.faab_pct !== undefined && (
-                <span className="text-xs font-semibold text-[#0F172A] shrink-0">{Number(e.faab_pct).toFixed(1)}%</span>
+                <span className="text-xs font-semibold text-ink shrink-0">{Number(e.faab_pct).toFixed(1)}%</span>
               )}
             </div>
           ))}
@@ -96,7 +96,7 @@ export default function WaiverWirePage() {
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading...</div>;
 
   return (
-    <main className="min-h-screen text-[#0F172A] lg:pl-56">
+    <main className="min-h-screen text-ink lg:pl-56">
       <NavBar activePath="/waiver-wire" />
 
       <div className="max-w-4xl mx-auto px-6 py-12">
@@ -119,7 +119,7 @@ export default function WaiverWirePage() {
               <select
                 value={week}
                 onChange={(e) => setWeek(Number(e.target.value))}
-                className="bg-white/60 backdrop-blur-sm border border-white/70 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="bg-card/60 backdrop-blur-sm border border-card/70 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
                 {WEEKS.map((w) => (
                   <option key={w} value={w}>Week {w}</option>
@@ -130,7 +130,7 @@ export default function WaiverWirePage() {
             {dataLoading ? (
               <p className="text-sm text-gray-400 text-center py-12">Loading...</p>
             ) : Object.keys(creators).length === 0 ? (
-              <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-8 text-center">
+              <div className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg p-8 text-center">
                 <p className="text-gray-400 text-sm">No waiver wire picks posted for Week {week} yet.</p>
               </div>
             ) : (

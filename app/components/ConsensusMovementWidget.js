@@ -15,7 +15,7 @@ function MovementRow({ m, direction }) {
     <div className="flex items-center gap-2.5 py-2">
       <PlayerHeadshot espnId={p.espn_id} sleeperId={p.sleeper_id} name={p.name} size="sm" />
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-[#0F172A] truncate">{p.name}</p>
+        <p className="text-sm font-medium text-ink truncate">{p.name}</p>
         <div className="flex items-center gap-1.5 mt-0.5">
           <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${posColors[p.position] || "bg-gray-100 text-gray-600"}`}>
             {p.position}
@@ -49,9 +49,9 @@ export default function ConsensusMovementWidget({ format }) {
   const empty = loaded && !data.buildingData && data.risers.length === 0 && data.fallers.length === 0;
 
   return (
-    <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-4">
+    <div className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg p-4">
       <div className="flex items-center justify-between mb-1">
-        <h3 className="text-sm font-bold text-[#0F172A]">Consensus Movers</h3>
+        <h3 className="text-sm font-bold text-ink">Consensus Movers</h3>
         <div className="flex items-center gap-1 shrink-0">
           {[7, 14].map((d) => (
             <button

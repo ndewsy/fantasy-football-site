@@ -87,7 +87,7 @@ export default function SubscribePage() {
 
   if (!authLoaded) {
     return (
-      <main className="min-h-screen text-[#0F172A] lg:pl-56">
+      <main className="min-h-screen text-ink lg:pl-56">
         <NavBar activePath="/subscribe" />
         <div className="min-h-[60vh] flex items-center justify-center text-gray-400">Loading...</div>
       </main>
@@ -96,7 +96,7 @@ export default function SubscribePage() {
 
   if (isAdminOrCreator) {
     return (
-      <main className="min-h-screen text-[#0F172A] lg:pl-56">
+      <main className="min-h-screen text-ink lg:pl-56">
         <NavBar activePath="/subscribe" />
         <div className="max-w-md mx-auto px-6 py-24 text-center">
           <div className="text-5xl mb-6">⭐</div>
@@ -112,7 +112,7 @@ export default function SubscribePage() {
 
   if (isSubscribed) {
     return (
-      <main className="min-h-screen text-[#0F172A] lg:pl-56">
+      <main className="min-h-screen text-ink lg:pl-56">
         <NavBar activePath="/subscribe" />
         <div className="max-w-md mx-auto px-6 py-24 text-center">
           <div className="text-5xl mb-6">✅</div>
@@ -127,7 +127,7 @@ export default function SubscribePage() {
   }
 
   return (
-    <main className="min-h-screen text-[#0F172A] lg:pl-56">
+    <main className="min-h-screen text-ink lg:pl-56">
       <NavBar activePath="/subscribe" />
 
       <div className="max-w-2xl mx-auto px-6 py-16">
@@ -141,7 +141,7 @@ export default function SubscribePage() {
         )}
 
         {/* Plan */}
-        <div className="bg-white/70 backdrop-blur-md rounded-xl p-6 border-2 border-blue-600 shadow-lg mb-6">
+        <div className="bg-card/70 backdrop-blur-md rounded-xl p-6 border-2 border-blue-600 shadow-lg mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-xl font-bold">Full Access</h2>
@@ -171,7 +171,7 @@ export default function SubscribePage() {
             value={referralCode}
             onChange={(e) => { setReferralCode(e.target.value); setCodeError(""); }}
             placeholder="e.g. HUDDLE"
-            className={"w-full bg-gray-50 border rounded-lg px-4 py-3 text-[#0F172A] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 " + (codeError ? "border-red-400" : "border-gray-200")}
+            className={"w-full bg-gray-50 border rounded-lg px-4 py-3 text-ink focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 " + (codeError ? "border-red-400" : "border-gray-200")}
           />
           {codeError ? (
             <p className="text-red-500 text-sm mt-2">{codeError}</p>
@@ -181,7 +181,7 @@ export default function SubscribePage() {
         </div>
 
         {/* Total & CTA */}
-        <div className="bg-white/70 backdrop-blur-md rounded-xl p-6 border border-white/80 shadow-lg">
+        <div className="bg-card/70 backdrop-blur-md rounded-xl p-6 border border-card/80 shadow-lg">
           <div className="flex items-center justify-between mb-4">
             <span className="text-gray-500">{promoActive ? "Total (5 months)" : "Total per month"}</span>
             <span className="text-3xl font-bold text-blue-600">{promoActive ? "$10" : "$10/mo"}</span>
@@ -208,14 +208,14 @@ export default function SubscribePage() {
               Have a free month code?
             </button>
           ) : (
-            <div className="bg-white/70 backdrop-blur-md rounded-xl p-6 border border-white/80 shadow-lg text-left">
+            <div className="bg-card/70 backdrop-blur-md rounded-xl p-6 border border-card/80 shadow-lg text-left">
               <label className="block text-sm text-gray-500 mb-2">Promo code</label>
               <input
                 type="text"
                 value={promoCode}
                 onChange={(e) => { setPromoCode(e.target.value); setPromoError(""); }}
                 placeholder="Enter your code"
-                className={"w-full bg-gray-50 border rounded-lg px-4 py-3 text-[#0F172A] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 " + (promoError ? "border-red-400" : "border-gray-200")}
+                className={"w-full bg-gray-50 border rounded-lg px-4 py-3 text-ink focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 " + (promoError ? "border-red-400" : "border-gray-200")}
               />
               {promoError && <p className="text-red-500 text-sm mt-2">{promoError}</p>}
               <button

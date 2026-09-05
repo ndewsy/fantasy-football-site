@@ -9,10 +9,10 @@ const SHEET_EXTS = new Set(["xls", "xlsx", "csv", "ods", "numbers"]);
 const DOC_EXTS   = new Set(["doc", "docx", "odt", "rtf", "txt", "pages"]);
 
 const MD_COMPONENTS = {
-  h1: ({ children }) => <h1 className="text-base font-bold mt-2 mb-1 text-[#0F172A]">{children}</h1>,
-  h2: ({ children }) => <h2 className="text-sm font-bold mt-2 mb-1 text-[#0F172A]">{children}</h2>,
-  h3: ({ children }) => <h3 className="text-sm font-semibold mt-1 mb-0.5 text-[#0F172A]">{children}</h3>,
-  strong: ({ children }) => <strong className="font-semibold text-[#0F172A]">{children}</strong>,
+  h1: ({ children }) => <h1 className="text-base font-bold mt-2 mb-1 text-ink">{children}</h1>,
+  h2: ({ children }) => <h2 className="text-sm font-bold mt-2 mb-1 text-ink">{children}</h2>,
+  h3: ({ children }) => <h3 className="text-sm font-semibold mt-1 mb-0.5 text-ink">{children}</h3>,
+  strong: ({ children }) => <strong className="font-semibold text-ink">{children}</strong>,
   em: ({ children }) => <em className="italic">{children}</em>,
   p: ({ children }) => <p className="mb-1.5 last:mb-0">{children}</p>,
   ul: ({ children }) => <ul className="list-disc list-inside mb-1.5 space-y-0.5">{children}</ul>,
@@ -216,7 +216,7 @@ export default function PostCard({ post, isSubscribed }) {
   });
 
   return (
-    <div className="bg-white/70 backdrop-blur-md rounded-xl p-5 border border-white/80 shadow-lg relative overflow-hidden">
+    <div className="bg-card/70 backdrop-blur-md rounded-xl p-5 border border-card/80 shadow-lg relative overflow-hidden">
       {isSubscribed ? (
         <>
           {post.tag && (

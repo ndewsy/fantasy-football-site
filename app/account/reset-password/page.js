@@ -70,7 +70,7 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <a href="/" className="text-2xl font-bold text-blue-600" style={{fontFamily: "'Fredoka One', cursive"}}>Fantasy Collective</a>
-          <h2 className="text-3xl font-bold mt-4 text-[#0F172A]">
+          <h2 className="text-3xl font-bold mt-4 text-ink">
             {stage === 'done' ? 'Password Updated' : 'Reset Password'}
           </h2>
           {stage === 'form' && (
@@ -78,7 +78,7 @@ export default function ResetPasswordPage() {
           )}
         </div>
 
-        <div className="bg-white/70 backdrop-blur-md rounded-xl p-8 border border-white/80 shadow-lg">
+        <div className="bg-card/70 backdrop-blur-md rounded-xl p-8 border border-card/80 shadow-lg">
 
           {stage === 'loading' && (
             <div className="text-center py-8 text-gray-400 text-sm">Verifying reset link…</div>
@@ -107,7 +107,7 @@ export default function ResetPasswordPage() {
                   type="password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-[#0F172A] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-ink focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   placeholder="••••••••"
                   autoFocus
                 />
@@ -120,7 +120,7 @@ export default function ResetPasswordPage() {
                   value={confirm}
                   onChange={e => setConfirm(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleUpdate()}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-[#0F172A] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-ink focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   placeholder="••••••••"
                 />
               </div>

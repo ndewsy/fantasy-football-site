@@ -101,10 +101,10 @@ export default function AuctionRankingsEditor({ creatorId, creatorLabel }) {
   }
 
   return (
-    <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-5">
+    <div className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg p-5">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div>
-          <h3 className="font-bold text-[#0F172A]">Auction Rankings{creatorLabel ? ` — ${creatorLabel}` : ""}</h3>
+          <h3 className="font-bold text-ink">Auction Rankings{creatorLabel ? ` — ${creatorLabel}` : ""}</h3>
           <p className="text-xs text-gray-400">% is share of a $200 budget. Order sets rank.</p>
         </div>
         <div className="flex gap-1.5">
@@ -129,7 +129,7 @@ export default function AuctionRankingsEditor({ creatorId, creatorLabel }) {
           onChange={(e) => setTeamBuildDescription(e.target.value)}
           rows={4}
           placeholder="Explain your auction strategy for this format — budget allocation, positional priorities, when to pivot to value plays, etc."
-          className="w-full bg-white rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+          className="w-full bg-card rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 resize-y"
         />
       </div>
 
@@ -143,17 +143,17 @@ export default function AuctionRankingsEditor({ creatorId, creatorLabel }) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Add a player..."
-              className="w-full bg-white rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-card rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
             />
             {searchResults.length > 0 && (
-              <div className="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-xl max-h-64 overflow-y-auto">
+              <div className="absolute z-10 mt-1 w-full bg-card rounded-lg border border-gray-200 shadow-xl max-h-64 overflow-y-auto">
                 {searchResults.map((p) => (
                   <button
                     key={p.id}
                     onClick={() => addPlayer(p.id)}
                     className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 text-left text-sm"
                   >
-                    <span className="font-medium text-[#0F172A]">{p.name}</span>
+                    <span className="font-medium text-ink">{p.name}</span>
                     <span className="text-xs text-gray-400">{p.position} · {p.team}</span>
                   </button>
                 ))}
@@ -172,7 +172,7 @@ export default function AuctionRankingsEditor({ creatorId, creatorLabel }) {
                   <span className="text-xs text-gray-400 font-mono w-7 shrink-0 text-right">{i + 1}</span>
                   <PlayerHeadshot espnId={p?.espn_id} sleeperId={p?.sleeper_id} name={p?.name} size="sm" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-[#0F172A] truncate">{p?.name || `#${row.player_id}`}</p>
+                    <p className="text-sm font-medium text-ink truncate">{p?.name || `#${row.player_id}`}</p>
                     <p className="text-xs text-gray-400">{p?.position} · {p?.team}</p>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">

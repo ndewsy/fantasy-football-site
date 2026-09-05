@@ -92,7 +92,7 @@ export default function AuctionPage() {
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading...</div>;
 
   return (
-    <main className="min-h-screen text-[#0F172A] lg:pl-56">
+    <main className="min-h-screen text-ink lg:pl-56">
       <NavBar activePath="/auction" />
 
       <div className="max-w-4xl mx-auto px-6 py-12">
@@ -121,12 +121,12 @@ export default function AuctionPage() {
             {boardLoading ? (
               <p className="text-sm text-gray-400 text-center py-12">Loading...</p>
             ) : !board?.players?.length ? (
-              <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-8 text-center">
+              <div className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg p-8 text-center">
                 <p className="text-gray-400 text-sm">This creator hasn&apos;t published {format} auction rankings yet.</p>
               </div>
             ) : (
               <>
-                <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg mb-6 overflow-hidden">
+                <div className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg mb-6 overflow-hidden">
                   <button
                     onClick={() => setTeamBuildOpen((v) => !v)}
                     className="w-full flex items-center justify-between px-5 py-3.5 text-left"
@@ -142,7 +142,7 @@ export default function AuctionPage() {
                   {teamBuildOpen && (
                     <div className="px-5 pb-5">
                       {board.teamBuildDescription ? (
-                        <p className="text-sm text-[#0F172A] whitespace-pre-wrap leading-relaxed">{board.teamBuildDescription}</p>
+                        <p className="text-sm text-ink whitespace-pre-wrap leading-relaxed">{board.teamBuildDescription}</p>
                       ) : (
                         <p className="text-sm text-gray-400">Strategy write-up coming soon.</p>
                       )}
@@ -150,7 +150,7 @@ export default function AuctionPage() {
                   )}
                 </div>
 
-                <div className="rounded-xl overflow-hidden border border-gray-100 bg-white/70 backdrop-blur-md shadow-lg">
+                <div className="rounded-xl overflow-hidden border border-gray-100 bg-card/70 backdrop-blur-md shadow-lg">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50 text-gray-500">
                       <tr>
@@ -169,12 +169,12 @@ export default function AuctionPage() {
                               <div className="flex items-center gap-2.5">
                                 <PlayerHeadshot espnId={p?.espn_id} sleeperId={p?.sleeper_id} name={p?.name} size="sm" />
                                 <div className="min-w-0">
-                                  <p className="font-medium text-[#0F172A] truncate">{p?.name || `Player #${row.player_id}`}</p>
+                                  <p className="font-medium text-ink truncate">{p?.name || `Player #${row.player_id}`}</p>
                                   <p className="text-xs text-gray-400">{p?.position} · {p?.team}</p>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-4 py-2.5 text-right font-semibold text-[#0F172A]">{formatPct(row.pct)}</td>
+                            <td className="px-4 py-2.5 text-right font-semibold text-ink">{formatPct(row.pct)}</td>
                           </tr>
                         );
                       })}
