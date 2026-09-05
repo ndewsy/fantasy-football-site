@@ -8,6 +8,7 @@ import rehypeSanitize from "rehype-sanitize";
 import CreatorAvatar from "@/app/components/CreatorAvatar";
 import PlayerHeadshot from "@/app/components/PlayerHeadshot";
 import AuctionRankingsEditor from "@/app/components/AuctionRankingsEditor";
+import WaiverWireEditor from "@/app/components/WaiverWireEditor";
 import Cropper from "react-easy-crop";
 import { DST_FORMAT, KICKER_FORMAT } from "@/lib/dstKickerFormats";
 
@@ -110,6 +111,7 @@ export default function DashboardPage() {
   // Admin state
   const [adminProfiles, setAdminProfiles] = useState([]);
   const [auctionAdminCreatorId, setAuctionAdminCreatorId] = useState("");
+  const [waiverAdminCreatorId, setWaiverAdminCreatorId] = useState("");
   const [adminPosts, setAdminPosts] = useState([]);
   const [adminSubCount, setAdminSubCount] = useState(0);
   const [roleUpdating, setRoleUpdating] = useState(null);
@@ -1434,7 +1436,7 @@ export default function DashboardPage() {
         {/* Row 1 — Dashboard tabs */}
         <div className="flex gap-1.5 mb-6 overflow-x-auto pb-1">
           {profile.role === "admin" && (
-            [["admin", "Admin Overview"], ["subscribers", "Subscribers"], ["payouts", "Revenue & Payouts"], ["feedback", "Feedback"], ["players", "Add Players"], ["playerdb", "Player Database"], ["admin-auction", "Auction Rankings"]].map(([t, label]) => (
+            [["admin", "Admin Overview"], ["subscribers", "Subscribers"], ["payouts", "Revenue & Payouts"], ["feedback", "Feedback"], ["players", "Add Players"], ["playerdb", "Player Database"], ["admin-auction", "Auction Rankings"], ["waiver-wire-admin", "Waiver Wire"]].map(([t, label]) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -1449,7 +1451,7 @@ export default function DashboardPage() {
             ))
           )}
           {profile.is_creator && (
-            ["rankings", "auction", "posts", "earnings", "analytics", "subscribers", "profile"].map((t) => (
+            ["rankings", "auction", "waiver-wire", "posts", "earnings", "analytics", "subscribers", "profile"].map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -1459,7 +1461,7 @@ export default function DashboardPage() {
                     : "bg-white/60 backdrop-blur-sm text-gray-500 hover:bg-white/80 border border-white/70"
                 }`}
               >
-                {t === "rankings" ? "My Rankings" : t === "auction" ? "My Auction" : t === "posts" ? "My Posts" : t === "earnings" ? "My Earnings" : t === "analytics" ? "My Analytics" : t === "subscribers" ? "Subscribers" : "My Profile"}
+                {t === "rankings" ? "My Rankings" : t === "auction" ? "My Auction" : t === "waiver-wire" ? "My Waiver Wire" : t === "posts" ? "My Posts" : t === "earnings" ? "My Earnings" : t === "analytics" ? "My Analytics" : t === "subscribers" ? "Subscribers" : "My Profile"}
               </button>
             ))
           )}
@@ -2284,6 +2286,37 @@ export default function DashboardPage() {
           );
         })()}
 
+        {tab === "waiver-wire-admin" && (() => {
+          const creators = adminProfiles.filter(p => p.is_creator && p.creator_id);
+          return (
+            <div>
+              <h2 className="text-lg font-bold text-[#0F172A] mb-4">Waiver Wire — Admin</h2>
+              <div className="flex items-center gap-2 mb-4">
+                <label className="text-xs font-semibold text-gray-500">Creator:</label>
+                <select
+                  value={waiverAdminCreatorId}
+                  onChange={(e) => setWaiverAdminCreatorId(e.target.value)}
+                  className="bg-white rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select a creator...</option>
+                  {creators.map(c => (
+                    <option key={c.creator_id} value={c.creator_id}>{c.display_name || c.creator_id}</option>
+                  ))}
+                </select>
+              </div>
+              {waiverAdminCreatorId ? (
+                <WaiverWireEditor
+                  key={waiverAdminCreatorId}
+                  creatorId={waiverAdminCreatorId}
+                  creatorLabel={creators.find(c => c.creator_id === waiverAdminCreatorId)?.display_name || waiverAdminCreatorId}
+                />
+              ) : (
+                <p className="text-sm text-gray-400">Pick a creator above to view or edit their waiver wire.</p>
+              )}
+            </div>
+          );
+        })()}
+
         {/* ── Rankings Tab ── */}
         {tab === "rankings" && (
           <div onClick={() => { setSelectedPlayers(new Set()); setLastClickedPlayer(null); }}>
@@ -2958,6 +2991,11 @@ export default function DashboardPage() {
         {/* ── My Auction Tab ── */}
         {tab === "auction" && (
           <AuctionRankingsEditor creatorId={profile.creator_id} />
+        )}
+
+        {/* ── My Waiver Wire Tab ── */}
+        {tab === "waiver-wire" && (
+          <WaiverWireEditor creatorId={profile.creator_id} />
         )}
 
         {/* ── Posts Tab ── */}

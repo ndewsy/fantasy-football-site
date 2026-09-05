@@ -64,6 +64,13 @@ function FeedbackIcon(props) {
     </svg>
   );
 }
+function WaiverWireIcon(props) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M3 4h14M6 4v11l4 2 4-2V4" />
+    </svg>
+  );
+}
 function DashboardIcon(props) {
   return (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -138,6 +145,7 @@ export default function NavBar({ activePath = "/" }) {
     { href: "/picks", label: "Picks", icon: PicksIcon },
     ...(user ? [{ href: "/leaderboard", label: "Leaderboard", icon: LeaderboardIcon }] : []),
     { href: "/feedback", label: "Feedback", icon: FeedbackIcon },
+    ...(isDashboardUser ? [{ href: "/waiver-wire", label: "Waiver Wire", icon: WaiverWireIcon }] : []),
     ...(isDashboardUser ? [{ href: "/dashboard", label: "Dashboard", icon: DashboardIcon }] : []),
   ];
 
