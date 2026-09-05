@@ -135,6 +135,11 @@ export default function DashboardPage() {
   const [earningsPeriod, setEarningsPeriod] = useState("current");
   const [historicalPlatformRevenue, setHistoricalPlatformRevenue] = useState(null);
   const [historicalPlatformRevenueLoading, setHistoricalPlatformRevenueLoading] = useState(false);
+  // Live this-month fees/gross ratio from Stripe, used to compute creator
+  // payout splits against actual net revenue instead of assuming the full
+  // sticker price was collected. Starts at 0 (behaves like gross) until the
+  // real figure loads, then self-corrects.
+  const [currentMonthFeeRate, setCurrentMonthFeeRate] = useState(0);
   const [revenueCurrency, setRevenueCurrency] = useState("usd");
 
   // Feedback state (admin only)
@@ -485,6 +490,18 @@ export default function DashboardPage() {
       setLoading(false);
     }
   }
+
+  // Fetched once per session (independent of which tab is active) so the
+  // creator-payout math below always has a real fee rate to work with,
+  // whether it's the admin overview or a creator's own earnings tab.
+  useEffect(() => {
+    if (!profile || !(profile.role === "admin" || profile.is_creator)) return;
+    fetchRevenuePeriod(resolvePeriod("current"), () => {}, (data) => {
+      const gross = data?.usd?.totalRevenue;
+      const fees = data?.usd?.stripeFees;
+      if (gross > 0 && fees >= 0) setCurrentMonthFeeRate(fees / gross);
+    });
+  }, [profile]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function updateCreatorId(profileId, newCreatorId) {
     setRoleUpdating(profileId);
@@ -1382,11 +1399,15 @@ export default function DashboardPage() {
   }
   // Per-creator earnings: legacy 80% of included/add-on revenue, flat-access coded
   // subs at 80% of $10, flat-access no-code subs at 100% of their even split share
-  // (the no-code case has no platform cut — the full $10 is redistributed).
+  // (the no-code case has no platform cut — the full $10 is redistributed). Scaled
+  // by currentMonthFeeRate so the split is of what Stripe actually nets out, not
+  // the full sticker price — multiplying the whole sum by (1 - feeRate) at the end
+  // is equivalent to netting each $10/$5 figure individually first.
+  const netMultiplier = 1 - currentMonthFeeRate;
   let creatorPayoutTotal = 0;
   for (const id in creatorBreakdown) {
     const d = creatorBreakdown[id];
-    d.earnings = d.included * 8 + d.addons * 4 + d.flatCoded * 8 + d.flatSplitShare * 10;
+    d.earnings = (d.included * 8 + d.addons * 4 + d.flatCoded * 8 + d.flatSplitShare * 10) * netMultiplier;
     creatorPayoutTotal += d.earnings;
   }
   // Platform revenue is whatever's left after creator payouts, rather than a blanket
@@ -3318,7 +3339,7 @@ export default function DashboardPage() {
                 (s.plan_type === "promo_5mo" && (!s.referral_creator_id || !creatorActiveCreatorIds.includes(s.referral_creator_id)) && promoPaidThisMonth(s))
               ).length / creatorActiveCreatorIds.length
             : 0;
-          const monthlyTotal = includedCount * 8 + addonCount * 4 + flatCodedCount * 8 + flatSplitShare * 10;
+          const monthlyTotal = (includedCount * 8 + addonCount * 4 + flatCodedCount * 8 + flatSplitShare * 10) * (1 - currentMonthFeeRate);
           const paidPayouts = creatorPayouts.filter(p => p.paid);
 
           return (
