@@ -610,14 +610,14 @@ export default function Home() {
 
       {/* Subscriber header — shown instead of the full landing */}
       {authLoaded && (isSubscribed || isDashboardUser) && (
-        <div className="w-full px-6 lg:px-8 pt-10 pb-2">
+        <div className="w-full px-3 sm:px-6 lg:px-8 pt-10 pb-2">
           <h2 className={`${anton.className} text-4xl uppercase tracking-tight text-ink`}>Rankings</h2>
           <p className="text-gray-500 mt-1">Expert consensus rankings across all formats.</p>
         </div>
       )}
 
       {/* Rankings Section */}
-      <div className="w-full px-6 lg:px-8 pt-6 pb-20 flex flex-col lg:flex-row gap-6 items-start">
+      <div className="w-full px-3 sm:px-6 lg:px-8 pt-6 pb-20 flex flex-col lg:flex-row gap-6 items-start">
 
         <div ref={rankingsRef} className="flex-1 min-w-0 order-1">
 
