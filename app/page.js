@@ -510,7 +510,10 @@ export default function Home() {
 
   // On the DST/K tab, the DST/Kickers sub-tab IS the position filter — the
   // QB/RB/WR/TE pill row is hidden there (see JSX below).
-  const effectivePosFilter = activeFormat === "DST/K" ? dstkSubTab : posFilter;
+  // dstkSubTab holds the *format* string ("DST"/"Kickers"), but rows are
+  // filtered by *position code* — "DST" happens to match both, "Kickers"
+  // does not (kickers are position "K"), so it needs translating here.
+  const effectivePosFilter = activeFormat === "DST/K" ? (dstkSubTab === KICKER_FORMAT ? "K" : dstkSubTab) : posFilter;
 
   let filteredPlayers = displayPlayers;
   if (filteredPlayers && search.trim()) {
