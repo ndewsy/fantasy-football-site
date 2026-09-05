@@ -2,10 +2,11 @@ import { Geist, Geist_Mono } from "next/font/google";
 import ThemeInitializer from "@/app/components/ThemeInitializer";
 import "./globals.css";
 
-// Runs before paint (inline, in <head>) so a repeat visitor's saved dark
-// mode applies immediately instead of flashing light-then-dark. Reads a
-// plain cookie rather than localStorage so it works identically here.
-const THEME_INIT_SCRIPT = `(function(){try{var m=document.cookie.match(/(?:^|; )theme=([^;]+)/);if(m&&m[1]==='dark')document.documentElement.classList.add('dark');}catch(e){}})();`;
+// Runs before paint (inline, in <head>) so a repeat visitor's saved theme
+// applies immediately instead of flashing the wrong one. Reads a plain
+// cookie rather than localStorage so it works identically here. Dark is
+// the site default — only an explicit "light" cookie opts back out.
+const THEME_INIT_SCRIPT = `(function(){try{var m=document.cookie.match(/(?:^|; )theme=([^;]+)/);if(!m||m[1]!=='light')document.documentElement.classList.add('dark');}catch(e){}})();`;
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

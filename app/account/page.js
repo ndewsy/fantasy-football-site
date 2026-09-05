@@ -52,7 +52,7 @@ export default function AccountPage() {
       ]);
       setSubscription(sub || null);
       setIsAdminOrCreator(!!(prof && (prof.role === "admin" || prof.is_creator)));
-      setDarkMode(prof?.theme === "dark");
+      setDarkMode(prof?.theme !== "light");
       setLoading(false);
     }
     load();

@@ -16,7 +16,7 @@ export default function ThemeInitializer() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || cancelled) return;
       const { data: profile } = await supabase.from("profiles").select("theme").eq("id", user.id).maybeSingle();
-      const accountTheme = profile?.theme || "light";
+      const accountTheme = profile?.theme || "dark";
       if (!cancelled && accountTheme !== getAppliedTheme()) applyTheme(accountTheme);
     }
     sync();
