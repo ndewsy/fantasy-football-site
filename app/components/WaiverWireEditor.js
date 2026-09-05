@@ -5,9 +5,9 @@ import { getCurrentWeekFromGames } from "@/lib/currentWeek";
 import PlayerHeadshot from "./PlayerHeadshot";
 
 const CATEGORIES = [
+  { id: "priority", label: "Priority Adds" },
   { id: "drop", label: "Drop/Cut" },
   { id: "streamer", label: "Streamers" },
-  { id: "priority", label: "Priority Adds" },
 ];
 const WEEKS = Array.from({ length: 18 }, (_, i) => i + 1);
 

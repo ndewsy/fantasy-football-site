@@ -4,13 +4,14 @@ import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
 import PageTitle from "@/app/components/PageTitle";
 import PlayerHeadshot from "@/app/components/PlayerHeadshot";
+import PillToggle from "@/app/components/PillToggle";
 import { getCurrentWeekFromGames } from "@/lib/currentWeek";
 
 const WEEKS = Array.from({ length: 18 }, (_, i) => i + 1);
 const CATEGORIES = [
+  { id: "priority", label: "Priority Adds" },
   { id: "drop", label: "Drop/Cut Candidates" },
   { id: "streamer", label: "Streamers" },
-  { id: "priority", label: "Priority Adds" },
 ];
 
 function TermBadge({ term }) {
@@ -24,10 +25,10 @@ function TermBadge({ term }) {
   );
 }
 
-function CategoryList({ label, entries }) {
+function CreatorCategoryCard({ creatorName, entries }) {
   return (
-    <div>
-      <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{label}</h4>
+    <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-5">
+      <h3 className="font-bold text-[#0F172A] mb-4">{creatorName}</h3>
       {entries.length === 0 ? (
         <p className="text-sm text-gray-400">Nothing posted yet.</p>
       ) : (
@@ -56,6 +57,7 @@ export default function WaiverWirePage() {
   const [loading, setLoading] = useState(true);
   const [isDashboardUser, setIsDashboardUser] = useState(false);
   const [week, setWeek] = useState(1);
+  const [category, setCategory] = useState(CATEGORIES[0].id);
   const [creatorsById, setCreatorsById] = useState({});
   const [dataLoading, setDataLoading] = useState(true);
   const [creators, setCreators] = useState({});
@@ -97,10 +99,10 @@ export default function WaiverWirePage() {
     <main className="min-h-screen text-[#0F172A] lg:pl-56">
       <NavBar activePath="/waiver-wire" />
 
-      <div className="max-w-3xl mx-auto px-6 py-12">
+      <div className="max-w-4xl mx-auto px-6 py-12">
         <PageTitle title="Waiver Wire" subtitle="Beta" />
         <p className="text-gray-500 text-center mb-8 max-w-xl mx-auto">
-          Drop/cut candidates, streamers, and priority adds by week — creators only while this is in beta.
+          Priority adds, drop/cut candidates, and streamers by week — creators only while this is in beta.
         </p>
 
         {!isDashboardUser ? (
@@ -110,6 +112,8 @@ export default function WaiverWirePage() {
           </div>
         ) : (
           <>
+            <PillToggle options={CATEGORIES.map((c) => ({ id: c.id, label: c.label }))} value={category} onChange={setCategory} className="mb-5" />
+
             <div className="flex items-center justify-center gap-2 mb-8">
               <label className="text-xs font-semibold text-gray-500">Week:</label>
               <select
@@ -130,16 +134,13 @@ export default function WaiverWirePage() {
                 <p className="text-gray-400 text-sm">No waiver wire picks posted for Week {week} yet.</p>
               </div>
             ) : (
-              <div className="flex flex-col gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {Object.entries(creators).map(([creatorId, byCategory]) => (
-                  <div key={creatorId} className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-5">
-                    <h3 className="font-bold text-[#0F172A] mb-4">{creatorsById[creatorId] || creatorId}</h3>
-                    <div className="flex flex-col gap-5">
-                      {CATEGORIES.map((c) => (
-                        <CategoryList key={c.id} label={c.label} entries={byCategory[c.id] || []} />
-                      ))}
-                    </div>
-                  </div>
+                  <CreatorCategoryCard
+                    key={creatorId}
+                    creatorName={creatorsById[creatorId] || creatorId}
+                    entries={byCategory[category] || []}
+                  />
                 ))}
               </div>
             )}
