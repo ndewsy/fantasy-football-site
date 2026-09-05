@@ -619,7 +619,7 @@ export default function Home() {
       {/* Rankings Section */}
       <div className="w-full px-3 sm:px-6 lg:px-8 pt-6 pb-20 flex flex-col lg:flex-row gap-6 items-start">
 
-        <div ref={rankingsRef} className="flex-1 min-w-0 order-1">
+        <div ref={rankingsRef} className="w-full flex-1 min-w-0 order-1">
 
         {/* Format tabs */}
         <div className="flex flex-wrap gap-1 mb-5 lg:flex-nowrap lg:gap-2 lg:overflow-x-auto lg:pb-1">
