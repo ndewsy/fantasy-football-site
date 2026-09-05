@@ -50,13 +50,13 @@ function PlayerPicker({ label, player, onSelect, onClear }) {
 
   if (player) {
     return (
-      <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-4 flex items-center gap-3">
+      <div className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-3 sm:p-4 flex items-center gap-2.5 sm:gap-3">
         <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="md" />
         <div className="min-w-0 flex-1">
-          <p className="font-bold text-[#0F172A] truncate">{player.name}</p>
+          <p className="font-bold text-[#0F172A] text-sm sm:text-base truncate">{player.name}</p>
           <p className="text-xs text-gray-400">{player.position} · {player.team}</p>
         </div>
-        <button onClick={onClear} className="text-gray-400 hover:text-gray-600 text-sm font-medium shrink-0">
+        <button onClick={onClear} className="text-gray-400 hover:text-gray-600 text-xs sm:text-sm font-medium shrink-0">
           Change
         </button>
       </div>
@@ -135,13 +135,13 @@ function ProjectionCard({ result, opponentLabel, isRecommended, hasRecommendatio
   const glow = hasGame && hasRecommendation ? (isRecommended ? "#16A34A" : "#DC2626") : null;
   return (
     <div
-      className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-5 relative transition-shadow"
+      className="bg-white/70 backdrop-blur-md rounded-xl border border-white/80 shadow-lg p-4 sm:p-5 relative transition-shadow"
       style={glow ? { boxShadow: `0 0 0 2px ${glow}55, 0 0 28px 6px ${glow}45` } : undefined}
     >
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center gap-2.5 sm:gap-3 mb-3 sm:mb-4">
         <PlayerHeadshot espnId={player.espn_id} sleeperId={player.sleeper_id} name={player.name} size="lg" />
         <div className="min-w-0">
-          <p className="font-bold text-[#0F172A] text-lg truncate">{player.name}</p>
+          <p className="font-bold text-[#0F172A] text-base sm:text-lg truncate">{player.name}</p>
           <p className="text-xs text-gray-400">{player.position} · {player.team}</p>
         </div>
       </div>
@@ -171,13 +171,17 @@ function ProjectionCard({ result, opponentLabel, isRecommended, hasRecommendatio
           )}
           <div className="divide-y divide-gray-100">
             {projection.breakdown.map((b) => (
-              <div key={b.statId} className="flex items-center justify-between py-1.5 text-sm">
-                <span className={b.winsStat ? "text-green-700 font-medium flex items-center gap-1" : "text-gray-500"}>
-                  {b.winsStat && <span className="text-green-600">▲</span>}
-                  {b.label}
+              <div key={b.statId} className="flex items-center gap-2 py-1.5 text-xs sm:text-sm">
+                <span className={`flex-1 min-w-0 flex items-center gap-1 ${b.winsStat ? "text-green-700 font-medium" : "text-gray-500"}`}>
+                  {b.winsStat && <span className="text-green-600 shrink-0">▲</span>}
+                  <span className="truncate">{b.label}</span>
                 </span>
-                <span className={`font-mono text-xs ${b.winsStat ? "text-green-700 font-semibold" : "text-gray-400"}`}>{b.display ?? b.line}</span>
-                <span className="font-semibold text-[#0F172A]">{b.points} pt{b.points === 1 ? "" : "s"}</span>
+                <span className={`w-12 sm:w-14 shrink-0 text-right font-mono tabular-nums text-[10px] sm:text-xs ${b.winsStat ? "text-green-700 font-semibold" : "text-gray-400"}`}>
+                  {b.display ?? b.line}
+                </span>
+                <span className="w-14 sm:w-16 shrink-0 text-right font-semibold text-[#0F172A] tabular-nums">
+                  {b.points} pt{b.points === 1 ? "" : "s"}
+                </span>
               </div>
             ))}
           </div>
@@ -297,7 +301,7 @@ export default function StartSitPage() {
 
             {!comparing && comparison && !comparison.error && (
               <>
-                <div className="flex items-start justify-center gap-8 sm:gap-14 mb-8">
+                <div className="flex items-start justify-center gap-6 sm:gap-14 mb-8">
                   {comparison.players.map((result) => (
                     <PlayerSummaryCard
                       key={result.player.id}
