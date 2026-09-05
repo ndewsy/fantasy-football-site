@@ -146,6 +146,7 @@ export async function GET(request) {
   // duplicate is deduped here as a safety net even with the periodID filter
   // above narrowing each stat down to one full-game "over" odd.
   const lineRowsByKey = new Map();
+  const gameLineRows = [];
   const unmatchedRows = [];
   let skippedNoLine = 0;
 
@@ -158,6 +159,24 @@ export async function GET(request) {
 
     const eventPlayers = event.players || {};
     const odds = event.odds || {};
+
+    // Game-level total + each team's implied total — deterministic oddIDs,
+    // no need to scan for them like the per-player markets below.
+    const gameTotal = blendedLine(odds['points-all-game-ou-over']?.byBookmaker);
+    const homeTeamTotal = blendedLine(odds['points-home-game-ou-over']?.byBookmaker);
+    const awayTeamTotal = blendedLine(odds['points-away-game-ou-over']?.byBookmaker);
+    if (gameTotal !== null || homeTeamTotal !== null || awayTeamTotal !== null) {
+      gameLineRows.push({
+        sgo_event_id: event.eventID,
+        home_team_id: homeID || null,
+        away_team_id: awayID || null,
+        game_total: gameTotal,
+        home_team_total: homeTeamTotal,
+        away_team_total: awayTeamTotal,
+        game_starts_at: gameStartsAt,
+        updated_at: new Date().toISOString(),
+      });
+    }
 
     for (const odd of Object.values(odds)) {
       if (odd.periodID !== 'game') continue; // full-game line only — skip 1q/2q/1h/etc sub-markets
@@ -250,6 +269,13 @@ export async function GET(request) {
     if (error) console.error('[sync-player-props] upsert unmatched failed:', error);
   }
 
+  if (gameLineRows.length > 0) {
+    const { error } = await supabase()
+      .from('game_lines')
+      .upsert(gameLineRows, { onConflict: 'sgo_event_id' });
+    if (error) console.error('[sync-player-props] upsert game lines failed:', error);
+  }
+
   // Belt-and-suspenders cleanup: these two stat_ids predate anytime_touchdowns
   // and are no longer written above, but upsert never removes rows for a
   // category that's stopped being synced — any left over from before this
@@ -261,11 +287,12 @@ export async function GET(request) {
     .in('stat_id', ['rushing_touchdowns', 'receiving_touchdowns']);
   if (purgeError) console.error('[sync-player-props] purge legacy TD stat_ids failed:', purgeError);
 
-  console.log(`[sync-player-props] events=${events.length} lines=${lineRows.length} unmatched=${unmatchedRows.length} skippedNoLine=${skippedNoLine}`);
+  console.log(`[sync-player-props] events=${events.length} lines=${lineRows.length} gameLines=${gameLineRows.length} unmatched=${unmatchedRows.length} skippedNoLine=${skippedNoLine}`);
   return Response.json({
     ok: true,
     events: events.length,
     lines: lineRows.length,
+    gameLines: gameLineRows.length,
     unmatched: unmatchedRows.length,
     skippedNoLine,
   });

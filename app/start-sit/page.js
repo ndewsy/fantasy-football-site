@@ -131,7 +131,7 @@ function PlayerSummaryCard({ result, isRecommended, hasRecommendation }) {
 }
 
 function ProjectionCard({ result, opponentLabel, isRecommended, hasRecommendation }) {
-  const { player, hasGame, gameStartsAt, homeAway, projection, missingStats } = result;
+  const { player, hasGame, gameStartsAt, homeAway, projection, missingStats, gameTotal, teamImpliedTotal } = result;
   const glow = hasGame && hasRecommendation ? (isRecommended ? "#16A34A" : "#DC2626") : null;
   return (
     <div
@@ -150,9 +150,16 @@ function ProjectionCard({ result, opponentLabel, isRecommended, hasRecommendatio
         <p className="text-sm text-gray-400 py-6 text-center">No upcoming prop lines yet for this player.</p>
       ) : (
         <>
-          <p className="text-xs text-gray-400 mb-3">
+          <p className="text-xs text-gray-400 mb-1">
             {homeAway === "home" ? "vs" : "@"} {opponentLabel} · {new Date(gameStartsAt).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
           </p>
+          {(gameTotal || teamImpliedTotal) && (
+            <p className="text-xs text-gray-400 mb-3">
+              {gameTotal && <>O/U {gameTotal}</>}
+              {gameTotal && teamImpliedTotal && " · "}
+              {teamImpliedTotal && <>Implied {teamImpliedTotal}</>}
+            </p>
+          )}
           <div className="text-center mb-4">
             <p className="text-3xl font-extrabold text-[#0F172A]">{projection.total}</p>
             <p className="text-xs text-gray-400">projected fantasy points</p>
@@ -165,8 +172,11 @@ function ProjectionCard({ result, opponentLabel, isRecommended, hasRecommendatio
           <div className="divide-y divide-gray-100">
             {projection.breakdown.map((b) => (
               <div key={b.statId} className="flex items-center justify-between py-1.5 text-sm">
-                <span className="text-gray-500">{b.label}</span>
-                <span className="text-gray-400 font-mono text-xs">{b.display ?? b.line}</span>
+                <span className={b.winsStat ? "text-green-700 font-medium flex items-center gap-1" : "text-gray-500"}>
+                  {b.winsStat && <span className="text-green-600">▲</span>}
+                  {b.label}
+                </span>
+                <span className={`font-mono text-xs ${b.winsStat ? "text-green-700 font-semibold" : "text-gray-400"}`}>{b.display ?? b.line}</span>
                 <span className="font-semibold text-[#0F172A]">{b.points} pt{b.points === 1 ? "" : "s"}</span>
               </div>
             ))}
@@ -297,6 +307,15 @@ export default function StartSitPage() {
                     />
                   ))}
                 </div>
+
+                {comparison.confidence !== null && comparison.confidence !== undefined && (
+                  <div className="flex justify-center mb-6">
+                    <span className="inline-flex items-center gap-1.5 bg-white/70 backdrop-blur-md border border-white/80 shadow-lg rounded-full px-4 py-1.5 text-sm">
+                      <span className="text-gray-400">Confidence:</span>
+                      <span className="font-bold text-[#0F172A]">{comparison.confidence}%</span>
+                    </span>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   {comparison.players.map((result) => {
