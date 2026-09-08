@@ -10,12 +10,21 @@ import { isPromoActive } from "@/lib/promo";
 import { anton } from "@/lib/fonts";
 import { riskColor } from "@/lib/riskColor";
 import ConsensusMovementWidget from "@/app/components/ConsensusMovementWidget";
+import CreatorAvatar from "@/app/components/CreatorAvatar";
 import { teamColors } from "@/lib/teamColors";
 import { DST_FORMAT, KICKER_FORMAT } from "@/lib/dstKickerFormats";
 import { getViewMode } from "@/lib/viewMode";
+import { getCurrentWeekFromGames } from "@/lib/currentWeek";
 
 const FORMATS = ["Redraft 1QB", "Redraft SF", "Dynasty 1QB", "Dynasty SF"];
-const FORMAT_TABS = [...FORMATS, "DST/K"];
+const FORMAT_TABS = [...FORMATS, "DST/K", "Weekly Rankings"];
+const WEEKLY_POSITIONS = [
+  { id: "QB", label: "QB" },
+  { id: "RB", label: "RB" },
+  { id: "WR", label: "WR" },
+  { id: "TE", label: "TE" },
+  { id: "FLEX", label: "FLEX" },
+];
 
 const CREATORS = [
   { id: "rookierager", name: "RookieRager", short: "RookieRager" },
@@ -191,6 +200,13 @@ export default function Home() {
   const [poolLoaded, setPoolLoaded] = useState(false);
   const [realIsDashboardUser, setRealIsDashboardUser] = useState(false);
   const [viewMode, setViewModeState] = useState("real");
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [myCreatorId, setMyCreatorId] = useState(null);
+  const [riskRatings, setRiskRatings] = useState({}); // { [playerId]: { [creatorId]: rating } }
+  const [weeklyRankingsData, setWeeklyRankingsData] = useState({ weeks: {} });
+  const [weeklyWeek, setWeeklyWeek] = useState(null);
+  const [weeklyPosition, setWeeklyPosition] = useState("QB");
+  const [weeklyCreatorProfile, setWeeklyCreatorProfile] = useState(null);
   const [showCreatorColumns, setShowCreatorColumns] = useState(true);
   const [search, setSearch] = useState("");
   const [posFilter, setPosFilter] = useState("All");
@@ -228,17 +244,55 @@ export default function Home() {
       for (let from = 0; ; from += PAGE) {
         const { data: batch } = await supabase
           .from("players")
-          .select("id, name, position, team, sleeper_id, espn_id, height_inches, weight_lbs, age, risk_rating")
+          .select("id, name, position, team, sleeper_id, espn_id, height_inches, weight_lbs, age")
           .order("adp_rank", { nullsFirst: false })
           .order("id")
           .range(from, from + PAGE - 1);
         data.push(...(batch || []));
         if (!batch || batch.length < PAGE) break;
       }
-      setPlayerPool(data.map(p => ({ id: p.id, name: p.name, pos: p.position, team: p.team || "FA", sleeper_id: p.sleeper_id, espn_id: p.espn_id, height_inches: p.height_inches, weight_lbs: p.weight_lbs, age: p.age, risk_rating: p.risk_rating })));
+      setPlayerPool(data.map(p => ({ id: p.id, name: p.name, pos: p.position, team: p.team || "FA", sleeper_id: p.sleeper_id, espn_id: p.espn_id, height_inches: p.height_inches, weight_lbs: p.weight_lbs, age: p.age })));
       setPoolLoaded(true);
     }
     loadPool();
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/players/risk-ratings")
+      .then((r) => (r.ok ? r.json() : { ratings: [] }))
+      .then(({ ratings }) => {
+        const map = {};
+        for (const r of ratings || []) {
+          (map[r.player_id] ??= {})[r.creator_id] = r.risk_rating;
+        }
+        setRiskRatings(map);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    async function loadWeekly() {
+      const supabase = createClient();
+      const [weeklyRes, gamesResult, profileResult] = await Promise.all([
+        fetch("/api/weekly-rankings?creator_id=ffhuddle").then((r) => (r.ok ? r.json() : { weeks: {} })).catch(() => ({ weeks: {} })),
+        supabase.from("season_games").select("week, status, kickoff_at").order("kickoff_at", { ascending: true }),
+        supabase.from("profiles").select("logo_url").eq("creator_id", "ffhuddle").eq("is_creator", true).maybeSingle(),
+      ]);
+      setWeeklyRankingsData(weeklyRes);
+      setWeeklyCreatorProfile(profileResult.data || null);
+
+      // Default to the current week if Huddle has already published it,
+      // otherwise fall back to the most recent archived week available.
+      const availableWeeks = Object.keys(weeklyRes.weeks || {}).map(Number).sort((a, b) => a - b);
+      if (availableWeeks.length > 0) {
+        const currentWeek = getCurrentWeekFromGames(gamesResult.data || []);
+        const defaultWeek = availableWeeks.includes(currentWeek)
+          ? currentWeek
+          : availableWeeks.filter((w) => w <= currentWeek).pop() ?? availableWeeks[availableWeeks.length - 1];
+        setWeeklyWeek(defaultWeek);
+      }
+    }
+    loadWeekly();
   }, []);
 
   useEffect(() => {
@@ -249,10 +303,12 @@ export default function Home() {
       if (user) {
         const [{ data: sub }, { data: prof }] = await Promise.all([
           supabase.from("subscriptions").select("status").eq("user_id", user.id).eq("status", "active").maybeSingle(),
-          supabase.from("profiles").select("role, is_creator").eq("id", user.id).maybeSingle(),
+          supabase.from("profiles").select("role, is_creator, creator_id").eq("id", user.id).maybeSingle(),
         ]);
         setRawIsSubscribed(!!sub);
         setRealIsDashboardUser(!!(prof && (prof.role === "admin" || prof.is_creator)));
+        setIsAdmin(prof?.role === "admin");
+        setMyCreatorId(prof?.creator_id || null);
         setViewModeState(getViewMode());
       }
       setAuthLoaded(true);
@@ -367,8 +423,12 @@ export default function Home() {
 
   function handleFormatChange(format) {
     setActiveFormat(format);
-    setActiveCreator("consensus");
+    // Weekly Rankings is Huddle-only — set the creator context to ffhuddle so
+    // the existing per-creator risk-rating logic (canEditRisk, displayedRisk,
+    // etc.) works correctly with zero special-casing for weekly-ranked players.
+    setActiveCreator(format === "Weekly Rankings" ? "ffhuddle" : "consensus");
     if (format === "DST/K") setDstkSubTab(DST_FORMAT);
+    if (format === "Weekly Rankings") setWeeklyPosition("QB");
   }
 
   const formatData = rankingsCache[effectiveFormat];
@@ -381,6 +441,29 @@ export default function Home() {
   const lockedForFormat = lockedCache[effectiveFormat] || {};
   // Individual creator tab locked for this viewer (admins/creators bypass)
   const isCreatorLocked = activeCreator !== "consensus" && !isDashboardUser && !!lockedForFormat[activeCreator];
+
+  // Risk rating: each creator has their own rating, shown only on their tab;
+  // Consensus averages across whichever creators have rated the player.
+  const isConsensusTab = activeCreator === "consensus";
+  const creatorRatings = selectedPlayer
+    ? Object.fromEntries(
+        ACTIVE_CREATORS
+          .map((c) => [c.id, riskRatings[selectedPlayer.id]?.[c.id]])
+          .filter(([, v]) => v != null)
+      )
+    : {};
+  const ratedValues = Object.values(creatorRatings);
+  const consensusAvg = ratedValues.length > 0
+    ? Math.round((ratedValues.reduce((a, b) => a + b, 0) / ratedValues.length) * 10) / 10
+    : null;
+  const displayedRisk = isConsensusTab
+    ? consensusAvg
+    : (selectedPlayer ? riskRatings[selectedPlayer.id]?.[activeCreator] ?? null : null);
+  const canEditRisk = isDashboardUser && !isConsensusTab && (isAdmin || myCreatorId === activeCreator);
+
+  const weeklyWeeks = Object.keys(weeklyRankingsData.weeks || {}).map(Number).sort((a, b) => a - b);
+  const weeklyRows = weeklyWeek ? (weeklyRankingsData.weeks?.[String(weeklyWeek)]?.[weeklyPosition] || []) : [];
+  const weeklyPoolById = Object.fromEntries(playerPool.map(p => [p.id, p]));
 
   // Expand integer ID arrays at render time — playerPool is guaranteed loaded here
   // (stillLoading includes !poolLoaded, so !stillLoading means pool is ready).
@@ -417,27 +500,32 @@ export default function Home() {
     return () => { document.body.style.overflow = ""; };
   }, [playerModalOpen]);
 
-  // Creators/admins can set a player's risk rating right from the card;
-  // subscribers only ever see the read-only version (gated in the JSX below).
-  // onChange (fires continuously while dragging) only updates local state for
-  // instant visual feedback; the actual autosave commits on release/blur so we
-  // don't fire a PATCH per pixel of drag or risk two in-flight saves resolving
-  // out of order and clobbering a newer value with a stale one.
-  function updateRiskRatingLocal(playerId, value) {
-    setSelectedPlayer(prev => (prev && prev.id === playerId ? { ...prev, risk_rating: value } : prev));
-    setPlayerPool(prev => prev.map(p => (p.id === playerId ? { ...p, risk_rating: value } : p)));
+  // Each creator sets their own risk rating for a player, only editable from
+  // their own tab (see canEditRisk); everyone else sees the read-only version
+  // (gated in the JSX below). onChange (fires continuously while dragging)
+  // only updates local state for instant visual feedback; the actual
+  // autosave commits on release/blur so we don't fire a PATCH per pixel of
+  // drag or risk two in-flight saves resolving out of order and clobbering a
+  // newer value with a stale one.
+  function updateRiskRatingLocal(playerId, creatorId, value) {
+    setRiskRatings(prev => {
+      const playerMap = { ...(prev[playerId] || {}) };
+      if (value == null) delete playerMap[creatorId];
+      else playerMap[creatorId] = value;
+      return { ...prev, [playerId]: playerMap };
+    });
   }
 
-  async function commitRiskRating(playerId, value) {
+  async function commitRiskRating(playerId, creatorId, value) {
     const seq = ++riskSaveSeqRef.current;
     setRiskSaveStatus({ playerId, status: "saving" });
     try {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch("/api/players", {
+      const res = await fetch("/api/players/risk-ratings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ id: playerId, risk_rating: value }),
+        body: JSON.stringify({ creator_id: creatorId, player_id: playerId, risk_rating: value }),
       });
       if (!res.ok) throw new Error("save failed");
       if (seq === riskSaveSeqRef.current) setRiskSaveStatus({ playerId, status: "saved" });
@@ -446,9 +534,9 @@ export default function Home() {
     }
   }
 
-  function clearRiskRating(playerId) {
-    updateRiskRatingLocal(playerId, null);
-    commitRiskRating(playerId, null);
+  function clearRiskRating(playerId, creatorId) {
+    updateRiskRatingLocal(playerId, creatorId, null);
+    commitRiskRating(playerId, creatorId, null);
   }
 
   async function openPlayerModal(player) {
@@ -643,7 +731,7 @@ export default function Home() {
                   : "bg-card/60 backdrop-blur-sm text-gray-600 hover:bg-card/80 border border-card/70"
               }`}
             >
-              <span className="lg:hidden">{fmt === "DST/K" ? fmt : abbreviateFormat(fmt)}</span>
+              <span className="lg:hidden">{fmt === "DST/K" ? fmt : fmt === "Weekly Rankings" ? "Weekly" : abbreviateFormat(fmt)}</span>
               <span className="hidden lg:inline">{fmt}</span>
             </button>
           ))}
@@ -659,6 +747,11 @@ export default function Home() {
           />
         )}
 
+        {/* Everything below is the normal season-rankings view (creator tabs,
+            filters, table) — Weekly Rankings has its own simpler render branch,
+            since it has no tiers/consensus/multi-creator-comparison concepts. */}
+        {activeFormat !== "Weekly Rankings" && (
+        <>
         {/* Creator tabs + toggle */}
         {(() => {
           const creatorTabItems = [{ id: "consensus", name: "Consensus" }, ...CREATORS].map(creator => {
@@ -1039,12 +1132,70 @@ export default function Home() {
             )}
           </div>
         )}
+        </>
+        )}
+
+        {/* Weekly Rankings (Huddle only) — no tiers, no consensus, no other
+            creators; a simple per-position ranked list for the selected week. */}
+        {activeFormat === "Weekly Rankings" && (
+          <div>
+            <div className="flex items-center gap-2.5 mb-5">
+              <CreatorAvatar logoUrl={weeklyCreatorProfile?.logo_url} initials="FFH" colorClass="bg-blue-600" size="sm" />
+              <div>
+                <p className="font-bold text-ink text-sm">FFHuddle · Weekly Rankings</p>
+                {weeklyWeek && <p className="text-xs text-gray-400">Week {weeklyWeek}</p>}
+              </div>
+            </div>
+
+            {weeklyWeeks.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-12">No weekly rankings published yet — check back soon.</p>
+            ) : (
+              <>
+                <PillToggle
+                  options={weeklyWeeks.map((w) => ({ id: String(w), label: `Week ${w}` }))}
+                  value={String(weeklyWeek)}
+                  onChange={(w) => setWeeklyWeek(Number(w))}
+                  className="mb-4 !justify-start"
+                />
+                <PillToggle
+                  options={WEEKLY_POSITIONS}
+                  value={weeklyPosition}
+                  onChange={setWeeklyPosition}
+                  className="mb-5 !justify-start"
+                />
+
+                {weeklyRows.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-12">No {weeklyPosition} rankings for Week {weeklyWeek} yet.</p>
+                ) : (
+                  <div className="divide-y divide-gray-100 border border-gray-100 rounded-xl overflow-hidden">
+                    {weeklyRows.map((row, i) => (
+                      <button
+                        key={row.player_id}
+                        onClick={() => openPlayerModal(weeklyPoolById[row.player_id] || { id: row.player_id, ...row.players })}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left"
+                      >
+                        <span className="text-sm text-gray-400 font-mono w-6 shrink-0 text-right">{i + 1}</span>
+                        <PlayerHeadshot espnId={row.players?.espn_id} sleeperId={row.players?.sleeper_id} name={row.players?.name} size="sm" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-ink truncate">{row.players?.name}</p>
+                          <p className="text-xs text-gray-400">{row.players?.position} · {row.players?.team}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
 
         </div>
 
+        {activeFormat !== "Weekly Rankings" && (
         <aside className="w-full lg:w-72 lg:shrink-0 lg:sticky lg:top-6 order-2">
           <ConsensusMovementWidget format={effectiveFormat} />
         </aside>
+        )}
 
       </div>
 
@@ -1103,19 +1254,21 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Risk Rating — creators/admins can set it here; everyone else sees it read-only */}
+            {/* Risk Rating — each creator sets their own, only editable from their own tab; Consensus averages across creators */}
             <div className="px-6 pt-5">
               <div className="flex items-center justify-between mb-1.5">
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Risk Rating</h3>
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                  Risk Rating{isConsensusTab && " · Consensus"}
+                </h3>
                 <div className="flex items-center gap-2">
-                  {selectedPlayer.risk_rating != null && (
-                    <span className="text-sm font-bold" style={{ color: riskColor(selectedPlayer.risk_rating) }}>
-                      {selectedPlayer.risk_rating}/10
+                  {displayedRisk != null && (
+                    <span className="text-sm font-bold" style={{ color: riskColor(displayedRisk) }}>
+                      {displayedRisk}/10
                     </span>
                   )}
-                  {isDashboardUser && selectedPlayer.risk_rating != null && (
+                  {canEditRisk && displayedRisk != null && (
                     <button
-                      onClick={() => clearRiskRating(selectedPlayer.id)}
+                      onClick={() => clearRiskRating(selectedPlayer.id, activeCreator)}
                       className="text-[10px] text-gray-400 hover:text-red-500 underline"
                     >
                       Clear
@@ -1124,23 +1277,23 @@ export default function Home() {
                 </div>
               </div>
 
-              {isDashboardUser ? (
+              {canEditRisk ? (
                 <>
                   <input
                     type="range"
                     min="1"
                     max="10"
-                    value={selectedPlayer.risk_rating ?? 1}
-                    onChange={(e) => updateRiskRatingLocal(selectedPlayer.id, Number(e.target.value))}
-                    onMouseUp={(e) => commitRiskRating(selectedPlayer.id, Number(e.target.value))}
-                    onTouchEnd={(e) => commitRiskRating(selectedPlayer.id, Number(e.target.value))}
-                    onKeyUp={(e) => commitRiskRating(selectedPlayer.id, Number(e.target.value))}
-                    onBlur={(e) => commitRiskRating(selectedPlayer.id, Number(e.target.value))}
+                    value={displayedRisk ?? 1}
+                    onChange={(e) => updateRiskRatingLocal(selectedPlayer.id, activeCreator, Number(e.target.value))}
+                    onMouseUp={(e) => commitRiskRating(selectedPlayer.id, activeCreator, Number(e.target.value))}
+                    onTouchEnd={(e) => commitRiskRating(selectedPlayer.id, activeCreator, Number(e.target.value))}
+                    onKeyUp={(e) => commitRiskRating(selectedPlayer.id, activeCreator, Number(e.target.value))}
+                    onBlur={(e) => commitRiskRating(selectedPlayer.id, activeCreator, Number(e.target.value))}
                     className="w-full accent-current"
-                    style={{ color: riskColor(selectedPlayer.risk_rating ?? 1) }}
+                    style={{ color: riskColor(displayedRisk ?? 1) }}
                   />
                   <div className="flex items-center justify-between mt-1">
-                    {selectedPlayer.risk_rating == null ? (
+                    {displayedRisk == null ? (
                       <p className="text-xs text-gray-400 italic">Drag to set a rating</p>
                     ) : <span />}
                     {riskSaveStatus?.playerId === selectedPlayer.id && (
@@ -1152,23 +1305,34 @@ export default function Home() {
                     )}
                   </div>
                 </>
-              ) : selectedPlayer.risk_rating != null ? (
-                <div
-                  className="relative h-2 rounded-full"
-                  style={{ background: `linear-gradient(to right, ${riskColor(1)}, ${riskColor(10)})` }}
-                >
+              ) : displayedRisk != null ? (
+                <>
                   <div
-                    className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-card border-2 shadow"
-                    style={{
-                      left: `calc(${((selectedPlayer.risk_rating - 1) / 9) * 100}% - 7px)`,
-                      borderColor: riskColor(selectedPlayer.risk_rating),
-                    }}
-                  />
-                </div>
+                    className="relative h-2 rounded-full"
+                    style={{ background: `linear-gradient(to right, ${riskColor(1)}, ${riskColor(10)})` }}
+                  >
+                    <div
+                      className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-card border-2 shadow"
+                      style={{
+                        left: `calc(${((displayedRisk - 1) / 9) * 100}% - 7px)`,
+                        borderColor: riskColor(displayedRisk),
+                      }}
+                    />
+                  </div>
+                  {isConsensusTab && ACTIVE_CREATORS.some((c) => creatorRatings[c.id] != null) && (
+                    <p className="text-[11px] text-gray-400 mt-1.5">
+                      {ACTIVE_CREATORS.filter((c) => creatorRatings[c.id] != null)
+                        .map((c) => `${c.short} ${creatorRatings[c.id]}`)
+                        .join(" · ")}
+                    </p>
+                  )}
+                </>
               ) : (
                 <>
                   <div className="h-2 rounded-full bg-gray-100" />
-                  <p className="text-xs text-gray-400 italic mt-1.5">Risk not set</p>
+                  <p className="text-xs text-gray-400 italic mt-1.5">
+                    {isConsensusTab ? "No creators have rated this player yet" : "Risk not set"}
+                  </p>
                 </>
               )}
             </div>

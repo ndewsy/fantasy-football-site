@@ -9,6 +9,7 @@ import CreatorAvatar from "@/app/components/CreatorAvatar";
 import PlayerHeadshot from "@/app/components/PlayerHeadshot";
 import AuctionRankingsEditor from "@/app/components/AuctionRankingsEditor";
 import WaiverWireEditor from "@/app/components/WaiverWireEditor";
+import WeeklyRankingsEditor from "@/app/components/WeeklyRankingsEditor";
 import Cropper from "react-easy-crop";
 import { DST_FORMAT, KICKER_FORMAT } from "@/lib/dstKickerFormats";
 
@@ -1417,9 +1418,13 @@ export default function DashboardPage() {
   const currentPeriod = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
   const adminTabs = [["admin", "Admin Overview"], ["subscribers", "Subscribers"], ["payouts", "Revenue & Payouts"], ["feedback", "Feedback"], ["players", "Add Players"], ["playerdb", "Player Database"], ["admin-auction", "Auction Rankings"], ["waiver-wire-admin", "Waiver Wire"]];
-  const creatorTabs = ["rankings", "auction", "waiver-wire", "posts", "earnings", "analytics", "subscribers", "profile"].map((t) => [
+  const creatorTabs = [
+    "rankings",
+    ...(profile.creator_id === "ffhuddle" ? ["weekly-rankings"] : []),
+    "auction", "waiver-wire", "posts", "earnings", "analytics", "subscribers", "profile",
+  ].map((t) => [
     t,
-    t === "rankings" ? "My Rankings" : t === "auction" ? "My Auction" : t === "waiver-wire" ? "My Waiver Wire" : t === "posts" ? "My Posts" : t === "earnings" ? "My Earnings" : t === "analytics" ? "My Analytics" : t === "subscribers" ? "Subscribers" : "My Profile",
+    t === "rankings" ? "My Rankings" : t === "weekly-rankings" ? "Weekly Rankings" : t === "auction" ? "My Auction" : t === "waiver-wire" ? "My Waiver Wire" : t === "posts" ? "My Posts" : t === "earnings" ? "My Earnings" : t === "analytics" ? "My Analytics" : t === "subscribers" ? "Subscribers" : "My Profile",
   ]);
 
   return (
@@ -3056,6 +3061,11 @@ export default function DashboardPage() {
             </div>
 
           </div>
+        )}
+
+        {/* ── Weekly Rankings Tab (Huddle only) ── */}
+        {tab === "weekly-rankings" && (
+          <WeeklyRankingsEditor creatorId={profile.creator_id} />
         )}
 
         {/* ── My Auction Tab ── */}
