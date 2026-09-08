@@ -58,8 +58,16 @@ function blendedProbability(byBookmaker) {
   return probs.reduce((a, b) => a + b, 0) / probs.length;
 }
 
+// SportsGameOdds sometimes lists a player under their legal first name (e.g.
+// "Kenneth Gainwell") while our roster uses the common name (e.g. "Kenny
+// Gainwell") — normalize() alone can't bridge that, so any first name found
+// mismatched between the two sources gets added here.
+const FIRST_NAME_ALIASES = {
+  kenneth: 'kenny',
+};
+
 function normalize(name) {
-  return name
+  const cleaned = name
     .toLowerCase()
     .replace(/[.']/g, '')
     .replace(/\s+jr\.?$/i, '')
@@ -67,6 +75,8 @@ function normalize(name) {
     .replace(/\s+iii$/i, '')
     .replace(/\s+/g, ' ')
     .trim();
+  const [first, ...rest] = cleaned.split(' ');
+  return [FIRST_NAME_ALIASES[first] || first, ...rest].join(' ');
 }
 
 async function fetchAllPlayers() {
