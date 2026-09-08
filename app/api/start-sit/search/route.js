@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { getAuthedUser } from '@/lib/getUser';
 
 let _supabase;
 const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY));
@@ -6,6 +7,9 @@ const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPAB
 // Only surfaces players who currently have at least one upcoming prop line —
 // there's nothing to project for anyone else, so no point showing them in the picker.
 export async function GET(request) {
+  const authed = await getAuthedUser(request);
+  if (!authed) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
   const { searchParams } = new URL(request.url);
   const q = (searchParams.get('q') || '').trim();
 

@@ -24,7 +24,7 @@ const SPORTSBOOKS = [
   { name: "BetMGM", url: "https://sports.betmgm.com", bg: "#B4975A", text: "#111111" },
 ];
 
-function PlayerPicker({ label, player, onSelect, onClear }) {
+function PlayerPicker({ label, player, onSelect, onClear, token }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [open, setOpen] = useState(false);
@@ -32,13 +32,15 @@ function PlayerPicker({ label, player, onSelect, onClear }) {
 
   useEffect(() => {
     const handle = setTimeout(() => {
-      fetch(`/api/start-sit/search?q=${encodeURIComponent(query.trim())}`)
+      fetch(`/api/start-sit/search?q=${encodeURIComponent(query.trim())}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
         .then((r) => (r.ok ? r.json() : { players: [] }))
         .then((d) => setResults(d.players || []))
         .catch(() => setResults([]));
     }, 150);
     return () => clearTimeout(handle);
-  }, [query]);
+  }, [query, token]);
 
   useEffect(() => {
     function handleClick(e) {
@@ -191,13 +193,149 @@ function ProjectionCard({ result, opponentLabel, isRecommended, hasRecommendatio
   );
 }
 
+// Gate popup for the two blocked states: signed-out visitors (need a free
+// account) and free-tier accounts that are out of vouchers for the month.
+// Structure/styling mirrors the SignupModal in app/picks/page.js.
+function AccessGateModal({ mode, onClose, promoActive }) {
+  const [authMode, setAuthMode] = useState("signup");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const [done, setDone] = useState(false);
+
+  async function handleSubmit() {
+    if (!email || !password) return;
+    setLoading(true);
+    setMessage("");
+    const supabase = createClient();
+    if (authMode === "signup") {
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) setMessage(error.message);
+      else setDone(true);
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) setMessage(error.message);
+      else window.location.reload();
+    }
+    setLoading(false);
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="w-full max-w-sm bg-card rounded-2xl shadow-2xl p-6 relative">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+          aria-label="Close"
+        >
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+            <line x1="4" y1="4" x2="16" y2="16" /><line x1="16" y1="4" x2="4" y2="16" />
+          </svg>
+        </button>
+
+        {mode === "upgrade" ? (
+          <div className="text-center py-2">
+            <p className="text-4xl mb-3">🔒</p>
+            <h2 className="text-lg font-bold text-ink mb-2">Out of free comparisons</h2>
+            <p className="text-sm text-gray-500 max-w-xs mx-auto mb-6">
+              You&rsquo;ve used all 3 free Start/Sit comparisons this month. Upgrade for unlimited access.
+            </p>
+            <a
+              href="/subscribe"
+              className="bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold px-6 py-2.5 rounded-xl inline-block transition-all text-sm"
+            >
+              {promoActive ? <>Upgrade — <PromoPrice /></> : "Upgrade — $10/mo"}
+            </a>
+            <button onClick={onClose} className="block mx-auto mt-4 text-sm text-gray-400 hover:text-gray-600 font-medium">
+              Maybe later
+            </button>
+          </div>
+        ) : done ? (
+          <div className="text-center py-2">
+            <p className="text-4xl mb-3">📬</p>
+            <h2 className="text-lg font-bold text-ink mb-2">Check your email</h2>
+            <p className="text-sm text-gray-500 max-w-xs mx-auto">
+              We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account, then come back to use Start/Sit.
+            </p>
+            <button onClick={onClose} className="mt-6 text-sm text-blue-600 hover:text-blue-700 font-medium">
+              Got it, close
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="mb-5 pr-6">
+              <h2 className="text-xl font-bold text-ink">
+                {authMode === "signup" ? "Start/Sit needs a free account" : "Welcome back"}
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">
+                {authMode === "signup"
+                  ? "Create a free account to get 3 Start/Sit comparisons every month."
+                  : "Sign in to use Start/Sit."}
+              </p>
+            </div>
+
+            <div className="mb-3">
+              <label className="block text-xs text-gray-500 mb-1.5">Email</label>
+              <input
+                type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-ink focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                placeholder="you@example.com" autoFocus
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-xs text-gray-500 mb-1.5">Password</label>
+              <input
+                type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-ink focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                placeholder="••••••••"
+              />
+            </div>
+
+            {message && (
+              <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">{message}</div>
+            )}
+
+            <button
+              onClick={handleSubmit}
+              disabled={loading || !email || !password}
+              className="w-full bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold py-2.5 rounded-xl transition-all disabled:opacity-50 text-sm"
+            >
+              {loading ? "Loading…" : authMode === "signup" ? "Create Free Account" : "Sign In"}
+            </button>
+
+            <p className="text-center text-xs text-gray-500 mt-4">
+              {authMode === "signup" ? "Already have an account?" : "Don't have an account?"}{" "}
+              <button
+                onClick={() => { setAuthMode(authMode === "signup" ? "signin" : "signup"); setMessage(""); }}
+                className="text-blue-600 hover:text-blue-700 font-medium"
+              >
+                {authMode === "signup" ? "Sign in" : "Sign up"}
+              </button>
+            </p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function StartSitPage() {
   const promoActive = isPromoActive();
   const [user, setUser] = useState(null);
+  const [accessToken, setAccessToken] = useState(null);
   const [subscription, setSubscription] = useState(null);
   const [isDashboardUser, setIsDashboardUser] = useState(false);
   const [activeCreatorIds, setActiveCreatorIds] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [remaining, setRemaining] = useState(null);
+  const [gateModal, setGateModal] = useState(null); // "signup" | "upgrade" | null
 
   const [scoring, setScoring] = useState("ppr");
   const [playerA, setPlayerA] = useState(null);
@@ -208,8 +346,10 @@ export default function StartSitPage() {
   useEffect(() => {
     async function load() {
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user || null;
       setUser(user);
+      setAccessToken(session?.access_token || null);
 
       const [subResult, ownProfileResult, activeCreatorsResult] = await Promise.all([
         user
@@ -224,6 +364,24 @@ export default function StartSitPage() {
       setSubscription(subResult.data);
       setIsDashboardUser(!!(ownProfileResult.data && (ownProfileResult.data.role === "admin" || ownProfileResult.data.is_creator)));
       setActiveCreatorIds((activeCreatorsResult.creators || []).map((c) => c.creator_id));
+
+      // Same isSubscribed formula as below — computed here too since state
+      // updates above aren't visible until the next render.
+      const isDashboardUserNow = !!(ownProfileResult.data && (ownProfileResult.data.role === "admin" || ownProfileResult.data.is_creator));
+      const isFlatAccessGrantedNow = subResult.data?.plan_type === "flat_access"
+        && subResult.data?.status === "active"
+        && (activeCreatorsResult.creators || []).length > 0;
+      const isSubscribedNow = isDashboardUserNow
+        || (!!subResult.data && subResult.data.plan_type !== "flat_access" && subResult.data.status === "active")
+        || isFlatAccessGrantedNow;
+
+      if (user && !isSubscribedNow) {
+        fetch("/api/start-sit/usage", { headers: { Authorization: `Bearer ${session.access_token}` } })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d) => { if (d) setRemaining(d.remaining); })
+          .catch(() => {});
+      }
+
       setLoading(false);
     }
     load();
@@ -243,15 +401,33 @@ export default function StartSitPage() {
   const hasFullAccess = isBetaTester || (isSubscribed && isPubliclyLive);
   const isPreLaunchSubscriber = isSubscribed && !isBetaTester && !isPubliclyLive;
 
+  // Free-tier accounts: full tool UI gated by remaining vouchers rather than
+  // a subscription. `remaining === null` while the usage check is in flight —
+  // default to showing the tool rather than flashing a locked banner.
+  const isFreeTierWithVouchers = !!user && !isSubscribed && (remaining === null || remaining > 0);
+  const isFreeTierOutOfVouchers = !!user && !isSubscribed && remaining === 0;
+
   useEffect(() => {
-    if (!playerA || !playerB) { setComparison(null); return; }
+    if (!playerA || !playerB || !accessToken) { setComparison(null); return; }
     setComparing(true);
-    fetch(`/api/start-sit/compare?playerIds=${playerA.id},${playerB.id}&scoring=${scoring}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then(setComparison)
+    fetch(`/api/start-sit/compare?playerIds=${playerA.id},${playerB.id}&scoring=${scoring}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+      .then(async (r) => {
+        if (r.status === 403) {
+          setRemaining(0);
+          setGateModal("upgrade");
+          return null;
+        }
+        return r.ok ? r.json() : null;
+      })
+      .then((data) => {
+        setComparison(data);
+        if (data && data.remaining !== null && data.remaining !== undefined) setRemaining(data.remaining);
+      })
       .catch(() => setComparison(null))
       .finally(() => setComparing(false));
-  }, [playerA, playerB, scoring]);
+  }, [playerA, playerB, scoring, accessToken]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading...</div>;
 
@@ -272,29 +448,47 @@ export default function StartSitPage() {
           </div>
         )}
 
-        {!isSubscribed && (
+        {!user && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 mb-8 text-center">
-            <p className="text-amber-600 font-semibold text-lg mb-1">🔒 Start/Sit is a subscriber tool</p>
-            <p className="text-gray-500 text-sm mb-4">Subscribe to compare players and see full projections.</p>
-            <a
-              href="/subscribe"
+            <p className="text-amber-600 font-semibold text-lg mb-1">🔒 Start/Sit requires a free account</p>
+            <p className="text-gray-500 text-sm mb-4">Create a free account to get 3 Start/Sit comparisons every month.</p>
+            <button
+              onClick={() => setGateModal("signup")}
               className="bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold px-6 py-2.5 rounded-xl inline-block transition-all"
             >
-              {promoActive ? <>Subscribe — <PromoPrice /></> : "Subscribe — $10/mo"}
-            </a>
+              Sign Up Free
+            </button>
           </div>
         )}
 
-        {hasFullAccess && (
+        {isFreeTierOutOfVouchers && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 mb-8 text-center">
+            <p className="text-amber-600 font-semibold text-lg mb-1">🔒 Out of free comparisons</p>
+            <p className="text-gray-500 text-sm mb-4">You&rsquo;ve used all 3 free Start/Sit comparisons this month.</p>
+            <button
+              onClick={() => setGateModal("upgrade")}
+              className="bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold px-6 py-2.5 rounded-xl inline-block transition-all"
+            >
+              {promoActive ? <>Upgrade — <PromoPrice /></> : "Upgrade — $10/mo"}
+            </button>
+          </div>
+        )}
+
+        {(hasFullAccess || isFreeTierWithVouchers) && (
           <>
             {isBetaTester && !isPubliclyLive && (
               <p className="text-xs text-blue-600 font-semibold mb-4">🧪 Beta preview — live for subscribers September 5th</p>
             )}
+            {!isSubscribed && remaining !== null && (
+              <p className="text-center text-xs text-gray-500 mb-4">
+                {remaining} of 3 free comparisons left this month
+              </p>
+            )}
             <PillToggle options={SCORING_OPTIONS} value={scoring} onChange={setScoring} className="mb-8" />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-              <PlayerPicker label="Player A" player={playerA} onSelect={setPlayerA} onClear={() => setPlayerA(null)} />
-              <PlayerPicker label="Player B" player={playerB} onSelect={setPlayerB} onClear={() => setPlayerB(null)} />
+              <PlayerPicker label="Player A" player={playerA} onSelect={setPlayerA} onClear={() => setPlayerA(null)} token={accessToken} />
+              <PlayerPicker label="Player B" player={playerB} onSelect={setPlayerB} onClear={() => setPlayerB(null)} token={accessToken} />
             </div>
 
             {comparing && <p className="text-sm text-gray-400 text-center py-8">Loading projections...</p>}
@@ -365,6 +559,10 @@ export default function StartSitPage() {
           </>
         )}
       </div>
+
+      {gateModal && (
+        <AccessGateModal mode={gateModal} onClose={() => setGateModal(null)} promoActive={promoActive} />
+      )}
     </main>
   );
 }

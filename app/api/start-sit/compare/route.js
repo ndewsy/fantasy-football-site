@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { computeProjection, missingStatLabels, computeConfidence, SCORING_FORMATS } from '@/lib/fantasyProjection';
+import { getAuthedUser } from '@/lib/getUser';
+import { getStartSitAccess } from '@/lib/startSitAccess';
 
 let _supabase;
 const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY));
@@ -66,6 +68,9 @@ function annotateStatWinners(playerA, playerB) {
 }
 
 export async function GET(request) {
+  const authed = await getAuthedUser(request);
+  if (!authed) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
   const { searchParams } = new URL(request.url);
   const idsParam = searchParams.get('playerIds') || '';
   const scoring = SCORING_FORMATS.includes(searchParams.get('scoring')) ? searchParams.get('scoring') : 'ppr';
@@ -74,6 +79,8 @@ export async function GET(request) {
   if (playerIds.length < 2) {
     return Response.json({ error: 'playerIds must contain at least 2 player ids' }, { status: 400 });
   }
+
+  const { isSubscribed } = await getStartSitAccess(supabase(), authed.user.id);
 
   let results;
   try {
@@ -85,6 +92,23 @@ export async function GET(request) {
 
   if (results.some((r) => !r)) {
     return Response.json({ error: 'One or more players not found' }, { status: 404 });
+  }
+
+  // Only spend a voucher once we know the request will actually produce a
+  // result — an invalid/malformed request shouldn't cost the user anything.
+  let remaining = null;
+  if (!isSubscribed) {
+    const { data: voucher, error: voucherError } = await supabase()
+      .rpc('consume_start_sit_voucher', { p_user_id: authed.user.id })
+      .single();
+    if (voucherError) {
+      console.error('[/api/start-sit/compare] voucher check failed:', voucherError);
+      return Response.json({ error: voucherError.message }, { status: 500 });
+    }
+    if (!voucher.allowed) {
+      return Response.json({ error: 'quota_exceeded', remaining: 0 }, { status: 403 });
+    }
+    remaining = voucher.remaining;
   }
 
   annotateStatWinners(results[0], results[1]);
@@ -102,5 +126,5 @@ export async function GET(request) {
     recommendedPlayerId = withGames[0].player.id;
   }
 
-  return Response.json({ scoring, players: results, recommendedPlayerId, confidence });
+  return Response.json({ scoring, players: results, recommendedPlayerId, confidence, remaining });
 }
