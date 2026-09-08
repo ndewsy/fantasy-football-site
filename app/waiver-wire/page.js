@@ -144,6 +144,18 @@ export default function WaiverWirePage() {
               <div className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg p-8 text-center">
                 <p className="text-gray-400 text-sm">No waiver wire picks posted for Week {week} yet.</p>
               </div>
+            ) : Object.keys(creators).length === 1 ? (
+              // A single creator's card in a 2-col grid leaves an empty cell
+              // next to it on wide screens — center it at a fixed width instead.
+              <div className="max-w-md mx-auto">
+                {Object.entries(creators).map(([creatorId, byCategory]) => (
+                  <CreatorCategoryCard
+                    key={creatorId}
+                    creatorName={creatorsById[creatorId] || creatorId}
+                    entries={byCategory[category] || []}
+                  />
+                ))}
+              </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {Object.entries(creators).map(([creatorId, byCategory]) => (
