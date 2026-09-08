@@ -207,6 +207,7 @@ export default function Home() {
   const [weeklyWeek, setWeeklyWeek] = useState(null);
   const [weeklyPosition, setWeeklyPosition] = useState("QB");
   const [weeklyCreatorProfile, setWeeklyCreatorProfile] = useState(null);
+  const [weeklySeasonGames, setWeeklySeasonGames] = useState([]);
   const [showCreatorColumns, setShowCreatorColumns] = useState(true);
   const [search, setSearch] = useState("");
   const [posFilter, setPosFilter] = useState("All");
@@ -275,11 +276,12 @@ export default function Home() {
       const supabase = createClient();
       const [weeklyRes, gamesResult, profileResult] = await Promise.all([
         fetch("/api/weekly-rankings?creator_id=ffhuddle").then((r) => (r.ok ? r.json() : { weeks: {} })).catch(() => ({ weeks: {} })),
-        supabase.from("season_games").select("week, status, kickoff_at").order("kickoff_at", { ascending: true }),
+        supabase.from("season_games").select("week, status, kickoff_at, home_team, away_team").order("kickoff_at", { ascending: true }),
         supabase.from("profiles").select("logo_url").eq("creator_id", "ffhuddle").eq("is_creator", true).maybeSingle(),
       ]);
       setWeeklyRankingsData(weeklyRes);
       setWeeklyCreatorProfile(profileResult.data || null);
+      setWeeklySeasonGames(gamesResult.data || []);
 
       // Default to the current week if Huddle has already published it,
       // otherwise fall back to the most recent archived week available.
@@ -464,6 +466,16 @@ export default function Home() {
   const weeklyWeeks = Object.keys(weeklyRankingsData.weeks || {}).map(Number).sort((a, b) => a - b);
   const weeklyRows = weeklyWeek ? (weeklyRankingsData.weeks?.[String(weeklyWeek)]?.[weeklyPosition] || []) : [];
   const weeklyPoolById = Object.fromEntries(playerPool.map(p => [p.id, p]));
+  // team -> { opponent, homeAway } for whichever week is selected — BYE if
+  // a team has no game that week.
+  const weeklyMatchups = Object.fromEntries(
+    weeklySeasonGames
+      .filter((g) => g.week === weeklyWeek)
+      .flatMap((g) => [
+        [g.home_team, { opponent: g.away_team, homeAway: "home" }],
+        [g.away_team, { opponent: g.home_team, homeAway: "away" }],
+      ])
+  );
 
   // Expand integer ID arrays at render time — playerPool is guaranteed loaded here
   // (stillLoading includes !poolLoaded, so !stillLoading means pool is ready).
@@ -1168,7 +1180,9 @@ export default function Home() {
                   <p className="text-sm text-gray-400 text-center py-12">No {weeklyPosition} rankings for Week {weeklyWeek} yet.</p>
                 ) : (
                   <div className="divide-y divide-gray-100 border border-gray-100 rounded-xl overflow-hidden">
-                    {weeklyRows.map((row, i) => (
+                    {weeklyRows.map((row, i) => {
+                      const matchup = weeklyMatchups[row.players?.team];
+                      return (
                       <button
                         key={row.player_id}
                         onClick={() => openPlayerModal(weeklyPoolById[row.player_id] || { id: row.player_id, ...row.players })}
@@ -1180,8 +1194,12 @@ export default function Home() {
                           <p className="text-sm font-medium text-ink truncate">{row.players?.name}</p>
                           <p className="text-xs text-gray-400">{row.players?.position} · {row.players?.team}</p>
                         </div>
+                        <span className="text-xs text-gray-400 shrink-0">
+                          {matchup ? `${matchup.homeAway === "home" ? "vs" : "@"} ${matchup.opponent}` : "BYE"}
+                        </span>
                       </button>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </>

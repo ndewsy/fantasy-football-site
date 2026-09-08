@@ -23,6 +23,7 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
   const [savedAt, setSavedAt] = useState(null);
   const [search, setSearch] = useState("");
   const [token, setToken] = useState(null);
+  const [seasonGames, setSeasonGames] = useState([]);
 
   useEffect(() => {
     async function loadPoolAndWeek() {
@@ -45,8 +46,9 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
 
       const { data: games } = await supabase
         .from("season_games")
-        .select("week, status, kickoff_at")
+        .select("week, status, kickoff_at, home_team, away_team")
         .order("kickoff_at", { ascending: true });
+      setSeasonGames(games || []);
       setWeek(getCurrentWeekFromGames(games || []));
     }
     loadPoolAndWeek();
@@ -67,6 +69,15 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
 
   const byId = Object.fromEntries(playerPool.map((p) => [p.id, p]));
   const usedIds = new Set(rows.map((r) => r.player_id));
+  // team -> { opponent, homeAway } for the selected week — BYE if no game.
+  const matchups = Object.fromEntries(
+    seasonGames
+      .filter((g) => g.week === week)
+      .flatMap((g) => [
+        [g.home_team, { opponent: g.away_team, homeAway: "home" }],
+        [g.away_team, { opponent: g.home_team, homeAway: "away" }],
+      ])
+  );
   const searchResults = search.trim().length >= 2
     ? playerPool.filter((p) => !usedIds.has(p.id) && p.name.toLowerCase().includes(search.toLowerCase().trim())).slice(0, 10)
     : [];
@@ -177,6 +188,7 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
             )}
             {rows.map((row, i) => {
               const p = byId[row.player_id];
+              const matchup = matchups[p?.team];
               return (
                 <div key={`${row.player_id}-${i}`} className="flex items-center gap-2.5 px-3 py-2 flex-wrap sm:flex-nowrap">
                   <span className="text-xs text-gray-400 font-mono w-7 shrink-0 text-right">{i + 1}</span>
@@ -185,6 +197,9 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
                     <p className="text-sm font-medium text-ink truncate">{p?.name || `#${row.player_id}`}</p>
                     <p className="text-xs text-gray-400">{p?.position} · {p?.team}</p>
                   </div>
+                  <span className="text-xs text-gray-400 shrink-0">
+                    {matchup ? `${matchup.homeAway === "home" ? "vs" : "@"} ${matchup.opponent}` : "BYE"}
+                  </span>
                   <div className="flex flex-col shrink-0">
                     <button onClick={() => movePlayer(i, -1)} disabled={i === 0} className="text-gray-400 hover:text-gray-700 disabled:opacity-30 text-xs leading-none px-1">▲</button>
                     <button onClick={() => movePlayer(i, 1)} disabled={i === rows.length - 1} className="text-gray-400 hover:text-gray-700 disabled:opacity-30 text-xs leading-none px-1">▼</button>
