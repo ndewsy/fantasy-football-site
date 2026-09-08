@@ -7,6 +7,7 @@ import PageTitle from "@/app/components/PageTitle";
 import PromoPrice from "@/app/components/PromoPrice";
 import { isPromoActive } from "@/lib/promo";
 import { applyTheme } from "@/lib/theme";
+import { getViewMode } from "@/lib/viewMode";
 
 const CREATOR_INFO = {
   rookierager:          { name: "RookieRager",            path: "/creators/rookierager" },
@@ -28,7 +29,8 @@ export default function AccountPage() {
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
-  const [isAdminOrCreator, setIsAdminOrCreator] = useState(false);
+  const [realIsAdminOrCreator, setRealIsAdminOrCreator] = useState(false);
+  const [viewMode, setViewModeState] = useState("real");
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -51,12 +53,19 @@ export default function AccountPage() {
         supabase.from("profiles").select("role, is_creator, theme").eq("id", user.id).maybeSingle(),
       ]);
       setSubscription(sub || null);
-      setIsAdminOrCreator(!!(prof && (prof.role === "admin" || prof.is_creator)));
+      setRealIsAdminOrCreator(!!(prof && (prof.role === "admin" || prof.is_creator)));
+      setViewModeState(getViewMode());
       setDarkMode(prof?.theme !== "light");
       setLoading(false);
     }
     load();
   }, [router]);
+
+  // Simulated preview for staff (see lib/viewMode.js) — a non-staff user's
+  // view_mode cookie is ignored since effectiveViewMode only reads it when
+  // realIsAdminOrCreator (the server-verified profiles lookup) is true.
+  const effectiveViewMode = realIsAdminOrCreator ? viewMode : "real";
+  const isAdminOrCreator = effectiveViewMode === "real" ? realIsAdminOrCreator : false;
 
   async function handleToggleDarkMode() {
     const next = !darkMode;

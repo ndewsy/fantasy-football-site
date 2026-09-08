@@ -7,6 +7,7 @@ import PillToggle from "@/app/components/PillToggle";
 import PlayerHeadshot from "@/app/components/PlayerHeadshot";
 import PromoPrice from "@/app/components/PromoPrice";
 import { isPromoActive } from "@/lib/promo";
+import { getViewMode } from "@/lib/viewMode";
 
 const FORMATS = ["Auction 1QB", "Auction SF"];
 
@@ -23,7 +24,8 @@ export default function AuctionPage() {
   const promoActive = isPromoActive();
   const [user, setUser] = useState(null);
   const [subscription, setSubscription] = useState(null);
-  const [isDashboardUser, setIsDashboardUser] = useState(false);
+  const [realIsDashboardUser, setRealIsDashboardUser] = useState(false);
+  const [viewMode, setViewModeState] = useState("real");
   const [activeCreatorIds, setActiveCreatorIds] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -51,19 +53,27 @@ export default function AuctionPage() {
       ]);
 
       setSubscription(subResult.data);
-      setIsDashboardUser(!!(ownProfileResult.data && (ownProfileResult.data.role === "admin" || ownProfileResult.data.is_creator)));
+      setRealIsDashboardUser(!!(ownProfileResult.data && (ownProfileResult.data.role === "admin" || ownProfileResult.data.is_creator)));
+      setViewModeState(getViewMode());
       setActiveCreatorIds((activeCreatorsResult.creators || []).map((c) => c.creator_id));
       setLoading(false);
     }
     load();
   }, []);
 
+  // Simulated preview for staff (see lib/viewMode.js) — a non-staff user's
+  // view_mode cookie is ignored since effectiveViewMode only reads it when
+  // realIsDashboardUser (the server-verified profiles lookup) is true.
+  const effectiveViewMode = realIsDashboardUser ? viewMode : "real";
+  const isDashboardUser = effectiveViewMode === "real" ? realIsDashboardUser : false;
+
   const isFlatAccessGranted = subscription?.plan_type === "flat_access"
     && subscription?.status === "active"
     && activeCreatorIds.length > 0;
-  const isSubscribed = isDashboardUser
+  const isSubscribedRaw = isDashboardUser
     || (!!subscription && subscription.plan_type !== "flat_access" && subscription.status === "active")
     || isFlatAccessGranted;
+  const isSubscribed = effectiveViewMode === "subscriber" ? true : effectiveViewMode === "free" ? false : isSubscribedRaw;
 
   useEffect(() => {
     if (!isSubscribed) return;

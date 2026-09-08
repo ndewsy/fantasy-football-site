@@ -6,6 +6,7 @@ import PageTitle from "@/app/components/PageTitle";
 import PlayerHeadshot from "@/app/components/PlayerHeadshot";
 import PillToggle from "@/app/components/PillToggle";
 import { getCurrentWeekFromGames } from "@/lib/currentWeek";
+import { getViewMode } from "@/lib/viewMode";
 
 const WEEKS = Array.from({ length: 18 }, (_, i) => i + 1);
 const CATEGORIES = [
@@ -55,7 +56,8 @@ function CreatorCategoryCard({ creatorName, entries }) {
 
 export default function WaiverWirePage() {
   const [loading, setLoading] = useState(true);
-  const [isDashboardUser, setIsDashboardUser] = useState(false);
+  const [realIsDashboardUser, setRealIsDashboardUser] = useState(false);
+  const [viewMode, setViewModeState] = useState("real");
   const [week, setWeek] = useState(1);
   const [category, setCategory] = useState(CATEGORIES[0].id);
   const [creatorsById, setCreatorsById] = useState({});
@@ -75,13 +77,22 @@ export default function WaiverWirePage() {
         supabase.from("season_games").select("week, status, kickoff_at").order("kickoff_at", { ascending: true }),
       ]);
 
-      setIsDashboardUser(!!(profileResult.data && (profileResult.data.role === "admin" || profileResult.data.is_creator)));
+      setRealIsDashboardUser(!!(profileResult.data && (profileResult.data.role === "admin" || profileResult.data.is_creator)));
+      setViewModeState(getViewMode());
       setCreatorsById(Object.fromEntries((creatorProfilesResult.data || []).map((c) => [c.creator_id, c.display_name || c.creator_id])));
       setWeek(getCurrentWeekFromGames(gamesResult.data || []));
       setLoading(false);
     }
     load();
   }, []);
+
+  // Simulated preview for staff (see lib/viewMode.js) — a non-staff user's
+  // view_mode cookie is ignored since effectiveViewMode only reads it when
+  // realIsDashboardUser (the server-verified profiles lookup) is true. Waiver
+  // Wire has no subscriber tier of its own, so both simulated Subscriber and
+  // Free correctly fall back to the existing "creators only" locked state.
+  const effectiveViewMode = realIsDashboardUser ? viewMode : "real";
+  const isDashboardUser = effectiveViewMode === "real" ? realIsDashboardUser : false;
 
   useEffect(() => {
     if (!isDashboardUser) return;

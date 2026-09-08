@@ -5,13 +5,15 @@ import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
 import PageTitle from "@/app/components/PageTitle";
 import { isPromoActive } from "@/lib/promo";
+import { getViewMode } from "@/lib/viewMode";
 
 export default function SubscribePage() {
   const router = useRouter();
   const promoActive = isPromoActive();
   const [authLoaded, setAuthLoaded] = useState(false);
-  const [isSubscribed, setIsSubscribed] = useState(false);
-  const [isAdminOrCreator, setIsAdminOrCreator] = useState(false);
+  const [rawIsSubscribed, setRawIsSubscribed] = useState(false);
+  const [realIsAdminOrCreator, setRealIsAdminOrCreator] = useState(false);
+  const [viewMode, setViewModeState] = useState("real");
   const [referralCode, setReferralCode] = useState("");
   const [codeError, setCodeError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -34,12 +36,20 @@ export default function SubscribePage() {
       ]);
       // Free-trial and promo subs shouldn't block the checkout flow — they need to
       // be able to convert to (or top up) a full plan before or after they expire.
-      setIsSubscribed(!!sub && sub.plan_type !== "free_trial" && sub.plan_type !== "promo_5mo");
-      setIsAdminOrCreator(!!(prof && (prof.role === "admin" || prof.is_creator)));
+      setRawIsSubscribed(!!sub && sub.plan_type !== "free_trial" && sub.plan_type !== "promo_5mo");
+      setRealIsAdminOrCreator(!!(prof && (prof.role === "admin" || prof.is_creator)));
+      setViewModeState(getViewMode());
       setAuthLoaded(true);
     }
     checkAccess();
   }, [router]);
+
+  // Simulated preview for staff (see lib/viewMode.js) — a non-staff user's
+  // view_mode cookie is ignored since effectiveViewMode only reads it when
+  // realIsAdminOrCreator (the server-verified profiles lookup) is true.
+  const effectiveViewMode = realIsAdminOrCreator ? viewMode : "real";
+  const isAdminOrCreator = effectiveViewMode === "real" ? realIsAdminOrCreator : false;
+  const isSubscribed = effectiveViewMode === "subscriber" ? true : effectiveViewMode === "free" ? false : rawIsSubscribed;
 
   async function handleSubscribe() {
     setCodeError("");

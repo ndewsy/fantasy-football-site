@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Montserrat } from "next/font/google";
 import { createClient } from "@/lib/supabase";
+import ViewModeToggle from "@/app/components/ViewModeToggle";
 
 const montserrat = Montserrat({ subsets: ["latin"], display: "swap" });
 
@@ -162,6 +163,7 @@ export default function NavBar({ activePath = "/" }) {
           ))}
         </div>
         <div className="px-3 pb-6 pt-2">
+          {isDashboardUser && <ViewModeToggle />}
           {user ? (
             <NavLink href="/account" label="My Account" Icon={AccountIcon} active={activePath === "/account"} />
           ) : (
@@ -230,6 +232,7 @@ export default function NavBar({ activePath = "/" }) {
             ))}
           </div>
           <div className="px-3 pb-6 pt-2">
+            {isDashboardUser && <ViewModeToggle />}
             {user ? (
               <NavLink href="/account" label="My Account" Icon={AccountIcon} active={activePath === "/account"} onClick={() => setMenuOpen(false)} />
             ) : (

@@ -7,6 +7,7 @@ import PillToggle from "@/app/components/PillToggle";
 import PlayerHeadshot from "@/app/components/PlayerHeadshot";
 import PromoPrice from "@/app/components/PromoPrice";
 import { isPromoActive } from "@/lib/promo";
+import { getViewMode } from "@/lib/viewMode";
 
 const START_SIT_LAUNCH_DATE = new Date("2026-09-05T00:00:00-04:00");
 
@@ -331,7 +332,8 @@ export default function StartSitPage() {
   const [user, setUser] = useState(null);
   const [accessToken, setAccessToken] = useState(null);
   const [subscription, setSubscription] = useState(null);
-  const [isDashboardUser, setIsDashboardUser] = useState(false);
+  const [realIsDashboardUser, setRealIsDashboardUser] = useState(false);
+  const [viewMode, setViewModeState] = useState("real");
   const [activeCreatorIds, setActiveCreatorIds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [remaining, setRemaining] = useState(null);
@@ -362,18 +364,24 @@ export default function StartSitPage() {
       ]);
 
       setSubscription(subResult.data);
-      setIsDashboardUser(!!(ownProfileResult.data && (ownProfileResult.data.role === "admin" || ownProfileResult.data.is_creator)));
+      const realIsDashboardUserNow = !!(ownProfileResult.data && (ownProfileResult.data.role === "admin" || ownProfileResult.data.is_creator));
+      setRealIsDashboardUser(realIsDashboardUserNow);
+      const cookieViewMode = getViewMode();
+      setViewModeState(cookieViewMode);
       setActiveCreatorIds((activeCreatorsResult.creators || []).map((c) => c.creator_id));
 
-      // Same isSubscribed formula as below — computed here too since state
-      // updates above aren't visible until the next render.
-      const isDashboardUserNow = !!(ownProfileResult.data && (ownProfileResult.data.role === "admin" || ownProfileResult.data.is_creator));
+      // Same isSubscribed formula as below (including the view-mode
+      // simulation) — computed here too since state updates above aren't
+      // visible until the next render.
+      const effectiveViewModeNow = realIsDashboardUserNow ? cookieViewMode : "real";
+      const isDashboardUserNow = effectiveViewModeNow === "real" ? realIsDashboardUserNow : false;
       const isFlatAccessGrantedNow = subResult.data?.plan_type === "flat_access"
         && subResult.data?.status === "active"
         && (activeCreatorsResult.creators || []).length > 0;
-      const isSubscribedNow = isDashboardUserNow
+      const isSubscribedRawNow = isDashboardUserNow
         || (!!subResult.data && subResult.data.plan_type !== "flat_access" && subResult.data.status === "active")
         || isFlatAccessGrantedNow;
+      const isSubscribedNow = effectiveViewModeNow === "subscriber" ? true : effectiveViewModeNow === "free" ? false : isSubscribedRawNow;
 
       if (user && !isSubscribedNow) {
         fetch("/api/start-sit/usage", { headers: { Authorization: `Bearer ${session.access_token}` } })
@@ -387,12 +395,19 @@ export default function StartSitPage() {
     load();
   }, []);
 
+  // Simulated preview for staff (see lib/viewMode.js) — a non-staff user's
+  // view_mode cookie is ignored since effectiveViewMode only reads it when
+  // realIsDashboardUser (the server-verified profiles lookup) is true.
+  const effectiveViewMode = realIsDashboardUser ? viewMode : "real";
+  const isDashboardUser = effectiveViewMode === "real" ? realIsDashboardUser : false;
+
   const isFlatAccessGranted = subscription?.plan_type === "flat_access"
     && subscription?.status === "active"
     && activeCreatorIds.length > 0;
-  const isSubscribed = isDashboardUser
+  const isSubscribedRaw = isDashboardUser
     || (!!subscription && subscription.plan_type !== "flat_access" && subscription.status === "active")
     || isFlatAccessGranted;
+  const isSubscribed = effectiveViewMode === "subscriber" ? true : effectiveViewMode === "free" ? false : isSubscribedRaw;
 
   // Creators/admins get the tool now as beta testers; regular subscribers see a
   // "coming soon" notice until public launch.

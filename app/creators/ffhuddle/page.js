@@ -6,6 +6,7 @@ import PostCard from "@/app/components/PostCard";
 import CreatorAvatar from "@/app/components/CreatorAvatar";
 import PromoPrice from "@/app/components/PromoPrice";
 import { isPromoActive } from "@/lib/promo";
+import { getViewMode } from "@/lib/viewMode";
 
 export default function RedraftKingPage() {
   const promoActive = isPromoActive();
@@ -15,7 +16,8 @@ export default function RedraftKingPage() {
   const [creatorProfile, setCreatorProfile] = useState(null);
   const [rankingsUpdatedAt, setRankingsUpdatedAt] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isDashboardUser, setIsDashboardUser] = useState(false);
+  const [realIsDashboardUser, setRealIsDashboardUser] = useState(false);
+  const [viewMode, setViewModeState] = useState("real");
   const [activeCreatorIds, setActiveCreatorIds] = useState([]);
 
   useEffect(() => {
@@ -41,7 +43,8 @@ export default function RedraftKingPage() {
       setPosts(postsResult.data || []);
       setCreatorProfile(profileResult.data || null);
       setRankingsUpdatedAt(rankingsResult.data?.updated_at || null);
-      setIsDashboardUser(!!(ownProfileResult.data && (ownProfileResult.data.role === "admin" || ownProfileResult.data.is_creator)));
+      setRealIsDashboardUser(!!(ownProfileResult.data && (ownProfileResult.data.role === "admin" || ownProfileResult.data.is_creator)));
+      setViewModeState(getViewMode());
       setActiveCreatorIds((activeCreatorsResult.creators || []).map((c) => c.creator_id));
       supabase.from("events").insert({ event_type: "page_view", creator_id: "ffhuddle", user_id: user?.id ?? null }).then(() => {}).catch(() => {});
       setLoading(false);
@@ -49,12 +52,19 @@ export default function RedraftKingPage() {
     load();
   }, []);
 
+  // Simulated preview for staff (see lib/viewMode.js) — a non-staff user's
+  // view_mode cookie is ignored since effectiveViewMode only reads it when
+  // realIsDashboardUser (the server-verified profiles lookup) is true.
+  const effectiveViewMode = realIsDashboardUser ? viewMode : "real";
+  const isDashboardUser = effectiveViewMode === "real" ? realIsDashboardUser : false;
+
   const isFlatAccessGranted = subscription?.plan_type === "flat_access"
     && subscription?.status === "active"
     && activeCreatorIds.includes("ffhuddle");
-  const isSubscribed = isDashboardUser
+  const isSubscribedRaw = isDashboardUser
     || (!!subscription && subscription.plan_type !== "flat_access" && subscription.status === "active")
     || isFlatAccessGranted;
+  const isSubscribed = effectiveViewMode === "subscriber" ? true : effectiveViewMode === "free" ? false : isSubscribedRaw;
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading...</div>;
 

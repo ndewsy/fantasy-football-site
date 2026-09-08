@@ -12,6 +12,7 @@ import { riskColor } from "@/lib/riskColor";
 import ConsensusMovementWidget from "@/app/components/ConsensusMovementWidget";
 import { teamColors } from "@/lib/teamColors";
 import { DST_FORMAT, KICKER_FORMAT } from "@/lib/dstKickerFormats";
+import { getViewMode } from "@/lib/viewMode";
 
 const FORMATS = ["Redraft 1QB", "Redraft SF", "Dynasty 1QB", "Dynasty SF"];
 const FORMAT_TABS = [...FORMATS, "DST/K"];
@@ -184,11 +185,12 @@ export default function Home() {
   const [rankingsCache, setRankingsCache] = useState({});
   const [rankingsLoading, setRankingsLoading] = useState(false);
   const [user, setUser] = useState(null);
-  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [rawIsSubscribed, setRawIsSubscribed] = useState(false);
   const [authLoaded, setAuthLoaded] = useState(false);
   const [playerPool, setPlayerPool] = useState([]);
   const [poolLoaded, setPoolLoaded] = useState(false);
-  const [isDashboardUser, setIsDashboardUser] = useState(false);
+  const [realIsDashboardUser, setRealIsDashboardUser] = useState(false);
+  const [viewMode, setViewModeState] = useState("real");
   const [showCreatorColumns, setShowCreatorColumns] = useState(true);
   const [search, setSearch] = useState("");
   const [posFilter, setPosFilter] = useState("All");
@@ -249,13 +251,21 @@ export default function Home() {
           supabase.from("subscriptions").select("status").eq("user_id", user.id).eq("status", "active").maybeSingle(),
           supabase.from("profiles").select("role, is_creator").eq("id", user.id).maybeSingle(),
         ]);
-        setIsSubscribed(!!sub);
-        setIsDashboardUser(!!(prof && (prof.role === "admin" || prof.is_creator)));
+        setRawIsSubscribed(!!sub);
+        setRealIsDashboardUser(!!(prof && (prof.role === "admin" || prof.is_creator)));
+        setViewModeState(getViewMode());
       }
       setAuthLoaded(true);
     }
     loadAuth();
   }, []);
+
+  // Simulated preview for staff (see lib/viewMode.js) — a non-staff user's
+  // view_mode cookie is ignored since effectiveViewMode only reads it when
+  // realIsDashboardUser (the server-verified profiles lookup) is true.
+  const effectiveViewMode = realIsDashboardUser ? viewMode : "real";
+  const isDashboardUser = effectiveViewMode === "real" ? realIsDashboardUser : false;
+  const isSubscribed = effectiveViewMode === "subscriber" ? true : effectiveViewMode === "free" ? false : rawIsSubscribed;
 
   // Fire page_view when a creator tab is selected
   useEffect(() => {
