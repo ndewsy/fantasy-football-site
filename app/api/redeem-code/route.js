@@ -1,6 +1,8 @@
+import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
-let _supabase;
+let _stripe, _supabase;
+const stripe = () => (_stripe ??= new Stripe(process.env.STRIPE_SECRET_KEY));
 const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY));
 
 export async function POST(request) {
@@ -27,27 +29,21 @@ export async function POST(request) {
     return Response.json({ error: 'You already have an active subscription.' }, { status: 400 });
   }
 
-  const trialEndsAt = new Date();
-  trialEndsAt.setMonth(trialEndsAt.getMonth() + 1);
-
-  const { error } = await supabase().from('subscriptions').upsert(
-    {
-      user_id: user.id,
-      status: 'active',
-      plan_type: 'free_trial',
-      trial_ends_at: trialEndsAt.toISOString(),
-      stripe_customer_id: null,
-      included_creator: null,
-      add_on_creators: [],
-      referral_creator_id: null,
+  // A real Stripe subscription with a trial period — collects a card now so
+  // it can auto-convert to standard $10/mo billing when the trial ends,
+  // instead of the old no-card grant that just expired with nothing to renew.
+  const session = await stripe().checkout.sessions.create({
+    payment_method_types: ['card'],
+    mode: 'subscription',
+    line_items: [{ price: 'price_1TrMBuA2rwv8VsfE9AOhxBis', quantity: 1 }],
+    subscription_data: {
+      trial_period_days: 30,
+      metadata: { user_id: user.id, plan_type: 'free_trial' },
     },
-    { onConflict: 'user_id' }
-  );
+    metadata: { user_id: user.id, plan_type: 'free_trial' },
+    success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/subscribe/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/subscribe`,
+  });
 
-  if (error) {
-    console.error('[/api/redeem-code] upsert failed:', error);
-    return Response.json({ error: 'Something went wrong. Please try again.' }, { status: 500 });
-  }
-
-  return Response.json({ ok: true, trial_ends_at: trialEndsAt.toISOString() });
+  return Response.json({ url: session.url });
 }

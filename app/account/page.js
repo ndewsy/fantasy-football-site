@@ -174,6 +174,16 @@ export default function AccountPage() {
   const trialEndsLabel = subscription?.trial_ends_at
     ? new Date(subscription.trial_ends_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
     : null;
+  const daysUntilExpiry = subscription?.trial_ends_at
+    ? Math.ceil((new Date(subscription.trial_ends_at) - new Date()) / (1000 * 60 * 60 * 24))
+    : null;
+  // No stripe_customer_id means no card is on file (the old no-card free
+  // trial, or the one-time promo purchase) — there's nothing Stripe can
+  // auto-charge, so prompt them to add a payment method before it lapses.
+  const needsPaymentMethod = (isFreeTrial || isPromo5mo)
+    && !subscription?.stripe_customer_id
+    && daysUntilExpiry !== null
+    && daysUntilExpiry <= 14;
 
   return (
     <main className="min-h-screen text-ink lg:pl-56">
@@ -271,6 +281,23 @@ export default function AccountPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500 text-sm">Access until</span>
                   <span className="font-medium">{trialEndsLabel}</span>
+                </div>
+              )}
+
+              {needsPaymentMethod && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
+                  <p className="text-amber-700 text-sm font-medium mb-2">
+                    {daysUntilExpiry <= 0
+                      ? "Your access has ended."
+                      : `Your access ends in ${daysUntilExpiry} day${daysUntilExpiry === 1 ? "" : "s"}.`}
+                    {" "}Add a payment method to keep it.
+                  </p>
+                  <a
+                    href="/subscribe"
+                    className="inline-block bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold px-5 py-2 rounded-lg text-sm transition-all"
+                  >
+                    Add Payment Method — $10/mo
+                  </a>
                 </div>
               )}
 

@@ -92,7 +92,7 @@ export default function SubscribePage() {
       setPromoSubmitting(false);
       return;
     }
-    router.push('/account');
+    window.location.href = body.url;
   }
 
   if (!authLoaded) {
@@ -233,8 +233,11 @@ export default function SubscribePage() {
                 disabled={promoSubmitting || !promoCode.trim()}
                 className="w-full mt-4 bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold py-3 rounded-xl transition-all disabled:opacity-60"
               >
-                {promoSubmitting ? "Redeeming..." : "Redeem Code"}
+                {promoSubmitting ? "Redirecting..." : "Redeem Code"}
               </button>
+              <p className="text-center text-gray-400 text-xs mt-3">
+                You&apos;ll enter payment info to start your free month — you won&apos;t be charged until it ends, and you can cancel anytime before then.
+              </p>
             </div>
           )}
         </div>

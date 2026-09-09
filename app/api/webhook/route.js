@@ -39,6 +39,24 @@ export async function POST(request) {
           },
           { onConflict: 'user_id' }
         );
+      } else if (session.metadata?.plan_type === 'free_trial') {
+        // Real Stripe subscription with a trial period — read back its actual
+        // trial_end rather than recomputing +30 days, so it can't drift from
+        // what Stripe will actually act on when the trial converts to billing.
+        const stripeSub = await stripe().subscriptions.retrieve(session.subscription);
+        await supabase().from('subscriptions').upsert(
+          {
+            user_id: userId,
+            status: 'active',
+            stripe_customer_id: session.customer,
+            plan_type: 'free_trial',
+            trial_ends_at: new Date(stripeSub.trial_end * 1000).toISOString(),
+            referral_creator_id: null,
+            included_creator: null,
+            add_on_creators: [],
+          },
+          { onConflict: 'user_id' }
+        );
       } else {
         const planType = session.metadata?.plan_type === 'flat_access' ? 'flat_access' : 'legacy';
         await supabase().from('subscriptions').upsert(
@@ -57,6 +75,34 @@ export async function POST(request) {
         );
       }
     }
+  }
+
+  // Keeps subscriptions.status/plan_type in sync with what Stripe actually
+  // has — previously nothing synced a cancellation, a failed payment, or
+  // (for the new free-trial flow) Stripe's own trial-to-paid conversion, so
+  // our table could silently drift from reality.
+  if (event.type === 'customer.subscription.updated') {
+    const sub = event.data.object;
+    if (sub.status === 'active' && sub.metadata?.plan_type === 'free_trial') {
+      // Stripe's trial ended and billing kicked in on its own — from here
+      // Stripe owns the lifecycle, so hand this off to a real plan_type and
+      // clear trial_ends_at so expire-free-trials (which only ever targets
+      // free_trial/promo_5mo rows) leaves it alone.
+      await supabase().from('subscriptions')
+        .update({ plan_type: 'legacy', trial_ends_at: null })
+        .eq('stripe_customer_id', sub.customer);
+    } else if (['canceled', 'unpaid', 'past_due'].includes(sub.status)) {
+      await supabase().from('subscriptions')
+        .update({ status: 'expired' })
+        .eq('stripe_customer_id', sub.customer);
+    }
+  }
+
+  if (event.type === 'customer.subscription.deleted') {
+    const sub = event.data.object;
+    await supabase().from('subscriptions')
+      .update({ status: 'expired' })
+      .eq('stripe_customer_id', sub.customer);
   }
 
   return new Response('OK', { status: 200 });
