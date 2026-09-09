@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Montserrat } from "next/font/google";
 import { createClient } from "@/lib/supabase";
 import ViewModeToggle from "@/app/components/ViewModeToggle";
+import TrialReminderModal from "@/app/components/TrialReminderModal";
 
 const montserrat = Montserrat({ subsets: ["latin"], display: "swap" });
 
@@ -114,6 +115,8 @@ export default function NavBar({ activePath = "/" }) {
   const [user, setUser] = useState(null);
   const [isDashboardUser, setIsDashboardUser] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [trialDaysLeft, setTrialDaysLeft] = useState(null);
+  const [showTrialReminder, setShowTrialReminder] = useState(false);
   const navRef = useRef(null);
 
   useEffect(() => {
@@ -122,8 +125,30 @@ export default function NavBar({ activePath = "/" }) {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
       if (user) {
-        const { data: prof } = await supabase.from("profiles").select("role, is_creator").eq("id", user.id).maybeSingle();
+        const [{ data: prof }, { data: sub }] = await Promise.all([
+          supabase.from("profiles").select("role, is_creator").eq("id", user.id).maybeSingle(),
+          supabase.from("subscriptions").select("plan_type, status, trial_ends_at, stripe_customer_id").eq("user_id", user.id).maybeSingle(),
+        ]);
         setIsDashboardUser(!!(prof && (prof.role === "admin" || prof.is_creator)));
+
+        // Legacy no-card trial users (see lib/viewMode.js-style comment
+        // pattern) — Stripe has nothing to auto-charge for them, so remind
+        // them in-app once a day during their final week instead.
+        const isExpiringNoCardTrial = sub?.plan_type === "free_trial" && sub?.status === "active" && !sub?.stripe_customer_id;
+        if (isExpiringNoCardTrial && sub.trial_ends_at) {
+          const daysLeft = Math.ceil((new Date(sub.trial_ends_at) - new Date()) / (1000 * 60 * 60 * 24));
+          if (daysLeft <= 7) {
+            setTrialDaysLeft(daysLeft);
+            const today = new Date().toISOString().slice(0, 10);
+            const storageKey = `trial_reminder_shown_${user.id}`;
+            let lastShown = null;
+            try { lastShown = localStorage.getItem(storageKey); } catch {}
+            if (lastShown !== today) {
+              setShowTrialReminder(true);
+              try { localStorage.setItem(storageKey, today); } catch {}
+            }
+          }
+        }
       }
     }
     load();
@@ -243,6 +268,10 @@ export default function NavBar({ activePath = "/" }) {
           </div>
         </div>
       </nav>
+
+      {showTrialReminder && (
+        <TrialReminderModal daysLeft={trialDaysLeft} onClose={() => setShowTrialReminder(false)} />
+      )}
     </>
   );
 }

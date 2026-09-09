@@ -7,7 +7,7 @@ const stripe = () => (_stripe ??= new Stripe(process.env.STRIPE_SECRET_KEY));
 const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY));
 
 export async function POST(request) {
-  const { referralCode } = await request.json();
+  const { referralCode, trialOffer } = await request.json();
   const authHeader = request.headers.get('Authorization');
   const token = authHeader?.replace('Bearer ', '');
 
@@ -18,6 +18,23 @@ export async function POST(request) {
   }
   if (!userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // The expiring-trial reminder popup offers the same one-time promo pricing
+  // outside the original calendar window — only to legacy no-card trial
+  // users it actually applies to, verified server-side so the discount
+  // can't just be requested by anyone.
+  let trialOfferEligible = false;
+  if (trialOffer) {
+    const { data: sub } = await supabase()
+      .from('subscriptions')
+      .select('plan_type, status, stripe_customer_id')
+      .eq('user_id', userId)
+      .maybeSingle();
+    trialOfferEligible = sub?.plan_type === 'free_trial' && sub?.status === 'active' && !sub?.stripe_customer_id;
+    if (!trialOfferEligible) {
+      return Response.json({ error: 'This offer is not available for your account.' }, { status: 403 });
+    }
   }
 
   let referralCreatorId = null;
@@ -65,8 +82,9 @@ export async function POST(request) {
   }
 
   // August promo: $10 one-time for 5 months instead of $10/month recurring.
-  // Auto-applies to everyone until the cutoff — no code required.
-  const promoActive = isPromoActive();
+  // Auto-applies to everyone until the cutoff — no code required. The same
+  // pricing also applies outside that window for an eligible trialOffer request.
+  const promoActive = isPromoActive() || trialOfferEligible;
 
   // Session metadata alone doesn't propagate to the recurring charges a
   // subscription generates later, or to the charge behind a one-time payment
@@ -82,34 +100,40 @@ export async function POST(request) {
     referral_creator_id: referralCreatorId || '',
   };
 
-  const session = await stripe().checkout.sessions.create({
-    payment_method_types: ['card'],
-    ...(promoActive
-      ? {
-          mode: 'payment',
-          line_items: [{
-            price_data: {
-              currency: 'usd',
-              unit_amount: 1000,
-              product_data: {
-                name: 'Full Access — August Promo (5 months)',
-                description: 'One-time payment for 5 months of full access to all rankings and creator communities.',
+  let session;
+  try {
+    session = await stripe().checkout.sessions.create({
+      payment_method_types: ['card'],
+      ...(promoActive
+        ? {
+            mode: 'payment',
+            line_items: [{
+              price_data: {
+                currency: 'usd',
+                unit_amount: 1000,
+                product_data: {
+                  name: 'Full Access — August Promo (5 months)',
+                  description: 'One-time payment for 5 months of full access to all rankings and creator communities.',
+                },
               },
-            },
-            quantity: 1,
-          }],
-          payment_intent_data: { metadata: attributionMetadata },
-        }
-      : {
-          mode: 'subscription',
-          line_items: [{ price: 'price_1TrMBuA2rwv8VsfE9AOhxBis', quantity: 1 }],
-          subscription_data: { metadata: attributionMetadata },
-        }),
-    allow_promotion_codes: true,
-    metadata: attributionMetadata,
-    success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/subscribe/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/subscribe`,
-  });
+              quantity: 1,
+            }],
+            payment_intent_data: { metadata: attributionMetadata },
+          }
+        : {
+            mode: 'subscription',
+            line_items: [{ price: 'price_1TrMBuA2rwv8VsfE9AOhxBis', quantity: 1 }],
+            subscription_data: { metadata: attributionMetadata },
+          }),
+      allow_promotion_codes: true,
+      metadata: attributionMetadata,
+      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/subscribe/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/subscribe`,
+    });
+  } catch (err) {
+    console.error('[/api/checkout] Stripe session creation failed:', err.message);
+    return Response.json({ error: 'Something went wrong starting checkout. Please try again.' }, { status: 500 });
+  }
 
   return Response.json({ url: session.url });
 }
