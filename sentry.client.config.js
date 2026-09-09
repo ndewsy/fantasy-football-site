@@ -9,4 +9,7 @@ Sentry.init({
   integrations: [
     Sentry.replayIntegration(),
   ],
+  // Local `npm run dev` runs (yours or an agent's) shouldn't page anyone —
+  // only the deployed production site should ever report to Sentry.
+  enabled: process.env.NODE_ENV === "production",
 });
