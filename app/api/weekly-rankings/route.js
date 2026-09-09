@@ -3,10 +3,14 @@ import { createClient } from '@supabase/supabase-js';
 let _supabase;
 const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY));
 
-const POSITIONS = ['QB', 'RB', 'WR', 'TE', 'FLEX'];
+const POSITIONS = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'DST', 'K'];
+
+function emptyPositionMap() {
+  return Object.fromEntries(POSITIONS.map((p) => [p, []]));
+}
 
 function groupByPosition(rows) {
-  const grouped = { QB: [], RB: [], WR: [], TE: [], FLEX: [] };
+  const grouped = emptyPositionMap();
   for (const row of rows) grouped[row.position]?.push(row);
   return grouped;
 }
@@ -48,7 +52,7 @@ export async function GET(request) {
   const weeks = {};
   for (const row of data || []) {
     const key = String(row.week);
-    if (!weeks[key]) weeks[key] = { QB: [], RB: [], WR: [], TE: [], FLEX: [] };
+    if (!weeks[key]) weeks[key] = emptyPositionMap();
     weeks[key][row.position]?.push(row);
   }
   return Response.json({ weeks });

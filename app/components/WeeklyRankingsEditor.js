@@ -10,6 +10,8 @@ const POSITIONS = [
   { id: "WR", label: "WR" },
   { id: "TE", label: "TE" },
   { id: "FLEX", label: "FLEX" },
+  { id: "DST", label: "DST" },
+  { id: "K", label: "K" },
 ];
 const WEEKS = Array.from({ length: 18 }, (_, i) => i + 1);
 
