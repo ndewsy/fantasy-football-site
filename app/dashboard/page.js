@@ -123,7 +123,7 @@ export default function DashboardPage() {
   const [subscriberUsers, setSubscriberUsers] = useState([]);
   const [subscriberUsersLoading, setSubscriberUsersLoading] = useState(false);
   const [revealedEmails, setRevealedEmails] = useState(new Set());
-  const [subscriberCategoryFilters, setSubscriberCategoryFilters] = useState(new Set(["admin", "creator", "paying", "nonpaying"])); // archive is off by default
+  const [subscriberCategoryFilters, setSubscriberCategoryFilters] = useState(new Set(["admin", "creator", "monthly", "promo", "nonpaying"])); // archive is off by default
   const [subscriberSearch, setSubscriberSearch] = useState("");
 
   // Revenue & Payouts state
@@ -643,13 +643,16 @@ export default function DashboardPage() {
   // Test accounts (email local part contains "+test") are archived regardless of
   // role, so they don't clutter the real admin/creator/subscriber counts. Beyond
   // that, role wins over subscription status — admins/creators get free platform
-  // access regardless of any subscription row they happen to have.
+  // access regardless of any subscription row they happen to have. Paying splits
+  // into "promo" (the one-time August-promo-priced deal, incl. the trial-reminder
+  // popup's reuse of it) vs. "monthly" (an ordinary recurring subscription).
   function subscriberCategory(u) {
     if ((u.email || "").split("@")[0].toLowerCase().includes("+test")) return "archive";
     if (u.role === "admin") return "admin";
     if (u.role === "creator" || u.is_creator) return "creator";
     const isPaying = u.subscription?.status === "active" && u.subscription.plan_type !== "free_trial";
-    return isPaying ? "paying" : "nonpaying";
+    if (!isPaying) return "nonpaying";
+    return u.subscription.plan_type === "promo_5mo" ? "promo" : "monthly";
   }
 
   function toggleSubscriberCategory(category) {
@@ -1694,11 +1697,12 @@ export default function DashboardPage() {
 
         {/* ── Subscribers Tab ── */}
         {tab === "subscribers" && (() => {
-          const CATEGORY_LABELS = { admin: "Admin", creator: "Creator", paying: "Paying Subscriber", nonpaying: "Non-Paying Subscriber", archive: "Archive" };
+          const CATEGORY_LABELS = { admin: "Admin", creator: "Creator", monthly: "Monthly Subscriber", promo: "August Promo", nonpaying: "Non-Paying Subscriber", archive: "Archive" };
           const CATEGORY_ACTIVE_CLASS = {
             admin: "bg-red-600 text-white",
             creator: "bg-blue-600 text-white",
-            paying: "bg-green-600 text-white",
+            monthly: "bg-green-600 text-white",
+            promo: "bg-purple-600 text-white",
             nonpaying: "bg-gray-500 text-white",
             archive: "bg-amber-500 text-white",
           };
@@ -1711,10 +1715,32 @@ export default function DashboardPage() {
             return name.includes(search) || email.includes(search);
           });
 
+          const categoryCounts = subscriberUsers.reduce((acc, u) => {
+            const cat = subscriberCategory(u);
+            acc[cat] = (acc[cat] || 0) + 1;
+            return acc;
+          }, {});
+          const totalPaying = (categoryCounts.monthly || 0) + (categoryCounts.promo || 0);
+          const totalNonPaying = categoryCounts.nonpaying || 0;
+
           return (
           <div>
             <h2 className="text-lg font-bold mb-3">Subscribers</h2>
             <p className="text-gray-500 text-sm mb-4">Click a name to reveal their email.</p>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 lg:gap-4 mb-6">
+              {[
+                { label: "Paying", value: totalPaying, color: "text-green-600" },
+                { label: "Non-Paying", value: totalNonPaying, color: "text-gray-500" },
+                { label: "August Promo", value: categoryCounts.promo || 0, color: "text-purple-600" },
+                { label: "Monthly", value: categoryCounts.monthly || 0, color: "text-blue-600" },
+              ].map(({ label, value, color }) => (
+                <div key={label} className="bg-card/70 backdrop-blur-md border border-card/80 shadow-lg rounded-xl p-2 lg:p-5">
+                  <p className={`text-lg lg:text-2xl font-bold ${color}`}>{value}</p>
+                  <p className="text-ink text-[10px] lg:text-sm font-medium mt-0.5 lg:mt-1">{label}</p>
+                </div>
+              ))}
+            </div>
 
             <div className="flex flex-wrap items-center gap-2 mb-4">
               {Object.keys(CATEGORY_LABELS).map(cat => (
