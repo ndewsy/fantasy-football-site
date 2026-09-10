@@ -51,6 +51,11 @@ function CreatorCategoryCard({ creatorName, entries }) {
                 <p className="text-sm font-medium text-ink truncate">{e.players?.name || `#${e.player_id}`}</p>
                 <p className="text-xs text-gray-400">{e.players?.position} · {e.players?.team}</p>
               </div>
+              {e.players?.percent_rostered !== null && e.players?.percent_rostered !== undefined && (
+                <span className="text-[11px] text-gray-400 shrink-0" title="% of ESPN leagues rostering this player">
+                  {Math.round(e.players.percent_rostered)}% rost.
+                </span>
+              )}
               <TermBadge term={e.term} />
               {e.faab_pct !== null && e.faab_pct !== undefined && (
                 <span className="text-xs font-semibold text-ink shrink-0">{Number(e.faab_pct).toFixed(1)}%</span>

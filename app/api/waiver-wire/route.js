@@ -37,7 +37,7 @@ export async function GET(request) {
   const position = searchParams.get('position');
   const week = weekParam ? parseInt(weekParam, 10) : null;
 
-  const selectCols = 'id, creator_id, week, category, position, player_id, term, faab_pct, rank, players(name, position, team, espn_id, sleeper_id)';
+  const selectCols = 'id, creator_id, week, category, position, player_id, term, faab_pct, rank, players(name, position, team, espn_id, sleeper_id, percent_rostered)';
 
   if (creator_id && week && category) {
     if (!CATEGORIES.includes(category)) return Response.json({ error: 'Invalid category' }, { status: 400 });

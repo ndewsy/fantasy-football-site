@@ -44,7 +44,7 @@ export default function WaiverWireEditor({ creatorId, creatorLabel }) {
       for (let from = 0; ; from += PAGE) {
         const { data } = await supabase
           .from("players")
-          .select("id, name, position, team, sleeper_id, espn_id")
+          .select("id, name, position, team, sleeper_id, espn_id, percent_rostered")
           .order("id", { ascending: true })
           .range(from, from + PAGE - 1);
         all.push(...(data || []));
@@ -212,6 +212,9 @@ export default function WaiverWireEditor({ creatorId, creatorLabel }) {
                   >
                     <span className="font-medium text-ink">{p.name}</span>
                     <span className="text-xs text-gray-400">{p.position} · {p.team}</span>
+                    {p.percent_rostered !== null && p.percent_rostered !== undefined && (
+                      <span className="text-[11px] text-gray-400 ml-auto shrink-0">{Math.round(p.percent_rostered)}% rost.</span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -232,6 +235,11 @@ export default function WaiverWireEditor({ creatorId, creatorLabel }) {
                     <p className="text-sm font-medium text-ink truncate">{p?.name || `#${row.player_id}`}</p>
                     <p className="text-xs text-gray-400">{p?.position} · {p?.team}</p>
                   </div>
+                  {p?.percent_rostered !== null && p?.percent_rostered !== undefined && (
+                    <span className="text-[11px] text-gray-400 shrink-0" title="% of ESPN leagues rostering this player">
+                      {Math.round(p.percent_rostered)}% rost.
+                    </span>
+                  )}
                   {isPositional && (
                     <>
                       <div className="flex items-center gap-1 shrink-0">
