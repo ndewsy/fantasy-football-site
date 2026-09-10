@@ -17,13 +17,12 @@ import { getViewMode } from "@/lib/viewMode";
 import { getCurrentWeekFromGames } from "@/lib/currentWeek";
 
 const FORMATS = ["Redraft 1QB", "Redraft SF", "Dynasty 1QB", "Dynasty SF"];
-const FORMAT_TABS = [...FORMATS, "DST/K", "Weekly Rankings"];
+const FORMAT_TABS = ["Weekly Rankings", ...FORMATS, "DST/K"];
 const WEEKLY_POSITIONS = [
   { id: "QB", label: "QB" },
   { id: "RB", label: "RB" },
   { id: "WR", label: "WR" },
   { id: "TE", label: "TE" },
-  { id: "FLEX", label: "FLEX" },
   { id: "DST", label: "DST" },
   { id: "K", label: "K" },
 ];

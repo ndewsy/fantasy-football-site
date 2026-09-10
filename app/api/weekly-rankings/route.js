@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 let _supabase;
 const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY));
 
-const POSITIONS = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'DST', 'K'];
+const POSITIONS = ['QB', 'RB', 'WR', 'TE', 'DST', 'K'];
 
 function emptyPositionMap() {
   return Object.fromEntries(POSITIONS.map((p) => [p, []]));
