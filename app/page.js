@@ -1282,13 +1282,13 @@ export default function Home() {
           onClick={() => setPlayerModalOpen(false)}
         >
           <div
-            className="bg-card/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-card/80 w-full max-w-lg relative"
+            className="bg-card/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-card/80 ring-1 ring-white/10 w-full max-w-xl relative"
             onClick={e => e.stopPropagation()}
           >
             {/* Close — stays outside the scrollable body below so it's always reachable */}
             <button
               onClick={() => setPlayerModalOpen(false)}
-              className="absolute top-4 right-4 z-10 text-white/80 hover:text-white transition-colors text-lg leading-none font-medium"
+              className="absolute top-5 right-5 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-black/20 backdrop-blur-sm text-white/80 hover:text-white hover:bg-black/30 transition-colors text-lg leading-none font-medium"
             >
               ✕
             </button>
@@ -1297,23 +1297,30 @@ export default function Home() {
                 viewport, and the page behind is scroll-locked while the modal
                 is open, so without its own scroll region the bottom of the
                 card was simply unreachable. */}
-            <div className="max-h-[85vh] overflow-y-auto rounded-2xl">
+            <div className="max-h-[85vh] overflow-y-auto rounded-3xl">
 
             {/* Header */}
             <div
-              className="relative p-6 rounded-t-2xl overflow-hidden flex items-end gap-4"
+              className="relative p-7 sm:p-8 rounded-t-3xl overflow-hidden flex items-end gap-5"
               style={{backgroundImage: modalBannerGradient(selectedPlayer.team)}}
             >
-              <PlayerHeadshot espnId={selectedPlayer.pos === "DST" ? null : selectedPlayer.espn_id} sleeperId={selectedPlayer.pos === "DST" ? null : selectedPlayer.sleeper_id} name={selectedPlayer.name} size="xl" shape="square" label={selectedPlayer.pos === "DST" ? selectedPlayer.team : null} />
-              <div className="pb-0.5 min-w-0">
-                <h2 className={`${anton.className} text-2xl sm:text-3xl text-white uppercase tracking-tight leading-none mb-1.5 truncate`}>{selectedPlayer.name}</h2>
+              {/* Glossy highlight for a premium sheen, independent of team color */}
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{ backgroundImage: "radial-gradient(ellipse 120% 80% at 20% -10%, rgba(255,255,255,0.18), transparent 60%)" }}
+              />
+              <div className="relative rounded-xl ring-2 ring-white/25 shadow-xl shrink-0">
+                <PlayerHeadshot espnId={selectedPlayer.pos === "DST" ? null : selectedPlayer.espn_id} sleeperId={selectedPlayer.pos === "DST" ? null : selectedPlayer.sleeper_id} name={selectedPlayer.name} size="2xl" shape="square" label={selectedPlayer.pos === "DST" ? selectedPlayer.team : null} />
+              </div>
+              <div className="relative pb-0.5 min-w-0">
+                <h2 className={`${anton.className} text-3xl sm:text-4xl text-white uppercase tracking-tight leading-none mb-2 truncate`}>{selectedPlayer.name}</h2>
                 {(selectedPlayer.age || selectedPlayer.height_inches || selectedPlayer.weight_lbs) && (
-                  <p className="text-blue-100 text-sm font-medium mb-2">
+                  <p className="inline-flex items-center gap-1 bg-black/25 backdrop-blur-sm text-white text-xs font-semibold px-2.5 py-1 rounded-full mb-2.5">
                     {[
-                      selectedPlayer.age ? `${selectedPlayer.age}` : null,
+                      selectedPlayer.age ? `${selectedPlayer.age} YRS` : null,
                       selectedPlayer.height_inches ? `${Math.floor(selectedPlayer.height_inches / 12)}'${selectedPlayer.height_inches % 12}"` : null,
                       selectedPlayer.weight_lbs ? `${selectedPlayer.weight_lbs} LBS` : null,
-                    ].filter(Boolean).join(" | ")}
+                    ].filter(Boolean).join("  ·  ")}
                   </p>
                 )}
                 <div className="flex items-center gap-2">
@@ -1336,7 +1343,7 @@ export default function Home() {
             </div>
 
             {/* Risk Rating — each creator sets their own, only editable from their own tab; Consensus averages across creators */}
-            <div className="px-6 pt-5">
+            <div className="px-7 pt-6">
               <div className="flex items-center justify-between mb-1.5">
                 <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
                   Risk Rating{isConsensusTab && " · Consensus"}
@@ -1420,13 +1427,13 @@ export default function Home() {
 
             {/* Waiver Wire — this week's mentions across creators, if any */}
             {!waiverMentionsLoading && waiverMentions.length > 0 && (
-              <div className="px-6 pt-5">
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+              <div className="px-7 pt-6 border-t border-white/10">
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2.5">
                   Waiver Wire · Week {weeklyCurrentNflWeek}
                 </h3>
                 <div className="space-y-2">
                   {waiverMentions.map((m) => (
-                    <div key={m.id} className="flex items-center justify-between gap-2 bg-gray-50 rounded-lg px-3 py-2">
+                    <div key={m.id} className="flex items-center justify-between gap-2 bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="text-xs font-semibold text-ink shrink-0">
                           {ACTIVE_CREATORS.find((c) => c.id === m.creator_id)?.short || m.creator_id}
@@ -1455,8 +1462,8 @@ export default function Home() {
 
             {/* Previous Season Stats */}
             {!seasonStatsLoading && seasonStats && (
-              <div className="px-6 pt-5">
-                <div className="flex items-center justify-between mb-2">
+              <div className="px-7 pt-6 border-t border-white/10">
+                <div className="flex items-center justify-between mb-2.5">
                   <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{seasonStats.season} Season</h3>
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-ink">{seasonStats.fantasy_points} pts</span>
@@ -1467,21 +1474,21 @@ export default function Home() {
                     )}
                   </div>
                 </div>
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
                   {seasonStatLine(seasonStats.position, seasonStats.stats).map((s) => (
-                    <div key={s.label} className="bg-gray-50 rounded-lg px-2 py-1.5 text-center">
+                    <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-2 text-center">
                       <p className="text-sm font-bold text-ink">{s.value}</p>
                       <p className="text-[9px] text-gray-400 uppercase tracking-wide">{s.label}</p>
                     </div>
                   ))}
                 </div>
-                <p className="text-[10px] text-gray-400 mt-1.5">Full PPR scoring · {seasonStats.games_played} games played</p>
+                <p className="text-[10px] text-gray-400 mt-2">Full PPR scoring · {seasonStats.games_played} games played</p>
               </div>
             )}
 
             {/* Rankings table */}
-            <div className="p-6">
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Rankings by Format</h3>
+            <div className="p-7 border-t border-white/10">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3.5">Rankings by Format</h3>
               {playerRankingsLoading ? (
                 <p className="text-gray-400 text-sm py-6 text-center">Loading...</p>
               ) : (
@@ -1489,15 +1496,15 @@ export default function Home() {
                   {/* Active-format indicator dot — sits in the gutter outside the
                       glowing row, aligned to the active row's fixed position (it's
                       always sorted to the first data row, right below the header). */}
-                  <span className="absolute left-0 top-[62px] -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(37,99,235,0.9)]" />
-                  <div className="rounded-xl overflow-hidden border border-gray-100">
+                  <span className="absolute left-0 top-[66px] -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(37,99,235,0.9)]" />
+                  <div className="rounded-xl overflow-hidden border border-white/10">
                     <table className="w-full text-sm">
-                      <thead className="bg-gray-50 text-gray-500">
+                      <thead className="bg-white/5 text-gray-500">
                         <tr>
-                          <th className="text-left px-4 py-2.5 font-medium">Format</th>
-                          <th className="text-center px-4 py-2.5 font-medium">Consensus</th>
-                          <th className="text-center px-4 py-2.5 font-medium">RookieRager</th>
-                          <th className="text-center px-4 py-2.5 font-medium">FFHuddle</th>
+                          <th className="text-left px-4 py-3 font-medium">Format</th>
+                          <th className="text-center px-4 py-3 font-medium">Consensus</th>
+                          <th className="text-center px-4 py-3 font-medium">RookieRager</th>
+                          <th className="text-center px-4 py-3 font-medium">FFHuddle</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1510,13 +1517,13 @@ export default function Home() {
                               className={`border-t transition-colors ${
                                 isActive
                                   ? "relative z-10 border-blue-200 bg-blue-50 ring-2 ring-inset ring-blue-400 shadow-[0_0_18px_rgba(37,99,235,0.45)]"
-                                  : "border-gray-100 hover:bg-gray-50"
+                                  : "border-white/10 hover:bg-white/5"
                               }`}
                             >
-                              <td className="px-4 py-3 font-medium text-ink">{fmt}</td>
-                              <td className="px-4 py-3 text-center text-gray-600">{row.consensus ?? "—"}</td>
-                              <td className="px-4 py-3 text-center text-gray-600">{row.rookierager ?? "—"}</td>
-                              <td className="px-4 py-3 text-center text-gray-600">{row.ffhuddle ?? "—"}</td>
+                              <td className="px-4 py-3.5 font-medium text-ink">{fmt}</td>
+                              <td className="px-4 py-3.5 text-center text-gray-600">{row.consensus ?? "—"}</td>
+                              <td className="px-4 py-3.5 text-center text-gray-600">{row.rookierager ?? "—"}</td>
+                              <td className="px-4 py-3.5 text-center text-gray-600">{row.ffhuddle ?? "—"}</td>
                             </tr>
                           );
                         })}
