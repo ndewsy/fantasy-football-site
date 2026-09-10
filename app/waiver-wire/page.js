@@ -5,8 +5,10 @@ import NavBar from "@/app/components/NavBar";
 import PageTitle from "@/app/components/PageTitle";
 import PlayerHeadshot from "@/app/components/PlayerHeadshot";
 import PillToggle from "@/app/components/PillToggle";
+import PromoPrice from "@/app/components/PromoPrice";
 import { getCurrentWeekFromGames } from "@/lib/currentWeek";
 import { getViewMode } from "@/lib/viewMode";
+import { isPromoActive } from "@/lib/promo";
 
 const WEEKS = Array.from({ length: 18 }, (_, i) => i + 1);
 const CATEGORIES = [
@@ -69,8 +71,10 @@ function CreatorCategoryCard({ creatorName, entries }) {
 }
 
 export default function WaiverWirePage() {
+  const promoActive = isPromoActive();
   const [loading, setLoading] = useState(true);
   const [realIsDashboardUser, setRealIsDashboardUser] = useState(false);
+  const [rawIsSubscribed, setRawIsSubscribed] = useState(false);
   const [viewMode, setViewModeState] = useState("real");
   const [week, setWeek] = useState(1);
   const [category, setCategory] = useState(CATEGORIES[0].id);
@@ -84,15 +88,19 @@ export default function WaiverWirePage() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
 
-      const [profileResult, creatorProfilesResult, gamesResult] = await Promise.all([
+      const [profileResult, subResult, creatorProfilesResult, gamesResult] = await Promise.all([
         user
           ? supabase.from("profiles").select("role, is_creator").eq("id", user.id).maybeSingle()
+          : Promise.resolve({ data: null }),
+        user
+          ? supabase.from("subscriptions").select("status").eq("user_id", user.id).eq("status", "active").maybeSingle()
           : Promise.resolve({ data: null }),
         supabase.from("profiles").select("creator_id, display_name").eq("is_creator", true).not("creator_id", "is", null),
         supabase.from("season_games").select("week, status, kickoff_at").order("kickoff_at", { ascending: true }),
       ]);
 
       setRealIsDashboardUser(!!(profileResult.data && (profileResult.data.role === "admin" || profileResult.data.is_creator)));
+      setRawIsSubscribed(!!subResult.data);
       setViewModeState(getViewMode());
       setCreatorsById(Object.fromEntries((creatorProfilesResult.data || []).map((c) => [c.creator_id, c.display_name || c.creator_id])));
       setWeek(getCurrentWeekFromGames(gamesResult.data || []));
@@ -103,21 +111,20 @@ export default function WaiverWirePage() {
 
   // Simulated preview for staff (see lib/viewMode.js) — a non-staff user's
   // view_mode cookie is ignored since effectiveViewMode only reads it when
-  // realIsDashboardUser (the server-verified profiles lookup) is true. Waiver
-  // Wire has no subscriber tier of its own, so both simulated Subscriber and
-  // Free correctly fall back to the existing "creators only" locked state.
+  // realIsDashboardUser (the server-verified profiles lookup) is true.
   const effectiveViewMode = realIsDashboardUser ? viewMode : "real";
   const isDashboardUser = effectiveViewMode === "real" ? realIsDashboardUser : false;
+  const isSubscribed = effectiveViewMode === "subscriber" ? true : effectiveViewMode === "free" ? false : rawIsSubscribed;
+  const hasFullAccess = isDashboardUser || isSubscribed;
 
   useEffect(() => {
-    if (!isDashboardUser) return;
     setDataLoading(true);
     fetch(`/api/waiver-wire?week=${week}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => setCreators(d?.creators || {}))
       .catch(() => setCreators({}))
       .finally(() => setDataLoading(false));
-  }, [week, isDashboardUser]);
+  }, [week]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading...</div>;
 
@@ -126,53 +133,52 @@ export default function WaiverWirePage() {
       <NavBar activePath="/waiver-wire" />
 
       <div className="max-w-4xl mx-auto px-6 py-12">
-        <PageTitle title="Waiver Wire" subtitle="Beta" />
+        <PageTitle title="Waiver Wire" />
         <p className="text-gray-500 text-center mb-8 max-w-xl mx-auto">
-          Priority adds, drop/cut candidates, and streamers by week — creators only while this is in beta.
+          Priority adds, drop/cut candidates, and streamers by week from our creators.
         </p>
 
-        {!isDashboardUser ? (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 text-center">
-            <p className="text-amber-600 font-semibold text-lg mb-1">🔒 Creators only</p>
-            <p className="text-gray-500 text-sm">Waiver Wire is in beta and only visible to creators right now.</p>
-          </div>
-        ) : (
-          <>
-            <PillToggle options={CATEGORIES.map((c) => ({ id: c.id, label: c.label }))} value={category} onChange={setCategory} className="mb-5" />
+        <PillToggle options={CATEGORIES.map((c) => ({ id: c.id, label: c.label }))} value={category} onChange={setCategory} className="mb-5" />
 
-            {POSITIONAL_CATEGORIES.has(category) && (
-              <PillToggle options={POSITIONS} value={position} onChange={setPosition} className="mb-5" />
-            )}
+        {POSITIONAL_CATEGORIES.has(category) && (
+          <PillToggle options={POSITIONS} value={position} onChange={setPosition} className="mb-5" />
+        )}
 
-            <div className="flex items-center justify-center gap-2 mb-8">
-              <label className="text-xs font-semibold text-gray-500">Week:</label>
-              <select
-                value={week}
-                onChange={(e) => setWeek(Number(e.target.value))}
-                className="bg-card/60 backdrop-blur-sm border border-card/70 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              >
-                {WEEKS.map((w) => (
-                  <option key={w} value={w}>Week {w}</option>
-                ))}
-              </select>
-            </div>
+        <div className="flex items-center justify-center gap-2 mb-8">
+          <label className="text-xs font-semibold text-gray-500">Week:</label>
+          <select
+            value={week}
+            onChange={(e) => setWeek(Number(e.target.value))}
+            className="bg-card/60 backdrop-blur-sm border border-card/70 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            {WEEKS.map((w) => (
+              <option key={w} value={w}>Week {w}</option>
+            ))}
+          </select>
+        </div>
 
-            {(() => {
-              const getEntries = (byCategory) => {
-                const forCategory = byCategory[category];
-                if (!forCategory) return [];
-                return POSITIONAL_CATEGORIES.has(category) ? (forCategory[position] || []) : forCategory;
-              };
-              return (
-            dataLoading ? (
-              <p className="text-sm text-gray-400 text-center py-12">Loading...</p>
-            ) : Object.keys(creators).length === 0 ? (
+        {(() => {
+          const getEntries = (byCategory) => {
+            const forCategory = byCategory[category];
+            if (!forCategory) return [];
+            return POSITIONAL_CATEGORIES.has(category) ? (forCategory[position] || []) : forCategory;
+          };
+
+          if (dataLoading) {
+            return <p className="text-sm text-gray-400 text-center py-12">Loading...</p>;
+          }
+          if (Object.keys(creators).length === 0) {
+            return (
               <div className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg p-8 text-center">
                 <p className="text-gray-400 text-sm">No waiver wire picks posted for Week {week} yet.</p>
               </div>
-            ) : Object.keys(creators).length === 1 ? (
-              // A single creator's card in a 2-col grid leaves an empty cell
-              // next to it on wide screens — center it at a fixed width instead.
+            );
+          }
+
+          const cards = (
+            // A single creator's card in a 2-col grid leaves an empty cell
+            // next to it on wide screens — center it at a fixed width instead.
+            Object.keys(creators).length === 1 ? (
               <div className="max-w-md mx-auto">
                 {Object.entries(creators).map(([creatorId, byCategory]) => (
                   <CreatorCategoryCard
@@ -193,10 +199,29 @@ export default function WaiverWirePage() {
                 ))}
               </div>
             )
-              );
-            })()}
-          </>
-        )}
+          );
+
+          if (hasFullAccess) return cards;
+
+          // Real picks, blurred — matches the home page's free-preview
+          // pattern rather than showing fake placeholder data.
+          return (
+            <div className="relative">
+              <div className="blur-md select-none pointer-events-none">{cards}</div>
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6">
+                <p className="text-ink font-semibold text-base bg-card/90 backdrop-blur-md px-4 py-2 rounded-lg shadow-lg">
+                  🔒 Subscribe to see this week&apos;s picks
+                </p>
+                <a
+                  href="/subscribe"
+                  className="bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold px-7 py-3 rounded-xl transition-all text-base"
+                >
+                  {promoActive ? <>Subscribe to unlock — <PromoPrice /></> : "Subscribe to unlock — $10/mo"}
+                </a>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </main>
   );
