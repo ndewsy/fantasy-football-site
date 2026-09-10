@@ -86,6 +86,12 @@ function modalBannerGradient(team) {
   return `linear-gradient(to bottom, ${shadeColor(primary, 10)} 0%, ${primary} 50%, ${shadeColor(primary, -18)} 100%)`;
 }
 
+function hexToRgba(hex, alpha) {
+  const num = parseInt(hex.replace("#", ""), 16);
+  const r = (num >> 16) & 0xff, g = (num >> 8) & 0xff, b = num & 0xff;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 const FREE_ROWS = 12;
 const DEFAULT_TIERS = [1, 13, 25, 37, 49, 61, 73, 85, 97, 109, 121, 151];
 
@@ -133,38 +139,44 @@ function abbreviateFormat(fmt) {
 
 // Position-appropriate stat line for the "previous season" card section —
 // no point showing pass attempts on a WR or targets on a QB.
-function seasonStatLine(position, stats) {
+function seasonStatLine(position, stats, perGame, gamesPlayed) {
   if (!stats) return [];
+  const gp = gamesPlayed > 0 ? gamesPlayed : 1;
+  const n = (v) => {
+    if (v === null || v === undefined) return v;
+    if (!perGame) return v;
+    return Math.round((v / gp) * 10) / 10;
+  };
   if (position === "QB") {
     return [
-      { label: "Comp/Att", value: `${stats.pass_cmp}/${stats.pass_att}` },
-      { label: "Pass Yds", value: stats.pass_yd },
-      { label: "Pass TD", value: stats.pass_td },
-      { label: "INT", value: stats.pass_int },
-      { label: "Rush Yds", value: stats.rush_yd },
-      { label: "Rush TD", value: stats.rush_td },
+      { label: "Comp/Att", value: `${n(stats.pass_cmp)}/${n(stats.pass_att)}` },
+      { label: "Pass Yds", value: n(stats.pass_yd) },
+      { label: "Pass TD", value: n(stats.pass_td) },
+      { label: "INT", value: n(stats.pass_int) },
+      { label: "Rush Yds", value: n(stats.rush_yd) },
+      { label: "Rush TD", value: n(stats.rush_td) },
     ];
   }
   if (position === "RB") {
     return [
-      { label: "Rush Att", value: stats.rush_att },
-      { label: "Rush Yds", value: stats.rush_yd },
-      { label: "Rush TD", value: stats.rush_td },
-      { label: "Rec", value: stats.rec },
-      { label: "Targets", value: stats.rec_tgt },
-      { label: "Rec Yds", value: stats.rec_yd },
-      { label: "Rec TD", value: stats.rec_td },
+      { label: "Rush Att", value: n(stats.rush_att) },
+      { label: "Rush Yds", value: n(stats.rush_yd) },
+      { label: "Rush TD", value: n(stats.rush_td) },
+      { label: "Rec", value: n(stats.rec) },
+      { label: "Targets", value: n(stats.rec_tgt) },
+      { label: "Rec Yds", value: n(stats.rec_yd) },
+      { label: "Rec TD", value: n(stats.rec_td) },
     ];
   }
   // WR / TE
   const line = [
-    { label: "Rec", value: stats.rec },
-    { label: "Targets", value: stats.rec_tgt },
-    { label: "Rec Yds", value: stats.rec_yd },
-    { label: "Rec TD", value: stats.rec_td },
+    { label: "Rec", value: n(stats.rec) },
+    { label: "Targets", value: n(stats.rec_tgt) },
+    { label: "Rec Yds", value: n(stats.rec_yd) },
+    { label: "Rec TD", value: n(stats.rec_td) },
   ];
   if (stats.rush_att > 0) {
-    line.push({ label: "Rush Yds", value: stats.rush_yd }, { label: "Rush TD", value: stats.rush_td });
+    line.push({ label: "Rush Yds", value: n(stats.rush_yd) }, { label: "Rush TD", value: n(stats.rush_td) });
   }
   return line;
 }
@@ -228,6 +240,7 @@ export default function Home() {
   const [playerRankingsLoading, setPlayerRankingsLoading] = useState(false);
   const [seasonStats, setSeasonStats] = useState(null);
   const [seasonStatsLoading, setSeasonStatsLoading] = useState(false);
+  const [statsMode, setStatsMode] = useState("total"); // "total" | "perGame"
   const [waiverMentions, setWaiverMentions] = useState([]);
   const [waiverMentionsLoading, setWaiverMentionsLoading] = useState(false);
   const [tiersCache, setTiersCache] = useState({});
@@ -601,6 +614,7 @@ export default function Home() {
     setPlayerRankings({});
     setSeasonStatsLoading(true);
     setSeasonStats(null);
+    setStatsMode("total");
     fetch(`/api/player-stats?playerId=${player.id}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => setSeasonStats(d?.seasonStats || null))
@@ -1278,11 +1292,12 @@ export default function Home() {
       {/* Player profile modal */}
       {playerModalOpen && selectedPlayer && (
         <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-modal-backdrop"
           onClick={() => setPlayerModalOpen(false)}
         >
           <div
-            className="bg-card/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-card/80 ring-1 ring-white/10 w-full max-w-xl relative"
+            className="bg-card/90 backdrop-blur-xl rounded-3xl border border-card/80 ring-1 ring-white/10 w-full max-w-xl lg:max-w-2xl relative animate-modal-card"
+            style={{ boxShadow: `0 25px 60px -15px rgba(0,0,0,0.6), 0 0 120px 15px ${hexToRgba(teamColors(selectedPlayer.team).primary, 0.35)}` }}
             onClick={e => e.stopPropagation()}
           >
             {/* Close — stays outside the scrollable body below so it's always reachable */}
@@ -1301,7 +1316,7 @@ export default function Home() {
 
             {/* Header */}
             <div
-              className="relative p-7 sm:p-8 rounded-t-3xl overflow-hidden flex items-end gap-5"
+              className="relative p-5 sm:p-8 rounded-t-3xl overflow-hidden flex items-end gap-4 sm:gap-5"
               style={{backgroundImage: modalBannerGradient(selectedPlayer.team)}}
             >
               {/* Glossy highlight for a premium sheen, independent of team color */}
@@ -1312,15 +1327,15 @@ export default function Home() {
               <div className="relative rounded-xl ring-2 ring-white/25 shadow-xl shrink-0">
                 <PlayerHeadshot espnId={selectedPlayer.pos === "DST" ? null : selectedPlayer.espn_id} sleeperId={selectedPlayer.pos === "DST" ? null : selectedPlayer.sleeper_id} name={selectedPlayer.name} size="2xl" shape="square" label={selectedPlayer.pos === "DST" ? selectedPlayer.team : null} />
               </div>
-              <div className="relative pb-0.5 min-w-0">
-                <h2 className={`${anton.className} text-3xl sm:text-4xl text-white uppercase tracking-tight leading-none mb-2 truncate`}>{selectedPlayer.name}</h2>
+              <div className="relative pb-0.5 min-w-0 pr-8 sm:pr-0">
+                <h2 className={`${anton.className} text-2xl sm:text-4xl text-white uppercase tracking-tight leading-none mb-2 truncate`}>{selectedPlayer.name}</h2>
                 {(selectedPlayer.age || selectedPlayer.height_inches || selectedPlayer.weight_lbs) && (
                   <p className="inline-flex items-center gap-1 bg-black/25 backdrop-blur-sm text-white text-xs font-semibold px-2.5 py-1 rounded-full mb-2.5">
                     {[
                       selectedPlayer.age ? `${selectedPlayer.age} YRS` : null,
                       selectedPlayer.height_inches ? `${Math.floor(selectedPlayer.height_inches / 12)}'${selectedPlayer.height_inches % 12}"` : null,
                       selectedPlayer.weight_lbs ? `${selectedPlayer.weight_lbs} LBS` : null,
-                    ].filter(Boolean).join("  ·  ")}
+                    ].filter(Boolean).join(" · ")}
                   </p>
                 )}
                 <div className="flex items-center gap-2">
@@ -1466,7 +1481,11 @@ export default function Home() {
                 <div className="flex items-center justify-between mb-2.5">
                   <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{seasonStats.season} Season</h3>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-ink">{seasonStats.fantasy_points} pts</span>
+                    <span className="text-xs font-bold text-ink">
+                      {statsMode === "perGame" && seasonStats.games_played > 0
+                        ? Math.round((seasonStats.fantasy_points / seasonStats.games_played) * 10) / 10
+                        : seasonStats.fantasy_points} pts
+                    </span>
                     {seasonStats.fantasy_finish && (
                       <span className="text-[10px] font-bold uppercase bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
                         {seasonStats.position}{seasonStats.fantasy_finish}
@@ -1474,8 +1493,23 @@ export default function Home() {
                     )}
                   </div>
                 </div>
+                <div className="flex items-center justify-end mb-2">
+                  <div className="inline-flex items-center bg-white/5 border border-white/10 rounded-full p-0.5">
+                    {[{ id: "total", label: "Total" }, { id: "perGame", label: "Per Game" }].map((mode) => (
+                      <button
+                        key={mode.id}
+                        onClick={() => setStatsMode(mode.id)}
+                        className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wide transition-colors ${
+                          statsMode === mode.id ? "bg-blue-600 text-white" : "text-gray-400 hover:text-ink"
+                        }`}
+                      >
+                        {mode.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
-                  {seasonStatLine(seasonStats.position, seasonStats.stats).map((s) => (
+                  {seasonStatLine(seasonStats.position, seasonStats.stats, statsMode === "perGame", seasonStats.games_played).map((s) => (
                     <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-2 text-center">
                       <p className="text-sm font-bold text-ink">{s.value}</p>
                       <p className="text-[9px] text-gray-400 uppercase tracking-wide">{s.label}</p>

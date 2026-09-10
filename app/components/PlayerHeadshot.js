@@ -7,7 +7,7 @@ const SIZES = {
   md: "w-10 h-10 text-xs",
   lg: "w-16 h-16 text-lg",
   xl: "w-28 h-28 text-3xl",
-  "2xl": "w-36 h-36 text-4xl",
+  "2xl": "w-20 h-20 sm:w-36 sm:h-36 text-xl sm:text-4xl",
   // Compact on mobile, matches "sm" on desktop — for dense table rows.
   tableRow: "w-6 h-6 lg:w-8 lg:h-8 text-[9px] lg:text-[10px]",
 };
