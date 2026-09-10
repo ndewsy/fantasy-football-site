@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
 import PostCard from "@/app/components/PostCard";
@@ -89,7 +90,7 @@ export default function RedraftKingPage() {
           {!isSubscribed && (
             <div className="w-full sm:w-auto sm:ml-auto text-center bg-card/70 backdrop-blur-md rounded-xl p-4 border border-card/80 shadow-lg">
               <p className="text-gray-500 text-sm mb-2">Get access</p>
-              <a href="/subscribe" className="bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold px-6 py-2 rounded-lg inline-block transition-all">{promoActive ? <>Subscribe — <PromoPrice /></> : "Subscribe — $10/mo"}</a>
+              <Link href="/subscribe" className="bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold px-6 py-2 rounded-lg inline-block transition-all">{promoActive ? <>Subscribe — <PromoPrice /></> : "Subscribe — $10/mo"}</Link>
             </div>
           )}
         </div>

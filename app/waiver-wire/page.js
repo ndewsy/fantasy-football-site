@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
 import PageTitle from "@/app/components/PageTitle";
@@ -260,12 +261,12 @@ export default function WaiverWirePage() {
                 <p className="text-ink font-semibold text-base bg-card/90 backdrop-blur-md px-4 py-2 rounded-lg shadow-lg">
                   🔒 Subscribe to see this week&apos;s picks
                 </p>
-                <a
+                <Link
                   href="/subscribe"
                   className="bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold px-7 py-3 rounded-xl transition-all text-base"
                 >
                   {promoActive ? <>Subscribe to unlock — <PromoPrice /></> : "Subscribe to unlock — $10/mo"}
-                </a>
+                </Link>
               </div>
             </div>
           );

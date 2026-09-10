@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
 import PageTitle from "@/app/components/PageTitle";
@@ -246,12 +247,12 @@ function AccessGateModal({ mode, onClose, promoActive }) {
             <p className="text-sm text-gray-500 max-w-xs mx-auto mb-6">
               You&rsquo;ve used all 3 free Start/Sit comparisons this month. Upgrade for unlimited access.
             </p>
-            <a
+            <Link
               href="/subscribe"
               className="bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold px-6 py-2.5 rounded-xl inline-block transition-all text-sm"
             >
               {promoActive ? <>Upgrade — <PromoPrice /></> : "Upgrade — $10/mo"}
-            </a>
+            </Link>
             <button onClick={onClose} className="block mx-auto mt-4 text-sm text-gray-400 hover:text-gray-600 font-medium">
               Maybe later
             </button>

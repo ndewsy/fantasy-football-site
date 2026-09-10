@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
 import PageTitle from "@/app/components/PageTitle";
@@ -115,12 +116,12 @@ export default function AuctionPage() {
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 mb-8 text-center">
             <p className="text-amber-600 font-semibold text-lg mb-1">🔒 Auction Draft is a subscriber tool</p>
             <p className="text-gray-500 text-sm mb-4">Subscribe to view auction rankings and team-build strategy.</p>
-            <a
+            <Link
               href="/subscribe"
               className="bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold px-6 py-2.5 rounded-xl inline-block transition-all"
             >
               {promoActive ? <>Subscribe — <PromoPrice /></> : "Subscribe — $10/mo"}
-            </a>
+            </Link>
           </div>
         )}
 

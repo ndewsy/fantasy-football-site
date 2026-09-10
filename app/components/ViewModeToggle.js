@@ -10,9 +10,11 @@ const OPTIONS = [
 ];
 
 // Staff-only preview toggle — rendered in NavBar when the real (unsimulated)
-// isDashboardUser is true. Reload-based rather than shared state: every page
-// on the site already navigates via full <a href> loads (see NavBar.js), so
-// each page just re-reads the cookie on its own mount.
+// isDashboardUser is true. Reload-based rather than shared state: NavBar (and
+// this toggle) isn't hoisted into a persisted layout, so it remounts fresh on
+// every navigation regardless — each page just re-reads the cookie on mount.
+// The explicit reload() here is still needed for the *current* page to pick
+// up the new mode immediately, since switching modes doesn't itself navigate.
 export default function ViewModeToggle() {
   const [mode, setMode] = useState("real");
 

@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 
 export default function LoginPage() {
@@ -67,7 +68,7 @@ export default function LoginPage() {
       <main className="min-h-screen flex items-center justify-center px-6">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <a href="/" className="text-2xl font-bold text-blue-600" style={{fontFamily: "'Fredoka One', cursive"}}>Fantasy Collective</a>
+            <Link href="/" className="text-2xl font-bold text-blue-600" style={{fontFamily: "'Fredoka One', cursive"}}>Fantasy Collective</Link>
             <h2 className="text-3xl font-bold mt-4 text-ink">Reset Password</h2>
             <p className="text-gray-500 mt-2">We'll send a reset link to your email.</p>
           </div>
@@ -136,7 +137,7 @@ export default function LoginPage() {
     <main className="min-h-screen flex items-center justify-center px-6">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <a href="/" className="text-2xl font-bold text-blue-600" style={{fontFamily: "'Fredoka One', cursive"}}>Fantasy Collective</a>
+          <Link href="/" className="text-2xl font-bold text-blue-600" style={{fontFamily: "'Fredoka One', cursive"}}>Fantasy Collective</Link>
           <h2 className="text-3xl font-bold mt-4 text-ink">{isSignup ? "Create Account" : "Welcome Back"}</h2>
           <p className="text-gray-500 mt-2">{isSignup ? "Sign up to get started" : "Sign in to your account"}</p>
         </div>

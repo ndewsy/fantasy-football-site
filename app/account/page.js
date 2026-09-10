@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
 import PageTitle from "@/app/components/PageTitle";
@@ -243,12 +244,12 @@ export default function AccountPage() {
           ) : !subscription ? (
             <div className="text-center py-4">
               <p className="text-gray-500 mb-4">You don't have an active subscription.</p>
-              <a
+              <Link
                 href="/subscribe"
                 className="inline-block bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold px-6 py-3 rounded-xl transition-all"
               >
                 {promoActive ? <>Get Access — <PromoPrice /></> : "Get Access — $10/mo"}
-              </a>
+              </Link>
             </div>
           ) : (
             <div className="flex flex-col gap-4">
@@ -292,12 +293,12 @@ export default function AccountPage() {
                       : `Your access ends in ${daysUntilExpiry} day${daysUntilExpiry === 1 ? "" : "s"}.`}
                     {" "}Add a payment method to keep it.
                   </p>
-                  <a
+                  <Link
                     href="/subscribe"
                     className="inline-block bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold px-5 py-2 rounded-lg text-sm transition-all"
                   >
                     Add Payment Method — $10/mo
-                  </a>
+                  </Link>
                 </div>
               )}
 
@@ -316,12 +317,12 @@ export default function AccountPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500 text-sm">Included community</span>
                   {includedCreator && CREATOR_INFO[includedCreator] ? (
-                    <a
+                    <Link
                       href={CREATOR_INFO[includedCreator].path}
                       className="font-medium text-blue-600 hover:text-blue-700 transition-colors"
                     >
                       {CREATOR_INFO[includedCreator].name} →
-                    </a>
+                    </Link>
                   ) : (
                     <span className="font-medium text-gray-700">{includedCreator || "—"}</span>
                   )}
@@ -335,13 +336,13 @@ export default function AccountPage() {
                   <div className="flex flex-col items-end gap-1.5">
                     {addOns.map(id => (
                       CREATOR_INFO[id] ? (
-                        <a
+                        <Link
                           key={id}
                           href={CREATOR_INFO[id].path}
                           className="font-medium text-blue-600 hover:text-blue-700 transition-colors text-sm"
                         >
                           {CREATOR_INFO[id].name} →
-                        </a>
+                        </Link>
                       ) : (
                         <span key={id} className="font-medium text-gray-700 text-sm">{id}</span>
                       )
@@ -387,24 +388,24 @@ export default function AccountPage() {
               {/* Manage button */}
               {isFreeTrial ? (
                 <>
-                  <a
+                  <Link
                     href="/subscribe"
                     className="mt-2 w-full text-center block bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold py-3 rounded-xl transition-all"
                   >
                     {promoActive ? <>Upgrade to Premium — <PromoPrice /></> : "Upgrade to Premium — $10/mo"}
-                  </a>
+                  </Link>
                   <p className="text-gray-400 text-xs text-center -mt-2">
                     Your free trial ends {trialEndsLabel || "soon"} — upgrade anytime to keep your access.
                   </p>
                 </>
               ) : isPromo5mo ? (
                 <>
-                  <a
+                  <Link
                     href="/subscribe"
                     className="mt-2 w-full text-center block bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold py-3 rounded-xl transition-all"
                   >
                     Switch to $10/mo Plan
-                  </a>
+                  </Link>
                   <p className="text-gray-400 text-xs text-center -mt-2">
                     Your promo access runs through {trialEndsLabel || "the end of the promo period"} — no recurring billing until you upgrade.
                   </p>
@@ -431,22 +432,22 @@ export default function AccountPage() {
         <div className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg p-6 mb-6">
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Quick Links</h2>
           <div className="flex flex-col gap-3">
-            <a href="/" className="flex items-center justify-between text-gray-600 hover:text-gray-900 transition-colors text-sm">
+            <Link href="/" className="flex items-center justify-between text-gray-600 hover:text-gray-900 transition-colors text-sm">
               <span>Rankings</span>
               <span className="text-gray-400">→</span>
-            </a>
-            <a href="/creators" className="flex items-center justify-between text-gray-600 hover:text-gray-900 transition-colors text-sm">
+            </Link>
+            <Link href="/creators" className="flex items-center justify-between text-gray-600 hover:text-gray-900 transition-colors text-sm">
               <span>Browse Creators</span>
               <span className="text-gray-400">→</span>
-            </a>
+            </Link>
             {includedCreator && CREATOR_INFO[includedCreator] && (
-              <a
+              <Link
                 href={CREATOR_INFO[includedCreator].path}
                 className="flex items-center justify-between text-gray-600 hover:text-gray-900 transition-colors text-sm"
               >
                 <span>{CREATOR_INFO[includedCreator].name} Community</span>
                 <span className="text-gray-400">→</span>
-              </a>
+              </Link>
             )}
           </div>
         </div>

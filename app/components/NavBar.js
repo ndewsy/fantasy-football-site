@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { Montserrat } from "next/font/google";
 import { createClient } from "@/lib/supabase";
 import ViewModeToggle from "@/app/components/ViewModeToggle";
@@ -96,7 +97,7 @@ function AccountIcon(props) {
 // exact same look — icon, label, and the blue-gradient active pill.
 function NavLink({ href, label, Icon, active, onClick }) {
   return (
-    <a
+    <Link
       href={href}
       onClick={onClick}
       className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
@@ -107,7 +108,7 @@ function NavLink({ href, label, Icon, active, onClick }) {
     >
       <Icon className="w-5 h-5 shrink-0" />
       {label}
-    </a>
+    </Link>
   );
 }
 
@@ -179,9 +180,9 @@ export default function NavBar({ activePath = "/" }) {
     <>
       {/* Desktop sidebar */}
       <nav className="hidden lg:flex fixed left-0 top-0 h-screen w-56 flex-col bg-card border-r border-gray-100 z-50">
-        <a href="/" className={`${montserrat.className} text-lg font-bold text-blue-600 leading-tight px-6 pt-7 pb-8 block`}>
+        <Link href="/" className={`${montserrat.className} text-lg font-bold text-blue-600 leading-tight px-6 pt-7 pb-8 block`}>
           Fantasy<br />Collective
-        </a>
+        </Link>
         <div className="flex-1 flex flex-col gap-1 px-3 overflow-y-auto">
           {links.map(({ href, label, icon }) => (
             <NavLink key={href} href={href} label={label} Icon={icon} active={activePath === href} />
@@ -192,9 +193,9 @@ export default function NavBar({ activePath = "/" }) {
           {user ? (
             <NavLink href="/account" label="My Account" Icon={AccountIcon} active={activePath === "/account"} />
           ) : (
-            <a href="/login" className="flex items-center justify-center gap-2 bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-semibold px-3 py-2.5 rounded-xl transition-all text-sm">
+            <Link href="/login" className="flex items-center justify-center gap-2 bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-semibold px-3 py-2.5 rounded-xl transition-all text-sm">
               Login
-            </a>
+            </Link>
           )}
         </div>
       </nav>
@@ -202,7 +203,7 @@ export default function NavBar({ activePath = "/" }) {
       {/* Mobile top bar — light/white to match the desktop sidebar, opens a drawer
           styled identically to it rather than a plain-text dropdown. */}
       <nav ref={navRef} className="lg:hidden relative sticky top-0 z-50 px-4 py-3 flex items-center justify-between bg-card border-b border-gray-100">
-        <a href="/" className={`${montserrat.className} text-lg font-bold text-blue-600 shrink-0`}>Fantasy Collective</a>
+        <Link href="/" className={`${montserrat.className} text-lg font-bold text-blue-600 shrink-0`}>Fantasy Collective</Link>
 
         <button
           className="flex items-center justify-center w-10 h-10 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors"
@@ -261,9 +262,9 @@ export default function NavBar({ activePath = "/" }) {
             {user ? (
               <NavLink href="/account" label="My Account" Icon={AccountIcon} active={activePath === "/account"} onClick={() => setMenuOpen(false)} />
             ) : (
-              <a href="/login" className="flex items-center justify-center gap-2 bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-semibold px-3 py-2.5 rounded-xl transition-all text-sm">
+              <Link href="/login" className="flex items-center justify-center gap-2 bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-semibold px-3 py-2.5 rounded-xl transition-all text-sm">
                 Login
-              </a>
+              </Link>
             )}
           </div>
         </div>

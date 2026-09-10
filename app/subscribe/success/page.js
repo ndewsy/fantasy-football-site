@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import PageTitle from "@/app/components/PageTitle";
 
@@ -63,12 +64,12 @@ export default function SuccessPage() {
           <p className="text-red-500 mb-4 text-sm">We couldn't confirm your login. Please refresh this page.</p>
         )}
         <div className="flex flex-col gap-3">
-          <a href="/" className="bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold py-3 rounded-xl transition-all">
+          <Link href="/" className="bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold py-3 rounded-xl transition-all">
             View Rankings
-          </a>
-          <a href="/creators" className="bg-card/70 backdrop-blur-md hover:bg-card/90 text-gray-700 font-bold py-3 rounded-xl transition-all border border-card/80">
+          </Link>
+          <Link href="/creators" className="bg-card/70 backdrop-blur-md hover:bg-card/90 text-gray-700 font-bold py-3 rounded-xl transition-all border border-card/80">
             Browse Creator Communities
-          </a>
+          </Link>
         </div>
       </div>
     </main>

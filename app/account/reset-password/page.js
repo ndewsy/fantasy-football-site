@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createBrowserClient } from '@supabase/ssr';
 
 // detectSessionInUrl: false prevents the client from auto-exchanging the
@@ -69,7 +70,7 @@ export default function ResetPasswordPage() {
     <main className="min-h-screen flex items-center justify-center px-6">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <a href="/" className="text-2xl font-bold text-blue-600" style={{fontFamily: "'Fredoka One', cursive"}}>Fantasy Collective</a>
+          <Link href="/" className="text-2xl font-bold text-blue-600" style={{fontFamily: "'Fredoka One', cursive"}}>Fantasy Collective</Link>
           <h2 className="text-3xl font-bold mt-4 text-ink">
             {stage === 'done' ? 'Password Updated' : 'Reset Password'}
           </h2>
@@ -156,9 +157,9 @@ export default function ResetPasswordPage() {
               <p className="text-gray-500 text-sm mb-6">
                 This reset link may have expired. Request a new one from the login page.
               </p>
-              <a href="/login" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
+              <Link href="/login" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
                 ← Back to sign in
-              </a>
+              </Link>
             </div>
           )}
 

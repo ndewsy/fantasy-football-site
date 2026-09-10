@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
 import PageTitle from "@/app/components/PageTitle";
@@ -61,7 +62,7 @@ export default function CreatorsPage() {
                 {creator.comingSoon ? (
                   <span className="bg-gray-100 text-gray-400 font-semibold px-4 py-2 rounded-lg text-sm cursor-not-allowed">Coming Soon</span>
                 ) : (
-                  <a href={"/creators/" + creator.id} className="bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-all">View Community</a>
+                  <Link href={"/creators/" + creator.id} className="bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-all">View Community</Link>
                 )}
               </div>
             </div>
