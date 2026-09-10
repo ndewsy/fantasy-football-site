@@ -6,6 +6,7 @@ import PageTitle from "@/app/components/PageTitle";
 import PlayerHeadshot from "@/app/components/PlayerHeadshot";
 import PillToggle from "@/app/components/PillToggle";
 import PromoPrice from "@/app/components/PromoPrice";
+import CreatorAvatar from "@/app/components/CreatorAvatar";
 import { getCurrentWeekFromGames } from "@/lib/currentWeek";
 import { getViewMode } from "@/lib/viewMode";
 import { isPromoActive } from "@/lib/promo";
@@ -25,6 +26,10 @@ const POSITIONS = [
   { id: "DST", label: "DST" },
 ];
 const POSITIONAL_CATEGORIES = new Set(["priority", "streamer"]);
+const CREATOR_BADGE = {
+  rookierager: { label: "RR", className: "bg-orange-100 text-orange-700" },
+  ffhuddle: { label: "FFH", className: "bg-blue-100 text-blue-700" },
+};
 
 function TermBadge({ term }) {
   if (!term) return null;
@@ -48,6 +53,46 @@ function CreatorCategoryCard({ creatorName, entries }) {
           {entries.map((e, i) => (
             <div key={e.id} className="flex items-center gap-2.5 py-2">
               <span className="text-xs text-gray-400 font-mono w-5 shrink-0 text-right">{i + 1}</span>
+              <PlayerHeadshot espnId={e.players?.espn_id} sleeperId={e.players?.sleeper_id} name={e.players?.name} size="sm" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-ink truncate">{e.players?.name || `#${e.player_id}`}</p>
+                <p className="text-xs text-gray-400">{e.players?.position} · {e.players?.team}</p>
+              </div>
+              {e.players?.percent_rostered !== null && e.players?.percent_rostered !== undefined && (
+                <span className="text-[11px] text-gray-400 shrink-0" title="% of ESPN leagues rostering this player">
+                  {Math.round(e.players.percent_rostered)}% rost.
+                </span>
+              )}
+              <TermBadge term={e.term} />
+              {e.faab_pct !== null && e.faab_pct !== undefined && (
+                <span className="text-xs font-semibold text-ink shrink-0">{Number(e.faab_pct).toFixed(1)}%</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Full-width, unboxed layout matching Weekly Rankings — used when there's
+// only one creator's picks to show, so it doesn't look stranded in a narrow
+// centered card next to a lot of empty page.
+function CreatorList({ creatorId, creatorName, logoUrl, entries }) {
+  const badge = CREATOR_BADGE[creatorId] || {};
+  return (
+    <div>
+      <div className="flex items-center gap-2.5 mb-4">
+        <CreatorAvatar logoUrl={logoUrl} initials={badge.label || creatorName?.slice(0, 2).toUpperCase() || "?"} colorClass="bg-blue-600" size="sm" />
+        <p className="font-bold text-ink text-sm">{creatorName}</p>
+      </div>
+      {entries.length === 0 ? (
+        <p className="text-sm text-gray-400">Nothing posted yet.</p>
+      ) : (
+        <div className="divide-y divide-gray-100 border border-gray-100 rounded-xl overflow-hidden">
+          {entries.map((e, i) => (
+            <div key={e.id} className="flex items-center gap-3 px-4 py-2.5">
+              <span className="text-sm text-gray-400 font-mono w-6 shrink-0 text-right">{i + 1}</span>
               <PlayerHeadshot espnId={e.players?.espn_id} sleeperId={e.players?.sleeper_id} name={e.players?.name} size="sm" />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-ink truncate">{e.players?.name || `#${e.player_id}`}</p>
@@ -95,14 +140,14 @@ export default function WaiverWirePage() {
         user
           ? supabase.from("subscriptions").select("status").eq("user_id", user.id).eq("status", "active").maybeSingle()
           : Promise.resolve({ data: null }),
-        supabase.from("profiles").select("creator_id, display_name").eq("is_creator", true).not("creator_id", "is", null),
+        supabase.from("profiles").select("creator_id, display_name, logo_url").eq("is_creator", true).not("creator_id", "is", null),
         supabase.from("season_games").select("week, status, kickoff_at").order("kickoff_at", { ascending: true }),
       ]);
 
       setRealIsDashboardUser(!!(profileResult.data && (profileResult.data.role === "admin" || profileResult.data.is_creator)));
       setRawIsSubscribed(!!subResult.data);
       setViewModeState(getViewMode());
-      setCreatorsById(Object.fromEntries((creatorProfilesResult.data || []).map((c) => [c.creator_id, c.display_name || c.creator_id])));
+      setCreatorsById(Object.fromEntries((creatorProfilesResult.data || []).map((c) => [c.creator_id, { name: c.display_name || c.creator_id, logoUrl: c.logo_url }])));
       setWeek(getCurrentWeekFromGames(gamesResult.data || []));
       setLoading(false);
     }
@@ -132,7 +177,7 @@ export default function WaiverWirePage() {
     <main className="min-h-screen text-ink lg:pl-56">
       <NavBar activePath="/waiver-wire" />
 
-      <div className="max-w-4xl mx-auto px-6 py-12">
+      <div className="max-w-6xl mx-auto px-6 py-12">
         <PageTitle title="Waiver Wire" />
         <p className="text-gray-500 text-center mb-8 max-w-xl mx-auto">
           Priority adds, drop/cut candidates, and streamers by week from our creators.
@@ -176,24 +221,27 @@ export default function WaiverWirePage() {
           }
 
           const cards = (
-            // A single creator's card in a 2-col grid leaves an empty cell
-            // next to it on wide screens — center it at a fixed width instead.
+            // A single creator's picks get Weekly Rankings' full-width list
+            // treatment instead of a narrow boxed card — matches that page's
+            // format rather than looking stranded next to empty space.
             Object.keys(creators).length === 1 ? (
-              <div className="max-w-md mx-auto">
+              <>
                 {Object.entries(creators).map(([creatorId, byCategory]) => (
-                  <CreatorCategoryCard
+                  <CreatorList
                     key={creatorId}
-                    creatorName={creatorsById[creatorId] || creatorId}
+                    creatorId={creatorId}
+                    creatorName={creatorsById[creatorId]?.name || creatorId}
+                    logoUrl={creatorsById[creatorId]?.logoUrl}
                     entries={getEntries(byCategory)}
                   />
                 ))}
-              </div>
+              </>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {Object.entries(creators).map(([creatorId, byCategory]) => (
                   <CreatorCategoryCard
                     key={creatorId}
-                    creatorName={creatorsById[creatorId] || creatorId}
+                    creatorName={creatorsById[creatorId]?.name || creatorId}
                     entries={getEntries(byCategory)}
                   />
                 ))}
