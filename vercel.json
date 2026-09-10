@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/cron/sync-roster-pct",
-      "schedule": "30 4,16 * * *"
+      "schedule": "30 4 * * *"
     },
     {
       "path": "/api/cron/expire-free-trials",
