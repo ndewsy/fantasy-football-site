@@ -276,7 +276,7 @@ function AccessGateModal({ mode, onClose, promoActive }) {
               </h2>
               <p className="text-sm text-gray-500 mt-1">
                 {authMode === "signup"
-                  ? "Create a free account to get 3 Start/Sit comparisons every month."
+                  ? "Create a free account to start using Start/Sit."
                   : "Sign in to use Start/Sit."}
               </p>
             </div>
@@ -467,7 +467,7 @@ export default function StartSitPage() {
         {!user && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 mb-8 text-center">
             <p className="text-amber-600 font-semibold text-lg mb-1">🔒 Start/Sit requires a free account</p>
-            <p className="text-gray-500 text-sm mb-4">Create a free account to get 3 Start/Sit comparisons every month.</p>
+            <p className="text-gray-500 text-sm mb-4">Create a free account to start using Start/Sit.</p>
             <button
               onClick={() => setGateModal("signup")}
               className="bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 text-white font-bold px-6 py-2.5 rounded-xl inline-block transition-all"
