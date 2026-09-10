@@ -14,6 +14,15 @@ const CATEGORIES = [
   { id: "drop", label: "Drop/Cut Candidates" },
   { id: "streamer", label: "Streamers" },
 ];
+// Drop/Cut stays one flat list; Priority Adds and Streamers split by position.
+const POSITIONS = [
+  { id: "QB", label: "QB" },
+  { id: "FLEX", label: "FLEX" },
+  { id: "TE", label: "TE" },
+  { id: "K", label: "K" },
+  { id: "DST", label: "DST" },
+];
+const POSITIONAL_CATEGORIES = new Set(["priority", "streamer"]);
 
 function TermBadge({ term }) {
   if (!term) return null;
@@ -60,6 +69,7 @@ export default function WaiverWirePage() {
   const [viewMode, setViewModeState] = useState("real");
   const [week, setWeek] = useState(1);
   const [category, setCategory] = useState(CATEGORIES[0].id);
+  const [position, setPosition] = useState(POSITIONS[0].id);
   const [creatorsById, setCreatorsById] = useState({});
   const [dataLoading, setDataLoading] = useState(true);
   const [creators, setCreators] = useState({});
@@ -125,6 +135,10 @@ export default function WaiverWirePage() {
           <>
             <PillToggle options={CATEGORIES.map((c) => ({ id: c.id, label: c.label }))} value={category} onChange={setCategory} className="mb-5" />
 
+            {POSITIONAL_CATEGORIES.has(category) && (
+              <PillToggle options={POSITIONS} value={position} onChange={setPosition} className="mb-5" />
+            )}
+
             <div className="flex items-center justify-center gap-2 mb-8">
               <label className="text-xs font-semibold text-gray-500">Week:</label>
               <select
@@ -138,7 +152,14 @@ export default function WaiverWirePage() {
               </select>
             </div>
 
-            {dataLoading ? (
+            {(() => {
+              const getEntries = (byCategory) => {
+                const forCategory = byCategory[category];
+                if (!forCategory) return [];
+                return POSITIONAL_CATEGORIES.has(category) ? (forCategory[position] || []) : forCategory;
+              };
+              return (
+            dataLoading ? (
               <p className="text-sm text-gray-400 text-center py-12">Loading...</p>
             ) : Object.keys(creators).length === 0 ? (
               <div className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg p-8 text-center">
@@ -152,7 +173,7 @@ export default function WaiverWirePage() {
                   <CreatorCategoryCard
                     key={creatorId}
                     creatorName={creatorsById[creatorId] || creatorId}
-                    entries={byCategory[category] || []}
+                    entries={getEntries(byCategory)}
                   />
                 ))}
               </div>
@@ -162,11 +183,13 @@ export default function WaiverWirePage() {
                   <CreatorCategoryCard
                     key={creatorId}
                     creatorName={creatorsById[creatorId] || creatorId}
-                    entries={byCategory[category] || []}
+                    entries={getEntries(byCategory)}
                   />
                 ))}
               </div>
-            )}
+            )
+              );
+            })()}
           </>
         )}
       </div>

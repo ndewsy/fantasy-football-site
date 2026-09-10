@@ -9,10 +9,21 @@ const CATEGORIES = [
   { id: "drop", label: "Drop/Cut" },
   { id: "streamer", label: "Streamers" },
 ];
+// Drop/Cut stays one flat list (no position, no term/FAAB); Priority Adds
+// and Streamers split into position tabs.
+const POSITIONS = [
+  { id: "QB", label: "QB" },
+  { id: "FLEX", label: "FLEX" },
+  { id: "TE", label: "TE" },
+  { id: "K", label: "K" },
+  { id: "DST", label: "DST" },
+];
+const POSITIONAL_CATEGORIES = new Set(["priority", "streamer"]);
 const WEEKS = Array.from({ length: 18 }, (_, i) => i + 1);
 
 export default function WaiverWireEditor({ creatorId, creatorLabel }) {
   const [category, setCategory] = useState(CATEGORIES[0].id);
+  const [position, setPosition] = useState(POSITIONS[0].id);
   const [week, setWeek] = useState(1);
   const [playerPool, setPlayerPool] = useState([]);
   const [rows, setRows] = useState([]); // [{ player_id, term, faab_pct }] enriched with pool info at render time
@@ -50,10 +61,14 @@ export default function WaiverWireEditor({ creatorId, creatorLabel }) {
     loadPoolAndWeek();
   }, []);
 
+  const isPositional = POSITIONAL_CATEGORIES.has(category);
+
   useEffect(() => {
     if (!creatorId) return;
     setLoading(true);
-    fetch(`/api/waiver-wire?creator_id=${encodeURIComponent(creatorId)}&week=${week}&category=${category}`)
+    const url = `/api/waiver-wire?creator_id=${encodeURIComponent(creatorId)}&week=${week}&category=${category}`
+      + (isPositional ? `&position=${position}` : "");
+    fetch(url)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         const entries = (d?.entries || []).map((e) => ({ player_id: e.player_id, term: e.term, faab_pct: e.faab_pct }));
@@ -61,7 +76,7 @@ export default function WaiverWireEditor({ creatorId, creatorLabel }) {
         setSavedAt(null);
       })
       .finally(() => setLoading(false));
-  }, [creatorId, week, category]);
+  }, [creatorId, week, category, position, isPositional]);
 
   const byId = Object.fromEntries(playerPool.map((p) => [p.id, p]));
   const usedIds = new Set(rows.map((r) => r.player_id));
@@ -109,10 +124,10 @@ export default function WaiverWireEditor({ creatorId, creatorLabel }) {
           creator_id: creatorId,
           week,
           category,
+          ...(isPositional ? { position } : {}),
           entries: rows.map((r) => ({
             player_id: r.player_id,
-            term: r.term || null,
-            faab_pct: r.faab_pct === "" ? null : r.faab_pct,
+            ...(isPositional ? { term: r.term || null, faab_pct: r.faab_pct === "" ? null : r.faab_pct } : {}),
           })),
         }),
       });
@@ -127,7 +142,9 @@ export default function WaiverWireEditor({ creatorId, creatorLabel }) {
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div>
           <h3 className="font-bold text-ink">Waiver Wire{creatorLabel ? ` — ${creatorLabel}` : ""}</h3>
-          <p className="text-xs text-gray-400">Order sets priority. Term and FAAB % are optional per player.</p>
+          <p className="text-xs text-gray-400">
+            {isPositional ? "Order sets priority. Term and FAAB % are optional per player." : "Order sets priority."}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <label className="text-xs font-semibold text-gray-500">Week:</label>
@@ -143,7 +160,7 @@ export default function WaiverWireEditor({ creatorId, creatorLabel }) {
         </div>
       </div>
 
-      <div className="flex gap-1.5 mb-5">
+      <div className={`flex gap-1.5 ${isPositional ? "mb-3" : "mb-5"}`}>
         {CATEGORIES.map((c) => (
           <button
             key={c.id}
@@ -156,6 +173,22 @@ export default function WaiverWireEditor({ creatorId, creatorLabel }) {
           </button>
         ))}
       </div>
+
+      {isPositional && (
+        <div className="flex gap-1.5 mb-5">
+          {POSITIONS.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => setPosition(p.id)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                position === p.id ? "bg-gray-700 text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <p className="text-sm text-gray-400 text-center py-8">Loading...</p>
@@ -199,37 +232,41 @@ export default function WaiverWireEditor({ creatorId, creatorLabel }) {
                     <p className="text-sm font-medium text-ink truncate">{p?.name || `#${row.player_id}`}</p>
                     <p className="text-xs text-gray-400">{p?.position} · {p?.team}</p>
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      onClick={() => updateTerm(i, "short")}
-                      className={`px-2 py-1 rounded-md text-[10px] font-semibold transition-colors ${
-                        row.term === "short" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                      }`}
-                    >
-                      Short
-                    </button>
-                    <button
-                      onClick={() => updateTerm(i, "long")}
-                      className={`px-2 py-1 rounded-md text-[10px] font-semibold transition-colors ${
-                        row.term === "long" ? "bg-purple-600 text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                      }`}
-                    >
-                      Long
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      max="100"
-                      value={row.faab_pct ?? ""}
-                      onChange={(e) => updateFaab(i, e.target.value === "" ? "" : Number(e.target.value))}
-                      placeholder="FAAB"
-                      className="w-16 text-right bg-gray-50 rounded-md border border-gray-200 px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <span className="text-xs text-gray-400">%</span>
-                  </div>
+                  {isPositional && (
+                    <>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => updateTerm(i, "short")}
+                          className={`px-2 py-1 rounded-md text-[10px] font-semibold transition-colors ${
+                            row.term === "short" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                          }`}
+                        >
+                          Short
+                        </button>
+                        <button
+                          onClick={() => updateTerm(i, "long")}
+                          className={`px-2 py-1 rounded-md text-[10px] font-semibold transition-colors ${
+                            row.term === "long" ? "bg-purple-600 text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                          }`}
+                        >
+                          Long
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          max="100"
+                          value={row.faab_pct ?? ""}
+                          onChange={(e) => updateFaab(i, e.target.value === "" ? "" : Number(e.target.value))}
+                          placeholder="FAAB"
+                          className="w-16 text-right bg-gray-50 rounded-md border border-gray-200 px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <span className="text-xs text-gray-400">%</span>
+                      </div>
+                    </>
+                  )}
                   <div className="flex flex-col shrink-0">
                     <button onClick={() => movePlayer(i, -1)} disabled={i === 0} className="text-gray-400 hover:text-gray-700 disabled:opacity-30 text-xs leading-none px-1">▲</button>
                     <button onClick={() => movePlayer(i, 1)} disabled={i === rows.length - 1} className="text-gray-400 hover:text-gray-700 disabled:opacity-30 text-xs leading-none px-1">▼</button>
