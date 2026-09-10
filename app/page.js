@@ -209,11 +209,12 @@ export default function Home() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [myCreatorId, setMyCreatorId] = useState(null);
   const [riskRatings, setRiskRatings] = useState({}); // { [playerId]: { [creatorId]: rating } }
-  const [weeklyRankingsData, setWeeklyRankingsData] = useState({ weeks: {} });
+  const [weeklyRankingsData, setWeeklyRankingsData] = useState({}); // { [creatorId]: { weeks: {...} } }
   const [weeklyWeek, setWeeklyWeek] = useState(null);
   const [weeklyPosition, setWeeklyPosition] = useState("QB");
-  const [weeklyCreatorProfile, setWeeklyCreatorProfile] = useState(null);
+  const [weeklyCreatorProfiles, setWeeklyCreatorProfiles] = useState({}); // { [creatorId]: { logo_url } }
   const [weeklySeasonGames, setWeeklySeasonGames] = useState([]);
+  const [weeklyCurrentNflWeek, setWeeklyCurrentNflWeek] = useState(1);
   const [showCreatorColumns, setShowCreatorColumns] = useState(true);
   const [search, setSearch] = useState("");
   const [posFilter, setPosFilter] = useState("All");
@@ -280,20 +281,26 @@ export default function Home() {
   useEffect(() => {
     async function loadWeekly() {
       const supabase = createClient();
-      const [weeklyRes, gamesResult, profileResult] = await Promise.all([
-        fetch("/api/weekly-rankings?creator_id=ffhuddle").then((r) => (r.ok ? r.json() : { weeks: {} })).catch(() => ({ weeks: {} })),
+      const creatorIds = ACTIVE_CREATORS.map((c) => c.id);
+      const [weeklyResults, gamesResult, profilesResult] = await Promise.all([
+        Promise.all(creatorIds.map((id) =>
+          fetch(`/api/weekly-rankings?creator_id=${encodeURIComponent(id)}`).then((r) => (r.ok ? r.json() : { weeks: {} })).catch(() => ({ weeks: {} }))
+        )),
         supabase.from("season_games").select("week, status, kickoff_at, home_team, away_team").order("kickoff_at", { ascending: true }),
-        supabase.from("profiles").select("logo_url").eq("creator_id", "ffhuddle").eq("is_creator", true).maybeSingle(),
+        supabase.from("profiles").select("creator_id, logo_url").in("creator_id", creatorIds).eq("is_creator", true),
       ]);
-      setWeeklyRankingsData(weeklyRes);
-      setWeeklyCreatorProfile(profileResult.data || null);
+      const dataByCreator = Object.fromEntries(creatorIds.map((id, i) => [id, weeklyResults[i]]));
+      setWeeklyRankingsData(dataByCreator);
+      setWeeklyCreatorProfiles(Object.fromEntries((profilesResult.data || []).map((p) => [p.creator_id, p])));
       setWeeklySeasonGames(gamesResult.data || []);
 
-      // Default to the current week if Huddle has already published it,
-      // otherwise fall back to the most recent archived week available.
-      const availableWeeks = Object.keys(weeklyRes.weeks || {}).map(Number).sort((a, b) => a - b);
+      // Default to the current week if the active creator (ffhuddle, on a
+      // fresh page load) has already published it, otherwise fall back to
+      // the most recent archived week available.
+      const currentWeek = getCurrentWeekFromGames(gamesResult.data || []);
+      setWeeklyCurrentNflWeek(currentWeek);
+      const availableWeeks = Object.keys(dataByCreator[activeCreator]?.weeks || {}).map(Number).sort((a, b) => a - b);
       if (availableWeeks.length > 0) {
-        const currentWeek = getCurrentWeekFromGames(gamesResult.data || []);
         const defaultWeek = availableWeeks.includes(currentWeek)
           ? currentWeek
           : availableWeeks.filter((w) => w <= currentWeek).pop() ?? availableWeeks[availableWeeks.length - 1];
@@ -301,7 +308,7 @@ export default function Home() {
       }
     }
     loadWeekly();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     async function loadAuth() {
@@ -436,12 +443,25 @@ export default function Home() {
 
   function handleFormatChange(format) {
     setActiveFormat(format);
-    // Weekly Rankings is Huddle-only — set the creator context to ffhuddle so
-    // the existing per-creator risk-rating logic (canEditRisk, displayedRisk,
+    // Weekly Rankings has no Consensus concept — default to ffhuddle so the
+    // existing per-creator risk-rating logic (canEditRisk, displayedRisk,
     // etc.) works correctly with zero special-casing for weekly-ranked players.
     setActiveCreator(format === "Weekly Rankings" ? "ffhuddle" : "consensus");
     if (format === "DST/K") setDstkSubTab(DST_FORMAT);
     if (format === "Weekly Rankings") setWeeklyPosition("QB");
+  }
+
+  // Switches which creator's weekly rankings are shown — reuses activeCreator
+  // (same state season-rankings/risk-rating logic already keys off) so the
+  // risk-rating integration stays correct with no extra plumbing.
+  function handleWeeklyCreatorChange(creatorId) {
+    setActiveCreator(creatorId);
+    const availableWeeks = Object.keys(weeklyRankingsData[creatorId]?.weeks || {}).map(Number).sort((a, b) => a - b);
+    if (availableWeeks.length === 0) { setWeeklyWeek(null); return; }
+    const defaultWeek = availableWeeks.includes(weeklyCurrentNflWeek)
+      ? weeklyCurrentNflWeek
+      : availableWeeks.filter((w) => w <= weeklyCurrentNflWeek).pop() ?? availableWeeks[availableWeeks.length - 1];
+    setWeeklyWeek(defaultWeek);
   }
 
   const formatData = rankingsCache[effectiveFormat];
@@ -474,8 +494,8 @@ export default function Home() {
     : (selectedPlayer ? riskRatings[selectedPlayer.id]?.[activeCreator] ?? null : null);
   const canEditRisk = isDashboardUser && !isConsensusTab && (isAdmin || myCreatorId === activeCreator);
 
-  const weeklyWeeks = Object.keys(weeklyRankingsData.weeks || {}).map(Number).sort((a, b) => a - b);
-  const weeklyRows = weeklyWeek ? (weeklyRankingsData.weeks?.[String(weeklyWeek)]?.[weeklyPosition] || []) : [];
+  const weeklyWeeks = Object.keys(weeklyRankingsData[activeCreator]?.weeks || {}).map(Number).sort((a, b) => a - b);
+  const weeklyRows = weeklyWeek ? (weeklyRankingsData[activeCreator]?.weeks?.[String(weeklyWeek)]?.[weeklyPosition] || []) : [];
   const weeklyPoolById = Object.fromEntries(playerPool.map(p => [p.id, p]));
   // team -> { opponent, homeAway } for whichever week is selected — BYE if
   // a team has no game that week.
@@ -1158,20 +1178,36 @@ export default function Home() {
         </>
         )}
 
-        {/* Weekly Rankings (Huddle only) — no tiers, no consensus, no other
-            creators; a simple per-position ranked list for the selected week. */}
+        {/* Weekly Rankings — no tiers, no Consensus; a simple per-position
+            ranked list for the selected creator + week. */}
         {activeFormat === "Weekly Rankings" && (
           <div>
-            <div className="flex items-center gap-2.5 mb-5">
-              <CreatorAvatar logoUrl={weeklyCreatorProfile?.logo_url} initials="FFH" colorClass="bg-blue-600" size="sm" />
+            <div className="flex items-center gap-2.5 mb-4">
+              <CreatorAvatar
+                logoUrl={weeklyCreatorProfiles[activeCreator]?.logo_url}
+                initials={CREATOR_MOBILE_BADGE[activeCreator]?.label || "?"}
+                colorClass="bg-blue-600"
+                size="sm"
+              />
               <div>
-                <p className="font-bold text-ink text-sm">FFHuddle · Weekly Rankings</p>
+                <p className="font-bold text-ink text-sm">
+                  {ACTIVE_CREATORS.find((c) => c.id === activeCreator)?.short} · Weekly Rankings
+                </p>
                 {weeklyWeek && <p className="text-xs text-gray-400">Week {weeklyWeek}</p>}
               </div>
             </div>
 
+            <PillToggle
+              options={ACTIVE_CREATORS.map((c) => ({ id: c.id, label: c.short }))}
+              value={activeCreator}
+              onChange={handleWeeklyCreatorChange}
+              className="mb-4 !justify-start"
+            />
+
             {weeklyWeeks.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-12">No weekly rankings published yet — check back soon.</p>
+              <p className="text-sm text-gray-400 text-center py-12">
+                {ACTIVE_CREATORS.find((c) => c.id === activeCreator)?.short} hasn&apos;t published weekly rankings yet — check back soon.
+              </p>
             ) : (
               <>
                 <PillToggle

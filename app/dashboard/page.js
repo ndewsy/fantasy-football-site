@@ -1423,7 +1423,7 @@ export default function DashboardPage() {
   const adminTabs = [["admin", "Admin Overview"], ["subscribers", "Subscribers"], ["payouts", "Revenue & Payouts"], ["feedback", "Feedback"], ["players", "Add Players"], ["playerdb", "Player Database"], ["admin-auction", "Auction Rankings"], ["waiver-wire-admin", "Waiver Wire"]];
   const creatorTabs = [
     "rankings",
-    ...(profile.creator_id === "ffhuddle" ? ["weekly-rankings"] : []),
+    "weekly-rankings",
     "auction", "waiver-wire", "posts", "earnings", "analytics", "subscribers", "profile",
   ].map((t) => [
     t,
@@ -3089,7 +3089,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ── Weekly Rankings Tab (Huddle only) ── */}
+        {/* ── Weekly Rankings Tab ── */}
         {tab === "weekly-rankings" && (
           <WeeklyRankingsEditor creatorId={profile.creator_id} />
         )}
