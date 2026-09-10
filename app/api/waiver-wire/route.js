@@ -35,9 +35,22 @@ export async function GET(request) {
   const weekParam = searchParams.get('week');
   const category = searchParams.get('category');
   const position = searchParams.get('position');
+  const playerIdParam = searchParams.get('player_id');
   const week = weekParam ? parseInt(weekParam, 10) : null;
 
   const selectCols = 'id, creator_id, week, category, position, player_id, term, faab_pct, rank, players(name, position, team, espn_id, sleeper_id, percent_rostered)';
+
+  // One player, across every creator — powers the player card's "waiver
+  // wire mentions" section rather than a single creator's board.
+  if (playerIdParam) {
+    const playerId = parseInt(playerIdParam, 10);
+    if (!Number.isInteger(playerId)) return Response.json({ error: 'Invalid player_id' }, { status: 400 });
+    let query = supabase().from('waiver_wire_entries').select(selectCols).eq('player_id', playerId);
+    if (week) query = query.eq('week', week);
+    const { data, error } = await query.order('week', { ascending: false }).order('rank');
+    if (error) return Response.json({ error: error.message }, { status: 500 });
+    return Response.json({ entries: data || [] });
+  }
 
   if (creator_id && week && category) {
     if (!CATEGORIES.includes(category)) return Response.json({ error: 'Invalid category' }, { status: 400 });

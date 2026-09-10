@@ -36,6 +36,8 @@ const CREATORS = [
 
 const ACTIVE_CREATORS = CREATORS.filter(c => !c.comingSoon);
 
+const WAIVER_CATEGORY_LABELS = { priority: "Priority Add", drop: "Drop/Cut", streamer: "Streamer" };
+
 // Mobile-only compact badge for creator rank columns — desktop keeps the
 // full "RookieRager"/"FFHuddle" header text via c.short.
 const CREATOR_MOBILE_BADGE = {
@@ -226,6 +228,8 @@ export default function Home() {
   const [playerRankingsLoading, setPlayerRankingsLoading] = useState(false);
   const [seasonStats, setSeasonStats] = useState(null);
   const [seasonStatsLoading, setSeasonStatsLoading] = useState(false);
+  const [waiverMentions, setWaiverMentions] = useState([]);
+  const [waiverMentionsLoading, setWaiverMentionsLoading] = useState(false);
   const [tiersCache, setTiersCache] = useState({});
   const [updatedAtCache, setUpdatedAtCache] = useState({});
   const [lockedCache, setLockedCache] = useState({});
@@ -251,14 +255,14 @@ export default function Home() {
       for (let from = 0; ; from += PAGE) {
         const { data: batch } = await supabase
           .from("players")
-          .select("id, name, position, team, sleeper_id, espn_id, height_inches, weight_lbs, age")
+          .select("id, name, position, team, sleeper_id, espn_id, height_inches, weight_lbs, age, percent_rostered")
           .order("adp_rank", { nullsFirst: false })
           .order("id")
           .range(from, from + PAGE - 1);
         data.push(...(batch || []));
         if (!batch || batch.length < PAGE) break;
       }
-      setPlayerPool(data.map(p => ({ id: p.id, name: p.name, pos: p.position, team: p.team || "FA", sleeper_id: p.sleeper_id, espn_id: p.espn_id, height_inches: p.height_inches, weight_lbs: p.weight_lbs, age: p.age })));
+      setPlayerPool(data.map(p => ({ id: p.id, name: p.name, pos: p.position, team: p.team || "FA", sleeper_id: p.sleeper_id, espn_id: p.espn_id, height_inches: p.height_inches, weight_lbs: p.weight_lbs, age: p.age, percent_rostered: p.percent_rostered })));
       setPoolLoaded(true);
     }
     loadPool();
@@ -602,6 +606,14 @@ export default function Home() {
       .then((d) => setSeasonStats(d?.seasonStats || null))
       .catch(() => setSeasonStats(null))
       .finally(() => setSeasonStatsLoading(false));
+
+    setWaiverMentionsLoading(true);
+    setWaiverMentions([]);
+    fetch(`/api/waiver-wire?player_id=${player.id}&week=${weeklyCurrentNflWeek}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setWaiverMentions(d?.entries || []))
+      .catch(() => setWaiverMentions([]))
+      .finally(() => setWaiverMentionsLoading(false));
 
     const rankingsData = {};
     const modalById = Object.fromEntries(playerPool.map(p => [p.id, p]));
@@ -1314,6 +1326,11 @@ export default function Home() {
                   >
                     {selectedPlayer.team}
                   </span>
+                  {selectedPlayer.percent_rostered !== null && selectedPlayer.percent_rostered !== undefined && (
+                    <span className="px-2.5 py-1 rounded-lg text-sm font-semibold bg-white/15 text-white" title="% of ESPN leagues rostering this player">
+                      {Math.round(selectedPlayer.percent_rostered)}% rost.
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -1400,6 +1417,41 @@ export default function Home() {
                 </>
               )}
             </div>
+
+            {/* Waiver Wire — this week's mentions across creators, if any */}
+            {!waiverMentionsLoading && waiverMentions.length > 0 && (
+              <div className="px-6 pt-5">
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                  Waiver Wire · Week {weeklyCurrentNflWeek}
+                </h3>
+                <div className="space-y-2">
+                  {waiverMentions.map((m) => (
+                    <div key={m.id} className="flex items-center justify-between gap-2 bg-gray-50 rounded-lg px-3 py-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-xs font-semibold text-ink shrink-0">
+                          {ACTIVE_CREATORS.find((c) => c.id === m.creator_id)?.short || m.creator_id}
+                        </span>
+                        <span className="text-xs text-gray-400 truncate">
+                          {WAIVER_CATEGORY_LABELS[m.category] || m.category}{m.position ? ` · ${m.position}` : ""}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {m.term && (
+                          <span className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${
+                            m.term === "short" ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"
+                          }`}>
+                            {m.term}
+                          </span>
+                        )}
+                        {m.faab_pct !== null && m.faab_pct !== undefined && (
+                          <span className="text-xs font-semibold text-ink">{Number(m.faab_pct).toFixed(1)}%</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Previous Season Stats */}
             {!seasonStatsLoading && seasonStats && (
