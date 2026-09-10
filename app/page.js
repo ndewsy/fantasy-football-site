@@ -189,10 +189,14 @@ function computeConsensus(formatData) {
 
 export default function Home() {
   const promoActive = isPromoActive();
-  const [activeFormat, setActiveFormat] = useState(FORMATS[0]);
+  // Weekly Rankings is the front-page default now — its own render branch
+  // sets activeCreator to "ffhuddle" on click (see handleFormatChange), so
+  // the initial state needs to match that for the risk-rating integration
+  // and page_view logging to be correct on a fresh, un-clicked page load too.
+  const [activeFormat, setActiveFormat] = useState("Weekly Rankings");
   const [dstkSubTab, setDstkSubTab] = useState(DST_FORMAT);
   const effectiveFormat = activeFormat === "DST/K" ? dstkSubTab : activeFormat;
-  const [activeCreator, setActiveCreator] = useState("consensus");
+  const [activeCreator, setActiveCreator] = useState("ffhuddle");
   const [rankingsCache, setRankingsCache] = useState({});
   const [rankingsLoading, setRankingsLoading] = useState(false);
   const [user, setUser] = useState(null);
@@ -339,6 +343,11 @@ export default function Home() {
   }, [activeCreator]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    // Weekly Rankings has its own data source (see the weekly-rankings
+    // effect below) — "Weekly Rankings" isn't a real season format, so
+    // there's nothing for /api/rankings to fetch here.
+    if (activeFormat === "Weekly Rankings") return;
+
     const cachedFormat = rankingsCache[effectiveFormat];
 
     if (activeCreator === "consensus") {
@@ -423,7 +432,7 @@ export default function Home() {
       setRankingsLoading(false);
     }
     fetchRankings();
-  }, [effectiveFormat, activeCreator]);
+  }, [effectiveFormat, activeCreator, activeFormat]);
 
   function handleFormatChange(format) {
     setActiveFormat(format);
