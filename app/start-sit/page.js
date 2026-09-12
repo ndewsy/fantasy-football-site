@@ -228,6 +228,14 @@ function ProjectionCard({ result, opponentLabel, isRecommended, hasRecommendatio
                       Est.
                     </span>
                   )}
+                  {b.source === "league_avg" && (
+                    <span
+                      className="shrink-0 text-[9px] font-bold uppercase tracking-wide text-purple-600 bg-purple-50 border border-purple-200 rounded px-1 py-px"
+                      title="No market line or personal history yet — estimated from the league-wide average at this position"
+                    >
+                      Lg. Avg
+                    </span>
+                  )}
                 </span>
                 <span className={`w-12 sm:w-14 shrink-0 text-right font-mono tabular-nums text-[10px] sm:text-xs ${b.winsStat ? "text-green-700 font-semibold" : "text-gray-400"}`}>
                   {b.display ?? b.line}
