@@ -134,6 +134,47 @@ function PlayerSummaryCard({ result, isRecommended, hasRecommendation }) {
   );
 }
 
+// How sure the recommendation is, not just a number — a colored gauge with
+// a plain-English tier, since a bare "83%" pill reads as an afterthought
+// next to the big START/SIT labels above it, when it's actually the whole
+// reason to trust (or double-check) that call.
+function ConfidenceMeter({ confidence, showEstimateNote }) {
+  const tier = confidence >= 85
+    ? { label: "Strong Lean", color: "#16A34A" }
+    : confidence >= 65
+      ? { label: "Lean", color: "#2563EB" }
+      : { label: "Toss-Up", color: "#D97706" };
+  return (
+    <div className="flex flex-col items-center gap-2 mb-8">
+      <div className="w-full max-w-xs bg-card/70 backdrop-blur-md border border-card/80 shadow-lg rounded-2xl px-5 py-4">
+        <div className="flex items-center justify-between mb-2.5">
+          <span
+            className="text-[11px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full"
+            style={{ color: tier.color, backgroundColor: `${tier.color}1a` }}
+          >
+            {tier.label}
+          </span>
+          <span className="text-2xl font-extrabold tabular-nums" style={{ color: tier.color }}>
+            {confidence}%
+          </span>
+        </div>
+        <div className="h-2.5 rounded-full bg-gray-100 overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{ width: `${confidence}%`, backgroundColor: tier.color }}
+          />
+        </div>
+        <p className="text-[11px] text-gray-400 mt-2 text-center uppercase tracking-wide">Confidence</p>
+      </div>
+      {showEstimateNote && (
+        <p className="text-[11px] text-gray-400 text-center max-w-xs">
+          Lowered — one or both projections lean on season-average estimates for stats the market hasn&rsquo;t priced
+        </p>
+      )}
+    </div>
+  );
+}
+
 function ProjectionCard({ result, opponentLabel, isRecommended, hasRecommendation }) {
   const { player, hasGame, gameStartsAt, homeAway, projection, noDataLabels, gameTotal, teamImpliedTotal } = result;
   const glow = hasGame && hasRecommendation ? (isRecommended ? "#16A34A" : "#DC2626") : null;
@@ -531,17 +572,10 @@ export default function StartSitPage() {
                 </div>
 
                 {comparison.confidence !== null && comparison.confidence !== undefined && (
-                  <div className="flex flex-col items-center gap-1.5 mb-6">
-                    <span className="inline-flex items-center gap-1.5 bg-card/70 backdrop-blur-md border border-card/80 shadow-lg rounded-full px-4 py-1.5 text-sm">
-                      <span className="text-gray-400">Confidence:</span>
-                      <span className="font-bold text-ink">{comparison.confidence}%</span>
-                    </span>
-                    {comparison.players.some((r) => r.hasGame && r.marketCompleteness < 1) && (
-                      <p className="text-[11px] text-gray-400 text-center max-w-xs">
-                        Lowered — one or both projections lean on season-average estimates for stats the market hasn&rsquo;t priced
-                      </p>
-                    )}
-                  </div>
+                  <ConfidenceMeter
+                    confidence={comparison.confidence}
+                    showEstimateNote={comparison.players.some((r) => r.hasGame && r.marketCompleteness < 1)}
+                  />
                 )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
