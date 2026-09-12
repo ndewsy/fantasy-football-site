@@ -135,7 +135,7 @@ function PlayerSummaryCard({ result, isRecommended, hasRecommendation }) {
 }
 
 function ProjectionCard({ result, opponentLabel, isRecommended, hasRecommendation }) {
-  const { player, hasGame, gameStartsAt, homeAway, projection, missingStats, gameTotal, teamImpliedTotal } = result;
+  const { player, hasGame, gameStartsAt, homeAway, projection, noDataLabels, gameTotal, teamImpliedTotal } = result;
   const glow = hasGame && hasRecommendation ? (isRecommended ? "#16A34A" : "#DC2626") : null;
   return (
     <div
@@ -168,17 +168,25 @@ function ProjectionCard({ result, opponentLabel, isRecommended, hasRecommendatio
             <p className="text-3xl font-extrabold text-ink">{projection.total}</p>
             <p className="text-xs text-gray-400">projected fantasy points</p>
           </div>
-          {missingStats?.length > 0 && (
+          {noDataLabels?.length > 0 && (
             <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mb-3 text-center">
-              Partial data — {missingStats.join(", ")} not posted yet
+              No data available — {noDataLabels.join(", ")}
             </p>
           )}
           <div className="divide-y divide-gray-100">
             {projection.breakdown.map((b) => (
               <div key={b.statId} className="flex items-center gap-2 py-1.5 text-xs sm:text-sm">
-                <span className={`flex-1 min-w-0 flex items-center gap-1 ${b.winsStat ? "text-green-700 font-medium" : "text-gray-500"}`}>
+                <span className={`flex-1 min-w-0 flex items-center gap-1.5 ${b.winsStat ? "text-green-700 font-medium" : "text-gray-500"}`}>
                   {b.winsStat && <span className="text-green-600 shrink-0">▲</span>}
                   <span className="truncate">{b.label}</span>
+                  {b.source === "estimated" && (
+                    <span
+                      className="shrink-0 text-[9px] font-bold uppercase tracking-wide text-amber-600 bg-amber-50 border border-amber-200 rounded px-1 py-px"
+                      title="No market line yet — estimated from last season's per-game average"
+                    >
+                      Est.
+                    </span>
+                  )}
                 </span>
                 <span className={`w-12 sm:w-14 shrink-0 text-right font-mono tabular-nums text-[10px] sm:text-xs ${b.winsStat ? "text-green-700 font-semibold" : "text-gray-400"}`}>
                   {b.display ?? b.line}
@@ -523,11 +531,16 @@ export default function StartSitPage() {
                 </div>
 
                 {comparison.confidence !== null && comparison.confidence !== undefined && (
-                  <div className="flex justify-center mb-6">
+                  <div className="flex flex-col items-center gap-1.5 mb-6">
                     <span className="inline-flex items-center gap-1.5 bg-card/70 backdrop-blur-md border border-card/80 shadow-lg rounded-full px-4 py-1.5 text-sm">
                       <span className="text-gray-400">Confidence:</span>
                       <span className="font-bold text-ink">{comparison.confidence}%</span>
                     </span>
+                    {comparison.players.some((r) => r.hasGame && r.marketCompleteness < 1) && (
+                      <p className="text-[11px] text-gray-400 text-center max-w-xs">
+                        Lowered — one or both projections lean on season-average estimates for stats the market hasn&rsquo;t priced
+                      </p>
+                    )}
                   </div>
                 )}
 

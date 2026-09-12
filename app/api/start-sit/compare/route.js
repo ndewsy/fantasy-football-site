@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { computeProjection, missingStatLabels, computeConfidence, SCORING_FORMATS } from '@/lib/fantasyProjection';
+import { computeProjection, buildProjectionLines, computeConfidence, SCORING_FORMATS } from '@/lib/fantasyProjection';
 import { getAuthedUser } from '@/lib/getUser';
 import { getStartSitAccess } from '@/lib/startSitAccess';
 
@@ -28,8 +28,21 @@ async function loadPlayer(playerId, scoring) {
   // (already sorted ascending) get ignored for a single start/sit decision.
   const nextEventId = lines[0].sgo_event_id;
   const nextLines = lines.filter((l) => l.sgo_event_id === nextEventId);
-  const projection = computeProjection(nextLines, scoring);
-  const missingStats = missingStatLabels(player.position, nextLines);
+
+  // Last season's per-game rate stands in for any stat the market hasn't
+  // posted a line for yet (or, for a true rookie, isn't available at all —
+  // buildProjectionLines reports that gap honestly rather than guessing).
+  const { data: seasonStatsRows, error: seasonStatsError } = await supabase()
+    .from('player_season_stats')
+    .select('games_played, stats')
+    .eq('player_id', playerId)
+    .order('season', { ascending: false })
+    .limit(1);
+  if (seasonStatsError) throw seasonStatsError;
+  const seasonStats = seasonStatsRows?.[0] || null;
+
+  const { lines: projectionLines, noDataLabels, marketCompleteness } = buildProjectionLines(player.position, nextLines, seasonStats);
+  const projection = computeProjection(projectionLines, scoring);
   const homeAway = nextLines[0].home_away;
 
   const { data: gameLine, error: gameLineError } = await supabase()
@@ -46,7 +59,8 @@ async function loadPlayer(playerId, scoring) {
     opponentId: nextLines[0].opponent_id,
     homeAway,
     projection,
-    missingStats,
+    noDataLabels,
+    marketCompleteness,
     gameTotal: gameLine?.game_total ?? null,
     teamImpliedTotal: gameLine ? (homeAway === 'home' ? gameLine.home_team_total : gameLine.away_team_total) : null,
   };
@@ -55,8 +69,9 @@ async function loadPlayer(playerId, scoring) {
 // Marks, on each player's breakdown row, whether that player's raw stat line
 // beats the other player's for the same category — higher is better for
 // every stat this projection tracks (yards, receptions, TD odds), so a
-// straight comparison is safe. Stats only one player has posted (see
-// missingStatLabels) are left unmarked rather than treated as a loss.
+// straight comparison is safe. Stats only one player has a line for (real
+// or estimated — see buildProjectionLines) are left unmarked rather than
+// treated as a loss.
 function annotateStatWinners(playerA, playerB) {
   if (!playerA.hasGame || !playerB.hasGame) return;
   const bById = Object.fromEntries(playerB.projection.breakdown.map((b) => [b.statId, b]));
@@ -120,7 +135,10 @@ export async function GET(request) {
     recommendedPlayerId = withGames.reduce((best, r) =>
       r.projection.total > best.projection.total ? r : best
     ).player.id;
-    confidence = computeConfidence(withGames[0].projection.total, withGames[1].projection.total);
+    confidence = computeConfidence(
+      withGames[0].projection.total, withGames[1].projection.total,
+      withGames[0].marketCompleteness, withGames[1].marketCompleteness
+    );
   } else if (withGames.length === 1) {
     // Only one of the two has an upcoming projectable game — easy call.
     recommendedPlayerId = withGames[0].player.id;
