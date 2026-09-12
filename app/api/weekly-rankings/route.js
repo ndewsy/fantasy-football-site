@@ -32,26 +32,30 @@ export async function GET(request) {
   const selectCols = 'id, creator_id, week, position, player_id, rank, players(name, position, team, espn_id, sleeper_id)';
 
   if (week) {
-    const [{ data, error }, { data: tierRows, error: tierError }] = await Promise.all([
+    const [{ data, error }, { data: tierRows, error: tierError }, { data: noteRow, error: noteError }] = await Promise.all([
       supabase().from('weekly_rankings').select(selectCols).eq('creator_id', creator_id).eq('week', week).order('rank'),
       supabase().from('weekly_ranking_tiers').select('position, tiers').eq('creator_id', creator_id).eq('week', week),
+      supabase().from('weekly_rankings_notes').select('note').eq('creator_id', creator_id).eq('week', week).maybeSingle(),
     ]);
     if (error) return Response.json({ error: error.message }, { status: 500 });
     if (tierError) return Response.json({ error: tierError.message }, { status: 500 });
+    if (noteError) return Response.json({ error: noteError.message }, { status: 500 });
     const tiers = emptyTiersMap();
     for (const row of tierRows || []) tiers[row.position] = row.tiers || [];
-    return Response.json({ positions: groupByPosition(data || []), tiers });
+    return Response.json({ positions: groupByPosition(data || []), tiers, note: noteRow?.note || '' });
   }
 
   // No week — every week this creator has published, in one response, since
   // the whole season is only a few hundred rows at most (public page uses
   // this to build its week selector without a request per week).
-  const [{ data, error }, { data: tierRows, error: tierError }] = await Promise.all([
+  const [{ data, error }, { data: tierRows, error: tierError }, { data: noteRows, error: noteError }] = await Promise.all([
     supabase().from('weekly_rankings').select(selectCols).eq('creator_id', creator_id).order('week').order('rank'),
     supabase().from('weekly_ranking_tiers').select('week, position, tiers').eq('creator_id', creator_id),
+    supabase().from('weekly_rankings_notes').select('week, note').eq('creator_id', creator_id),
   ]);
   if (error) return Response.json({ error: error.message }, { status: 500 });
   if (tierError) return Response.json({ error: tierError.message }, { status: 500 });
+  if (noteError) return Response.json({ error: noteError.message }, { status: 500 });
 
   const weeks = {};
   for (const row of data || []) {
@@ -65,7 +69,11 @@ export async function GET(request) {
     if (!tiers[key]) tiers[key] = emptyTiersMap();
     tiers[key][row.position] = row.tiers || [];
   }
-  return Response.json({ weeks, tiers });
+  const notes = {};
+  for (const row of noteRows || []) {
+    if (row.note) notes[String(row.week)] = row.note;
+  }
+  return Response.json({ weeks, tiers, notes });
 }
 
 export async function POST(request) {

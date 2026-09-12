@@ -392,6 +392,7 @@ export default function Home() {
   const weeklyWeeks = Object.keys(weeklyRankingsData[activeCreator]?.weeks || {}).map(Number).sort((a, b) => a - b);
   const weeklyRows = weeklyWeek ? (weeklyRankingsData[activeCreator]?.weeks?.[String(weeklyWeek)]?.[weeklyPosition] || []) : [];
   const weeklyTiers = weeklyWeek ? (weeklyRankingsData[activeCreator]?.tiers?.[String(weeklyWeek)]?.[weeklyPosition] || []) : [];
+  const weeklyNote = weeklyWeek ? (weeklyRankingsData[activeCreator]?.notes?.[String(weeklyWeek)] || "") : "";
   // team -> { opponent, homeAway } for whichever week is selected — BYE if
   // a team has no game that week.
   const weeklyMatchups = useMemo(() => Object.fromEntries(
@@ -1110,6 +1111,12 @@ export default function Home() {
                   onChange={setWeeklyPosition}
                   className="mb-5 !justify-start"
                 />
+
+                {weeklyNote && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-5">
+                    <p className="text-xs text-amber-700 whitespace-pre-wrap">{weeklyNote}</p>
+                  </div>
+                )}
 
                 {weeklyRows.length === 0 ? (
                   <p className="text-sm text-gray-400 text-center py-12">No {weeklyPosition} rankings for Week {weeklyWeek} yet.</p>

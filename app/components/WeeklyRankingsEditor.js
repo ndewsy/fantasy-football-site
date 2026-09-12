@@ -33,6 +33,7 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
   const [showAddTier, setShowAddTier] = useState(false);
   const [addTierRank, setAddTierRank] = useState("");
   const [addTierError, setAddTierError] = useState("");
+  const [note, setNote] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState(null);
@@ -83,6 +84,16 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
       })
       .finally(() => setLoading(false));
   }, [creatorId, week, position]);
+
+  // Week-level, not per-position — reload only when creator/week changes so
+  // switching position tabs doesn't clobber an unsaved disclaimer edit.
+  useEffect(() => {
+    if (!creatorId) return;
+    fetch(`/api/weekly-rankings/note?creator_id=${encodeURIComponent(creatorId)}&week=${week}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setNote(d?.note || ""))
+      .catch(() => setNote(""));
+  }, [creatorId, week]);
 
   const byId = Object.fromEntries(playerPool.map((p) => [p.id, p]));
   const usedIds = new Set(rows.map((r) => r.player_id));
@@ -147,17 +158,24 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
     if (!token || !creatorId) return;
     setSaving(true);
     try {
-      const res = await fetch("/api/weekly-rankings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          creator_id: creatorId,
-          week,
-          position,
-          entries: rows.map((r) => ({ player_id: r.player_id })),
-          tiers,
+      const [res] = await Promise.all([
+        fetch("/api/weekly-rankings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            creator_id: creatorId,
+            week,
+            position,
+            entries: rows.map((r) => ({ player_id: r.player_id })),
+            tiers,
+          }),
         }),
-      });
+        fetch("/api/weekly-rankings/note", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ creator_id: creatorId, week, note }),
+        }),
+      ]);
       if (res.ok) setSavedAt(new Date().toISOString());
     } finally {
       setSaving(false);
@@ -183,6 +201,20 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
             ))}
           </select>
         </div>
+      </div>
+
+      <div className="mb-5">
+        <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+          Disclaimer for Week {week} <span className="font-normal text-gray-400">(optional — shown to everyone, applies to all positions this week)</span>
+        </label>
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          maxLength={500}
+          rows={2}
+          placeholder="e.g. TEN and GB on bye. Justin Jefferson excluded — his game had already started when these were posted."
+          className="w-full bg-card rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+        />
       </div>
 
       <div className="flex gap-1.5 mb-5">
