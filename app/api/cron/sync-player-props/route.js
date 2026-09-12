@@ -33,43 +33,59 @@ function probabilityToAmericanOdds(p) {
   return rounded > 0 ? `+${rounded}` : `${rounded}`;
 }
 
-// Different books often post genuinely different lines for the same player
-// (not just different odds on the same number) — e.g. one book at 223.5
-// passing yards near-even odds, another at 216.5 priced -135. A line only
-// a single side is heavily favored on isn't the book's honest expected
-// value, it's a hedge; the line priced closest to a true coin-flip (50%
-// implied probability, i.e. -100/+100) is the most honest single estimate
-// available. Scans every bookmaker SportsGameOdds returns, not just one or
-// two, so there's the widest possible pool to find a fair price in.
-function fairestBook(byBookmaker) {
+// SportsGameOdds returns pricing in two different shapes depending on the
+// player/market: well-covered players get a full byBookmaker breakdown
+// (draftkings, fanduel, caesars, ...), but for lower-profile players it
+// often comes back with byBookmaker entirely empty while a real, current
+// aggregate price still sits directly on the odd object as bookOdds /
+// bookOverUnder — confirmed live against an actual DraftKings line that
+// only showed up there, not in byBookmaker. Treating that as just another
+// candidate (rather than only reading byBookmaker) is the difference
+// between silently skipping a player and picking up their real price.
+function bookCandidates(odd) {
+  const candidates = Object.entries(odd?.byBookmaker || {})
+    .filter(([, entry]) => entry?.available && entry.odds !== undefined && entry.odds !== null)
+    .map(([book, entry]) => ({ book, overUnder: entry.overUnder, odds: entry.odds }));
+  if (odd?.bookOddsAvailable && odd.bookOdds !== undefined && odd.bookOdds !== null) {
+    candidates.push({ book: 'aggregate', overUnder: odd.bookOverUnder, odds: odd.bookOdds });
+  }
+  return candidates;
+}
+
+// Different books (and the aggregate above) often post genuinely different
+// lines for the same player, not just different odds on the same number —
+// e.g. one priced at 223.5 near-even, another at 216.5 priced -135. A line
+// one side is heavily favored on isn't the book's honest expected value,
+// it's a hedge; the line priced closest to a true coin-flip (50% implied
+// probability, i.e. -100/+100) is the most honest single estimate available.
+function fairestBook(odd) {
   let best = null;
   let bestDist = Infinity;
-  for (const [book, entry] of Object.entries(byBookmaker || {})) {
-    if (!entry?.available || entry.overUnder === undefined || entry.overUnder === null) continue;
-    const prob = americanOddsToProbability(entry.odds);
+  for (const c of bookCandidates(odd)) {
+    if (c.overUnder === undefined || c.overUnder === null) continue;
+    const prob = americanOddsToProbability(c.odds);
     if (prob === null) continue;
     const dist = Math.abs(prob - 0.5);
     if (dist < bestDist) {
       bestDist = dist;
-      best = { book, overUnder: Number(entry.overUnder), odds: entry.odds };
+      best = { book: c.book, overUnder: Number(c.overUnder), odds: c.odds };
     }
   }
   return best;
 }
 
-function fairestLine(byBookmaker) {
-  return fairestBook(byBookmaker)?.overUnder ?? null;
+function fairestLine(odd) {
+  return fairestBook(odd)?.overUnder ?? null;
 }
 
-// Same "use every book" widening for the anytime-TD Yes/No moneyline, but
+// Same "use every source" widening for the anytime-TD Yes/No moneyline, but
 // odds don't average linearly — blend in probability space, then convert
-// back for display. Unlike fairestBook above, every book's probability here
-// is itself a usable estimate (there's no "line" to correct for skew), so
-// blending across all of them is the more stable choice.
-function blendedProbability(byBookmaker) {
-  const probs = Object.values(byBookmaker || {})
-    .filter((b) => b?.available)
-    .map((b) => americanOddsToProbability(b.odds))
+// back for display. Unlike fairestBook above, every source's probability
+// here is itself a usable estimate (there's no "line" to correct for skew),
+// so blending across all of them (including the aggregate) is more stable.
+function blendedProbability(odd) {
+  const probs = bookCandidates(odd)
+    .map((c) => americanOddsToProbability(c.odds))
     .filter((p) => p !== null);
   if (probs.length === 0) return null;
   return probs.reduce((a, b) => a + b, 0) / probs.length;
@@ -170,9 +186,9 @@ export async function GET(request) {
 
     // Game-level total + each team's implied total — deterministic oddIDs,
     // no need to scan for them like the per-player markets below.
-    const gameTotal = fairestLine(odds['points-all-game-ou-over']?.byBookmaker);
-    const homeTeamTotal = fairestLine(odds['points-home-game-ou-over']?.byBookmaker);
-    const awayTeamTotal = fairestLine(odds['points-away-game-ou-over']?.byBookmaker);
+    const gameTotal = fairestLine(odds['points-all-game-ou-over']);
+    const homeTeamTotal = fairestLine(odds['points-home-game-ou-over']);
+    const awayTeamTotal = fairestLine(odds['points-away-game-ou-over']);
     if (gameTotal !== null || homeTeamTotal !== null || awayTeamTotal !== null) {
       gameLineRows.push({
         sgo_event_id: event.eventID,
@@ -205,24 +221,25 @@ export async function GET(request) {
       let underOdds;
 
       if (isAnytimeTd) {
-        const prob = blendedProbability(odd.byBookmaker);
+        const prob = blendedProbability(odd);
         if (prob === null) { skippedNoLine++; continue; }
         line = prob;
         overOdds = probabilityToAmericanOdds(prob);
         const noOdd = odd.opposingOddID ? odds[odd.opposingOddID] : null;
-        const noProb = noOdd ? blendedProbability(noOdd.byBookmaker) : null;
+        const noProb = noOdd ? blendedProbability(noOdd) : null;
         underOdds = noProb !== null ? probabilityToAmericanOdds(noProb) : null;
       } else {
-        const picked = fairestBook(odd.byBookmaker);
+        const picked = fairestBook(odd);
         if (!picked) { skippedNoLine++; continue; }
         line = picked.overUnder;
         overOdds = picked.odds;
         const underOdd = odd.opposingOddID ? odds[odd.opposingOddID] : null;
         // Prefer the same book's price on the under side for consistency
         // with the chosen over line; fall back to that side's own fairest
-        // book if the one we picked didn't quote it.
-        const sameBookUnder = underOdd?.byBookmaker?.[picked.book];
-        underOdds = sameBookUnder?.available ? sameBookUnder.odds : (fairestBook(underOdd?.byBookmaker)?.odds ?? null);
+        // price (byBookmaker or aggregate) if the one we picked didn't
+        // quote it there specifically.
+        const sameBookUnder = picked.book !== 'aggregate' ? underOdd?.byBookmaker?.[picked.book] : null;
+        underOdds = sameBookUnder?.available ? sameBookUnder.odds : (fairestBook(underOdd)?.odds ?? null);
       }
 
       const playerInfo = eventPlayers[sgoPlayerID];
