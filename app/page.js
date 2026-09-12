@@ -391,6 +391,7 @@ export default function Home() {
 
   const weeklyWeeks = Object.keys(weeklyRankingsData[activeCreator]?.weeks || {}).map(Number).sort((a, b) => a - b);
   const weeklyRows = weeklyWeek ? (weeklyRankingsData[activeCreator]?.weeks?.[String(weeklyWeek)]?.[weeklyPosition] || []) : [];
+  const weeklyTiers = weeklyWeek ? (weeklyRankingsData[activeCreator]?.tiers?.[String(weeklyWeek)]?.[weeklyPosition] || []) : [];
   // team -> { opponent, homeAway } for whichever week is selected — BYE if
   // a team has no game that week.
   const weeklyMatchups = useMemo(() => Object.fromEntries(
@@ -1115,23 +1116,35 @@ export default function Home() {
                 ) : (
                   <div className="divide-y divide-gray-100 border border-gray-100 rounded-xl overflow-hidden">
                     {weeklyRows.map((row, i) => {
+                      const rank = i + 1;
+                      const tierNum = getTierNumber(rank, weeklyTiers.length > 0 ? weeklyTiers : [1]);
+                      const prevTierNum = i > 0 ? getTierNumber(rank - 1, weeklyTiers.length > 0 ? weeklyTiers : [1]) : tierNum;
+                      const showDivider = weeklyTiers.length > 0 && (i === 0 || tierNum !== prevTierNum);
                       const matchup = weeklyMatchups[row.players?.team];
                       return (
-                      <button
-                        key={row.player_id}
-                        onClick={() => openPlayerModal(weeklyPoolById[row.player_id] || { id: row.player_id, ...row.players })}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left"
-                      >
-                        <span className="text-sm text-gray-400 font-mono w-6 shrink-0 text-right">{i + 1}</span>
-                        <PlayerHeadshot espnId={row.players?.espn_id} sleeperId={row.players?.sleeper_id} name={row.players?.name} size="sm" />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-ink truncate">{row.players?.name}</p>
-                          <p className="text-xs text-gray-400">{row.players?.position} · {row.players?.team}</p>
-                        </div>
-                        <span className="text-xs text-gray-400 shrink-0">
-                          {matchup ? `${matchup.homeAway === "home" ? "vs" : "@"} ${matchup.opponent}` : "BYE"}
-                        </span>
-                      </button>
+                      <Fragment key={row.player_id}>
+                        {showDivider && (
+                          <div className="w-full flex items-center gap-3 px-4 py-2 select-none">
+                            <div className="flex-1 h-px bg-blue-200" />
+                            <span className="text-xs font-semibold text-blue-600 tracking-wider uppercase">Tier {tierNum}</span>
+                            <div className="flex-1 h-px bg-blue-200" />
+                          </div>
+                        )}
+                        <button
+                          onClick={() => openPlayerModal(weeklyPoolById[row.player_id] || { id: row.player_id, ...row.players })}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left"
+                        >
+                          <span className="text-sm text-gray-400 font-mono w-6 shrink-0 text-right">{i + 1}</span>
+                          <PlayerHeadshot espnId={row.players?.espn_id} sleeperId={row.players?.sleeper_id} name={row.players?.name} size="sm" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-ink truncate">{row.players?.name}</p>
+                            <p className="text-xs text-gray-400">{row.players?.position} · {row.players?.team}</p>
+                          </div>
+                          <span className="text-xs text-gray-400 shrink-0">
+                            {matchup ? `${matchup.homeAway === "home" ? "vs" : "@"} ${matchup.opponent}` : "BYE"}
+                          </span>
+                        </button>
+                      </Fragment>
                       );
                     })}
                   </div>

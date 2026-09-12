@@ -15,6 +15,10 @@ function groupByPosition(rows) {
   return grouped;
 }
 
+function emptyTiersMap() {
+  return Object.fromEntries(POSITIONS.map((p) => [p, []]));
+}
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const creator_id = searchParams.get('creator_id');
@@ -28,26 +32,26 @@ export async function GET(request) {
   const selectCols = 'id, creator_id, week, position, player_id, rank, players(name, position, team, espn_id, sleeper_id)';
 
   if (week) {
-    const { data, error } = await supabase()
-      .from('weekly_rankings')
-      .select(selectCols)
-      .eq('creator_id', creator_id)
-      .eq('week', week)
-      .order('rank');
+    const [{ data, error }, { data: tierRows, error: tierError }] = await Promise.all([
+      supabase().from('weekly_rankings').select(selectCols).eq('creator_id', creator_id).eq('week', week).order('rank'),
+      supabase().from('weekly_ranking_tiers').select('position, tiers').eq('creator_id', creator_id).eq('week', week),
+    ]);
     if (error) return Response.json({ error: error.message }, { status: 500 });
-    return Response.json({ positions: groupByPosition(data || []) });
+    if (tierError) return Response.json({ error: tierError.message }, { status: 500 });
+    const tiers = emptyTiersMap();
+    for (const row of tierRows || []) tiers[row.position] = row.tiers || [];
+    return Response.json({ positions: groupByPosition(data || []), tiers });
   }
 
   // No week — every week this creator has published, in one response, since
   // the whole season is only a few hundred rows at most (public page uses
   // this to build its week selector without a request per week).
-  const { data, error } = await supabase()
-    .from('weekly_rankings')
-    .select(selectCols)
-    .eq('creator_id', creator_id)
-    .order('week')
-    .order('rank');
+  const [{ data, error }, { data: tierRows, error: tierError }] = await Promise.all([
+    supabase().from('weekly_rankings').select(selectCols).eq('creator_id', creator_id).order('week').order('rank'),
+    supabase().from('weekly_ranking_tiers').select('week, position, tiers').eq('creator_id', creator_id),
+  ]);
   if (error) return Response.json({ error: error.message }, { status: 500 });
+  if (tierError) return Response.json({ error: tierError.message }, { status: 500 });
 
   const weeks = {};
   for (const row of data || []) {
@@ -55,7 +59,13 @@ export async function GET(request) {
     if (!weeks[key]) weeks[key] = emptyPositionMap();
     weeks[key][row.position]?.push(row);
   }
-  return Response.json({ weeks });
+  const tiers = {};
+  for (const row of tierRows || []) {
+    const key = String(row.week);
+    if (!tiers[key]) tiers[key] = emptyTiersMap();
+    tiers[key][row.position] = row.tiers || [];
+  }
+  return Response.json({ weeks, tiers });
 }
 
 export async function POST(request) {
@@ -67,7 +77,7 @@ export async function POST(request) {
   if (authError || !user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await request.json();
-  const { creator_id, position, entries } = body;
+  const { creator_id, position, entries, tiers } = body;
   const week = parseInt(body.week, 10);
 
   if (!creator_id || !Number.isInteger(week) || week < 1 || !POSITIONS.includes(position)) {
@@ -80,6 +90,9 @@ export async function POST(request) {
     if (!Number.isInteger(Number(e.player_id))) {
       return Response.json({ error: 'each entry needs a player_id' }, { status: 400 });
     }
+  }
+  if (tiers !== undefined && (!Array.isArray(tiers) || tiers.some((t) => !Number.isInteger(t) || t < 1))) {
+    return Response.json({ error: 'tiers must be an array of positive integers' }, { status: 400 });
   }
 
   const { data: profile } = await supabase()
@@ -113,6 +126,16 @@ export async function POST(request) {
     }));
     const { error: insertError } = await supabase().from('weekly_rankings').insert(rows);
     if (insertError) return Response.json({ error: insertError.message }, { status: 500 });
+  }
+
+  if (tiers !== undefined) {
+    const { error: tiersError } = await supabase()
+      .from('weekly_ranking_tiers')
+      .upsert(
+        { creator_id, week, position, tiers, updated_at: new Date().toISOString() },
+        { onConflict: 'creator_id,week,position' }
+      );
+    if (tiersError) return Response.json({ error: tiersError.message }, { status: 500 });
   }
 
   return Response.json({ ok: true });

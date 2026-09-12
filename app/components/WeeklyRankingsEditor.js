@@ -14,11 +14,25 @@ const POSITIONS = [
 ];
 const WEEKS = Array.from({ length: 18 }, (_, i) => i + 1);
 
+// tiers is a sorted array of rank thresholds where a new tier starts —
+// tiers[0] is always 1 (implicit, not user-removable), same model as the
+// main Redraft/Dynasty rankings' tiers.
+function getTierNumber(rank, tiers) {
+  for (let i = tiers.length - 1; i >= 0; i--) {
+    if (rank >= tiers[i]) return i + 1;
+  }
+  return 1;
+}
+
 export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
   const [position, setPosition] = useState(POSITIONS[0].id);
   const [week, setWeek] = useState(1);
   const [playerPool, setPlayerPool] = useState([]);
   const [rows, setRows] = useState([]); // [{ player_id }] enriched with pool info at render time
+  const [tiers, setTiers] = useState([1]);
+  const [showAddTier, setShowAddTier] = useState(false);
+  const [addTierRank, setAddTierRank] = useState("");
+  const [addTierError, setAddTierError] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState(null);
@@ -63,6 +77,8 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
       .then((d) => {
         const entries = (d?.positions?.[position] || []).map((e) => ({ player_id: e.player_id }));
         setRows(entries);
+        const savedTiers = d?.tiers?.[position];
+        setTiers(savedTiers && savedTiers.length > 0 ? savedTiers : [1]);
         setSavedAt(null);
       })
       .finally(() => setLoading(false));
@@ -100,6 +116,33 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
     setSearch("");
   }
 
+  function confirmAddTier() {
+    const pos = parseInt(addTierRank, 10);
+    if (!Number.isInteger(pos) || pos < 1) {
+      setAddTierError("Please enter a positive whole number.");
+      return;
+    }
+    if (pos >= rows.length) {
+      setAddTierError(`Must be less than ${rows.length} (your total ranked players).`);
+      return;
+    }
+    const newTierStart = pos + 1;
+    if (tiers.includes(newTierStart)) {
+      setAddTierError(`A tier boundary already exists after rank ${pos}.`);
+      return;
+    }
+    setTiers([...tiers, newTierStart].sort((a, b) => a - b));
+    setShowAddTier(false);
+    setAddTierRank("");
+    setAddTierError("");
+  }
+
+  function removeTier(tierIndex) {
+    const next = [...tiers];
+    next.splice(tierIndex, 1);
+    setTiers(next);
+  }
+
   async function save() {
     if (!token || !creatorId) return;
     setSaving(true);
@@ -112,6 +155,7 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
           week,
           position,
           entries: rows.map((r) => ({ player_id: r.player_id })),
+          tiers,
         }),
       });
       if (res.ok) setSavedAt(new Date().toISOString());
@@ -183,15 +227,63 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
             )}
           </div>
 
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs text-gray-400">Tiers group players visually on the public page.</p>
+            <button
+              onClick={() => { setShowAddTier(true); setAddTierRank(""); setAddTierError(""); }}
+              className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+            >
+              + Add Tier
+            </button>
+          </div>
+          {showAddTier && (
+            <div className="flex items-center gap-2 mb-3 bg-gray-50 border border-gray-200 rounded-lg p-2.5">
+              <span className="text-xs text-gray-500 shrink-0">New tier starts after rank</span>
+              <input
+                type="number"
+                min="1"
+                value={addTierRank}
+                onChange={(e) => setAddTierRank(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && confirmAddTier()}
+                autoFocus
+                className="w-16 bg-card rounded border border-gray-200 px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button onClick={confirmAddTier} className="text-xs font-semibold bg-blue-600 text-white px-2.5 py-1 rounded">Add</button>
+              <button onClick={() => setShowAddTier(false)} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+              {addTierError && <p className="text-[11px] text-red-500 ml-1">{addTierError}</p>}
+            </div>
+          )}
+
           <div className="max-h-[32rem] overflow-y-auto divide-y divide-gray-100 border border-gray-100 rounded-lg">
             {rows.length === 0 && (
               <p className="text-sm text-gray-400 text-center py-8">No players ranked yet.</p>
             )}
             {rows.map((row, i) => {
+              const rank = i + 1;
+              const tierNum = getTierNumber(rank, tiers);
+              const prevTierNum = i > 0 ? getTierNumber(rank - 1, tiers) : tierNum;
+              const showDivider = i === 0 || tierNum !== prevTierNum;
               const p = byId[row.player_id];
               const matchup = matchups[p?.team];
               return (
-                <div key={`${row.player_id}-${i}`} className="flex items-center gap-2.5 px-3 py-2 flex-wrap sm:flex-nowrap">
+                <div key={`${row.player_id}-${i}`}>
+                {showDivider && (
+                  <div className="flex items-center gap-3 px-3 py-1.5 bg-blue-50">
+                    <div className="flex-1 h-px bg-blue-200" />
+                    <span className="text-[11px] font-semibold text-blue-600 tracking-wider uppercase">Tier {tierNum}</span>
+                    {tierNum > 1 && (
+                      <button
+                        onClick={() => removeTier(tiers.indexOf(rank))}
+                        className="text-[11px] text-blue-400 hover:text-red-500"
+                        title="Remove this tier break"
+                      >
+                        ✕
+                      </button>
+                    )}
+                    <div className="flex-1 h-px bg-blue-200" />
+                  </div>
+                )}
+                <div className="flex items-center gap-2.5 px-3 py-2 flex-wrap sm:flex-nowrap">
                   <span className="text-xs text-gray-400 font-mono w-7 shrink-0 text-right">{i + 1}</span>
                   <PlayerHeadshot espnId={p?.espn_id} sleeperId={p?.sleeper_id} name={p?.name} size="sm" />
                   <div className="min-w-0 flex-1">
@@ -206,6 +298,7 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
                     <button onClick={() => movePlayer(i, 1)} disabled={i === rows.length - 1} className="text-gray-400 hover:text-gray-700 disabled:opacity-30 text-xs leading-none px-1">▼</button>
                   </div>
                   <button onClick={() => removePlayer(i)} className="text-gray-300 hover:text-red-500 shrink-0 text-sm px-1">✕</button>
+                </div>
                 </div>
               );
             })}
