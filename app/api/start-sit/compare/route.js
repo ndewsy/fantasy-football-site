@@ -6,10 +6,14 @@ import { getStartSitAccess } from '@/lib/startSitAccess';
 let _supabase;
 const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY));
 
+// The season currently in progress — bump this once the 2027 season starts.
+// Matches the constant in app/api/cron/sync-week-stats/route.js.
+const CURRENT_SEASON = 2026;
+
 async function loadPlayer(playerId, scoring) {
   const { data: player, error: playerError } = await supabase()
     .from('players')
-    .select('id, name, position, team, espn_id, sleeper_id')
+    .select('id, name, position, team, espn_id, sleeper_id, rookie_year')
     .eq('id', playerId)
     .maybeSingle();
   if (playerError) throw playerError;
@@ -41,7 +45,8 @@ async function loadPlayer(playerId, scoring) {
   if (seasonStatsError) throw seasonStatsError;
   const seasonStats = seasonStatsRows?.[0] || null;
 
-  const { lines: projectionLines, noDataLabels, marketCompleteness } = buildProjectionLines(player.position, nextLines, seasonStats);
+  const isRookie = player.rookie_year === CURRENT_SEASON;
+  const { lines: projectionLines, noDataLabels, marketCompleteness } = buildProjectionLines(player.position, nextLines, seasonStats, isRookie);
   const projection = computeProjection(projectionLines, scoring);
   const homeAway = nextLines[0].home_away;
 
