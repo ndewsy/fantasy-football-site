@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import { getCurrentWeekFromGames } from "@/lib/currentWeek";
 import PlayerHeadshot from "./PlayerHeadshot";
@@ -37,9 +37,12 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState(null);
+  const [noteSaving, setNoteSaving] = useState(false);
+  const [noteSavedAt, setNoteSavedAt] = useState(null);
   const [search, setSearch] = useState("");
   const [token, setToken] = useState(null);
   const [seasonGames, setSeasonGames] = useState([]);
+  const dragIndex = useRef(null);
 
   useEffect(() => {
     async function loadPoolAndWeek() {
@@ -92,7 +95,8 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
     fetch(`/api/weekly-rankings/note?creator_id=${encodeURIComponent(creatorId)}&week=${week}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => setNote(d?.note || ""))
-      .catch(() => setNote(""));
+      .catch(() => setNote(""))
+      .finally(() => setNoteSavedAt(null));
   }, [creatorId, week]);
 
   const byId = Object.fromEntries(playerPool.map((p) => [p.id, p]));
@@ -152,6 +156,50 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
     const next = [...tiers];
     next.splice(tierIndex, 1);
     setTiers(next);
+  }
+
+  // Standalone save for just the disclaimer — it's week-level, not tied to
+  // any one position's list, so a creator jotting a note shouldn't have to
+  // scroll past the full player list to the main Save button below to post it.
+  async function saveNote() {
+    if (!token || !creatorId) return;
+    setNoteSaving(true);
+    try {
+      const res = await fetch("/api/weekly-rankings/note", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ creator_id: creatorId, week, note }),
+      });
+      if (res.ok) setNoteSavedAt(new Date().toISOString());
+    } finally {
+      setNoteSaving(false);
+    }
+  }
+
+  // Native HTML5 drag-and-drop, same pattern as the main rankings editor
+  // (app/dashboard/page.js) — reorders rows live as you drag over them;
+  // the existing Save button below persists it, same as the ▲/▼ buttons.
+  function handleDragStart(e, index) {
+    dragIndex.current = index;
+    e.dataTransfer.effectAllowed = "move";
+  }
+
+  function handleDragOver(e, index) {
+    e.preventDefault();
+    if (dragIndex.current === null || dragIndex.current === index) return;
+    // Splice synchronously here (not inside the setRows updater) — the
+    // updater callback can run after this function returns, by which point
+    // dragIndex.current would already hold the reassignment below, splicing
+    // with the wrong (new) index instead of the one actually dragged from.
+    const next = [...rows];
+    const [dragged] = next.splice(dragIndex.current, 1);
+    next.splice(index, 0, dragged);
+    dragIndex.current = index;
+    setRows(next);
+  }
+
+  function handleDragEnd() {
+    dragIndex.current = null;
   }
 
   async function save() {
@@ -215,6 +263,18 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
           placeholder="e.g. TEN and GB on bye. Justin Jefferson excluded — his game had already started when these were posted."
           className="w-full bg-card rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 resize-none"
         />
+        <div className="flex items-center justify-end gap-2 mt-1.5">
+          <p className="text-xs text-gray-400">
+            {noteSavedAt ? `Saved ${new Date(noteSavedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : ""}
+          </p>
+          <button
+            onClick={saveNote}
+            disabled={noteSaving}
+            className="bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-gray-600 font-semibold px-3 py-1.5 rounded-lg text-xs transition-colors"
+          >
+            {noteSaving ? "Saving..." : "Save Disclaimer"}
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-1.5 mb-5">
@@ -315,7 +375,14 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
                     <div className="flex-1 h-px bg-blue-200" />
                   </div>
                 )}
-                <div className="flex items-center gap-2.5 px-3 py-2 flex-wrap sm:flex-nowrap">
+                <div
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, i)}
+                  onDragOver={(e) => handleDragOver(e, i)}
+                  onDragEnd={handleDragEnd}
+                  className="flex items-center gap-2.5 px-3 py-2 flex-wrap sm:flex-nowrap cursor-grab active:cursor-grabbing"
+                >
+                  <span className="text-gray-300 shrink-0 select-none" title="Drag to reorder">⠿</span>
                   <span className="text-xs text-gray-400 font-mono w-7 shrink-0 text-right">{i + 1}</span>
                   <PlayerHeadshot espnId={p?.espn_id} sleeperId={p?.sleeper_id} name={p?.name} size="sm" />
                   <div className="min-w-0 flex-1">
