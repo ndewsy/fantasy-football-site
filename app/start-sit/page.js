@@ -175,6 +175,46 @@ function ConfidenceMeter({ confidence, showEstimateNote }) {
   );
 }
 
+function opponentLabelFor(opponentId) {
+  return opponentId ? opponentId.replace(/_NFL$/, "").replaceAll("_", " ") : "TBD";
+}
+
+// Public teaser, visible regardless of login/subscription state — the
+// week's highest-projected players across every position, computed fresh
+// from the same market-based projection system as the 2-player comparison
+// tool below it.
+function TopStartsSection({ topStarts, loading }) {
+  if (!loading && topStarts.length === 0) return null;
+  return (
+    <div className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg p-4 sm:p-5 mb-8">
+      <h2 className="font-bold text-ink text-sm sm:text-base mb-1">🔥 This Week&rsquo;s Top 5 Best Starts</h2>
+      <p className="text-xs text-gray-400 mb-4">Highest-projected players across every position, updated live from current market lines.</p>
+      {loading ? (
+        <p className="text-sm text-gray-400 text-center py-6">Loading...</p>
+      ) : (
+        <div className="divide-y divide-gray-100">
+          {topStarts.map((r, i) => (
+            <div key={r.player.id} className="flex items-center gap-3 py-2.5">
+              <span className="text-sm font-mono text-gray-400 w-5 shrink-0 text-right">{i + 1}</span>
+              <PlayerHeadshot espnId={r.player.espn_id} sleeperId={r.player.sleeper_id} name={r.player.name} size="sm" />
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-ink text-sm truncate">{r.player.name}</p>
+                <p className="text-xs text-gray-400">
+                  {r.player.position} · {r.player.team} · {r.homeAway === "home" ? "vs" : "@"} {opponentLabelFor(r.opponentId)}
+                </p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="font-extrabold text-ink text-base">{r.projectedPoints}</p>
+                <p className="text-[10px] text-gray-400">proj. pts</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ProjectionCard({ result, opponentLabel, isRecommended, hasRecommendation }) {
   const { player, hasGame, gameStartsAt, homeAway, projection, noDataLabels, gameTotal, teamImpliedTotal } = result;
   const glow = hasGame && hasRecommendation ? (isRecommended ? "#16A34A" : "#DC2626") : null;
@@ -410,6 +450,8 @@ export default function StartSitPage() {
   const [playerB, setPlayerB] = useState(null);
   const [comparison, setComparison] = useState(null);
   const [comparing, setComparing] = useState(false);
+  const [topStarts, setTopStarts] = useState([]);
+  const [topStartsLoading, setTopStartsLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
@@ -510,6 +552,17 @@ export default function StartSitPage() {
       .finally(() => setComparing(false));
   }, [playerA, playerB, scoring, accessToken]);
 
+  // Public teaser — no auth/gating, so this runs independent of everything
+  // above and loads even for anonymous/pre-launch/out-of-vouchers visitors.
+  useEffect(() => {
+    setTopStartsLoading(true);
+    fetch(`/api/start-sit/top-starts?scoring=${scoring}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setTopStarts(d?.topStarts || []))
+      .catch(() => setTopStarts([]))
+      .finally(() => setTopStartsLoading(false));
+  }, [scoring]);
+
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading...</div>;
 
   return (
@@ -521,6 +574,8 @@ export default function StartSitPage() {
         <p className="text-gray-500 text-center mb-8 max-w-xl mx-auto">
           Fantasy point projections built from live sportsbook player prop lines — pick two players and see who projects higher.
         </p>
+
+        <TopStartsSection topStarts={topStarts} loading={topStartsLoading} />
 
         {isPreLaunchSubscriber && (
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8 text-center">
