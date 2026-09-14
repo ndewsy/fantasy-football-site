@@ -1,0 +1,2 @@
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS content_format text NOT NULL DEFAULT 'markdown';
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS font text;

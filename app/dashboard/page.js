@@ -3,13 +3,13 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
-import ReactMarkdown from "react-markdown";
-import rehypeSanitize from "rehype-sanitize";
 import CreatorAvatar from "@/app/components/CreatorAvatar";
 import PlayerHeadshot from "@/app/components/PlayerHeadshot";
 import AuctionRankingsEditor from "@/app/components/AuctionRankingsEditor";
 import WaiverWireEditor from "@/app/components/WaiverWireEditor";
 import WeeklyRankingsEditor from "@/app/components/WeeklyRankingsEditor";
+import PostEditor from "@/app/components/PostEditor";
+import { PostContent } from "@/app/components/PostContent";
 import Cropper from "react-easy-crop";
 import { DST_FORMAT, KICKER_FORMAT } from "@/lib/dstKickerFormats";
 
@@ -109,6 +109,7 @@ export default function DashboardPage() {
   const [postTitle, setPostTitle] = useState("");
   const [postTag, setPostTag] = useState(TAGS[0]);
   const [postContent, setPostContent] = useState("");
+  const [postFont, setPostFont] = useState("default");
   const [postFiles, setPostFiles] = useState([]); // up to MAX_POST_FILES
   const [fileDragging, setFileDragging] = useState(false);
   const [postSaving, setPostSaving] = useState(false);
@@ -117,7 +118,6 @@ export default function DashboardPage() {
   const [dropUploadError, setDropUploadError] = useState("");
   const [deletingPostId, setDeletingPostId] = useState(null);
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
-  const contentRef = useRef(null);
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoUploadError, setLogoUploadError] = useState("");
   const fileInputRef = useRef(null);
@@ -1208,7 +1208,9 @@ export default function DashboardPage() {
 
   async function handleCreatePost(e) {
     e.preventDefault();
-    if (!postTitle.trim() || !postContent.trim()) return;
+    // postContent is Tiptap HTML (e.g. "<p></p>" when empty) — strip tags
+    // before checking for real content, plain .trim() would always pass.
+    if (!postTitle.trim() || !postContent.replace(/<[^>]*>/g, '').trim()) return;
     setPostSaving(true);
     setPostError('');
 
@@ -1237,6 +1239,8 @@ export default function DashboardPage() {
         title: postTitle,
         tag: postTag.trim() || TAGS[0],
         content: postContent,
+        content_format: 'html',
+        font: postFont,
         file_url: file_urls[0] ?? null,
         file_urls: file_urls.length > 0 ? file_urls : null,
       })
@@ -1252,6 +1256,7 @@ export default function DashboardPage() {
     setPosts(prev => [newPost, ...prev]);
     setPostTitle('');
     setPostContent('');
+    setPostFont('default');
     setPostFiles([]);
     setPostSaving(false);
   }
@@ -1354,32 +1359,6 @@ export default function DashboardPage() {
     }
   }
 
-  function applyInlineFormat(prefix, suffix) {
-    const ta = contentRef.current;
-    if (!ta) return;
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    const before = postContent.slice(0, start);
-    const selected = postContent.slice(start, end);
-    const after = postContent.slice(end);
-    setPostContent(before + prefix + selected + suffix + after);
-    requestAnimationFrame(() => {
-      ta.focus();
-      ta.setSelectionRange(start + prefix.length, end + prefix.length);
-    });
-  }
-
-  function applyLinePrefix(prefix) {
-    const ta = contentRef.current;
-    if (!ta) return;
-    const start = ta.selectionStart;
-    const lineStart = postContent.lastIndexOf('\n', start - 1) + 1;
-    setPostContent(postContent.slice(0, lineStart) + prefix + postContent.slice(lineStart));
-    requestAnimationFrame(() => {
-      ta.focus();
-      ta.setSelectionRange(start + prefix.length, start + prefix.length);
-    });
-  }
 
   if (loading) {
     return (
@@ -3222,34 +3201,12 @@ export default function DashboardPage() {
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-sm text-gray-500">Content</label>
-                    <div className="flex items-center gap-1">
-                      {[
-                        { label: "B", title: "Bold", action: () => applyInlineFormat("**", "**"), cls: "font-bold" },
-                        { label: "I", title: "Italic", action: () => applyInlineFormat("*", "*"), cls: "italic" },
-                        { label: "H", title: "Header", action: () => applyLinePrefix("# "), cls: "font-semibold" },
-                      ].map(({ label, title, action, cls }) => (
-                        <button
-                          key={label}
-                          type="button"
-                          title={title}
-                          onMouseDown={(e) => { e.preventDefault(); action(); }}
-                          className={`w-7 h-7 flex items-center justify-center rounded text-gray-500 hover:text-ink hover:bg-gray-100 text-sm transition-colors ${cls}`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <textarea
-                    ref={contentRef}
-                    value={postContent}
-                    onChange={(e) => setPostContent(e.target.value)}
-                    placeholder="Write your post…"
-                    rows={5}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none font-mono text-sm"
-                    required
+                  <label className="block text-sm text-gray-500 mb-1">Content</label>
+                  <PostEditor
+                    content={postContent}
+                    onChange={setPostContent}
+                    font={postFont}
+                    onFontChange={setPostFont}
                   />
                 </div>
 
@@ -3382,9 +3339,12 @@ export default function DashboardPage() {
                           </button>
                         </div>
                       </div>
-                      <div className="text-gray-500 text-xs line-clamp-2 mb-2 [&_h1]:font-bold [&_h2]:font-bold [&_strong]:font-semibold [&_em]:italic">
-                        <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{post.content}</ReactMarkdown>
-                      </div>
+                      <PostContent
+                        content={post.content}
+                        format={post.content_format}
+                        font={post.font}
+                        className="text-gray-500 text-xs line-clamp-2 mb-2"
+                      />
                       <div className="flex items-center gap-3">
                         <span className="text-gray-400 text-xs">
                           {new Date(post.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}

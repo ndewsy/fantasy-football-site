@@ -1,27 +1,14 @@
 "use client";
 import { useRef, useEffect, useState } from "react";
 import Link from "next/link";
-import ReactMarkdown from "react-markdown";
-import rehypeSanitize from "rehype-sanitize";
 import CreatorAvatar from "./CreatorAvatar";
+import { PostContent, excerptText } from "./PostContent";
+import { POST_FONTS } from "@/lib/fonts";
 
 const IMAGE_EXTS = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "avif"]);
 const PDF_EXTS   = new Set(["pdf"]);
 const SHEET_EXTS = new Set(["xls", "xlsx", "csv", "ods", "numbers"]);
 const DOC_EXTS   = new Set(["doc", "docx", "odt", "rtf", "txt", "pages"]);
-
-const MD_COMPONENTS = {
-  h1: ({ children }) => <h1 className="text-base font-bold mt-2 mb-1 text-ink">{children}</h1>,
-  h2: ({ children }) => <h2 className="text-sm font-bold mt-2 mb-1 text-ink">{children}</h2>,
-  h3: ({ children }) => <h3 className="text-sm font-semibold mt-1 mb-0.5 text-ink">{children}</h3>,
-  strong: ({ children }) => <strong className="font-semibold text-ink">{children}</strong>,
-  em: ({ children }) => <em className="italic">{children}</em>,
-  p: ({ children }) => <p className="mb-1.5 last:mb-0">{children}</p>,
-  ul: ({ children }) => <ul className="list-disc list-inside mb-1.5 space-y-0.5">{children}</ul>,
-  ol: ({ children }) => <ol className="list-decimal list-inside mb-1.5 space-y-0.5">{children}</ol>,
-  li: ({ children }) => <li className="text-sm">{children}</li>,
-  code: ({ children }) => <code className="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
-};
 
 function fileExt(url) {
   try {
@@ -219,18 +206,6 @@ function firstImageUrl(urls) {
   return (urls || []).find((u) => IMAGE_EXTS.has(fileExt(u))) || null;
 }
 
-// Plain-text excerpt for the compact card — strips the most common markdown
-// syntax rather than rendering it, since this is a short preview, not the
-// full body (that still goes through ReactMarkdown in the detail modal).
-function stripMarkdown(text) {
-  return (text || "")
-    .replace(/```[\s\S]*?```/g, "")
-    .replace(/[#*_`>~]/g, "")
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 function formatDate(createdAt) {
   return new Date(createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
@@ -273,11 +248,12 @@ function PostDetailModal({ post, creatorName, creatorLogoUrl, onClose }) {
             </div>
           </div>
           {post.content && (
-            <div className="text-gray-500 text-sm mb-1">
-              <ReactMarkdown rehypePlugins={[rehypeSanitize]} components={MD_COMPONENTS}>
-                {post.content}
-              </ReactMarkdown>
-            </div>
+            <PostContent
+              content={post.content}
+              format={post.content_format}
+              font={post.font}
+              className="text-gray-500 text-sm mb-1"
+            />
           )}
           <PostAttachment urls={postFileUrls(post)} />
         </div>
@@ -291,7 +267,8 @@ export default function PostCard({ post, isSubscribed, creatorName, creatorLogoU
   const viewedRef = useRef(false);
   const dateStr = formatDate(post.created_at);
   const thumbnail = firstImageUrl(postFileUrls(post));
-  const excerpt = stripMarkdown(post.content);
+  const excerpt = excerptText(post.content, post.content_format);
+  const fontClass = POST_FONTS[post.font]?.className || "";
 
   function handleOpen() {
     setOpen(true);
@@ -320,8 +297,8 @@ export default function PostCard({ post, isSubscribed, creatorName, creatorLogoU
         )}
       </div>
       <div className="p-4">
-        <h3 className="font-semibold text-sm text-ink mb-2 line-clamp-2">{post.title}</h3>
-        {excerpt && <p className="text-gray-500 text-xs mb-3 line-clamp-2">{excerpt}</p>}
+        <h3 className={`font-semibold text-sm text-ink mb-2 line-clamp-2 ${fontClass}`}>{post.title}</h3>
+        {excerpt && <p className={`text-gray-500 text-xs mb-3 line-clamp-2 ${fontClass}`}>{excerpt}</p>}
         <div className="flex items-center gap-2">
           <CreatorAvatar logoUrl={creatorLogoUrl} initials={(creatorName || "?").slice(0, 2).toUpperCase()} colorClass="bg-blue-600" size="sm" />
           <div className="min-w-0 flex-1">
