@@ -16,6 +16,23 @@ import { DST_FORMAT, KICKER_FORMAT } from "@/lib/dstKickerFormats";
 const FORMATS = ["Dynasty SF", "Dynasty 1QB", "Redraft 1QB", "Redraft SF", DST_FORMAT, KICKER_FORMAT];
 const DEFAULT_TIERS = [1, 13, 25, 37, 49, 61, 73, 85, 97, 109, 121, 151];
 
+// A player's rank relative to their own position (e.g. "TE9") reflects how
+// good they are at that position, which doesn't depend on QB scarcity —
+// only their overall/cross-position rank should differ between a 1QB and SF
+// version of the same underlying evaluation. Reordering a player's
+// position-rank in one of these formats mirrors that same position-rank
+// into its paired format (see syncPairedPositionRank below), leaving that
+// format's other positions and its own cross-position placement untouched.
+// Redraft and Dynasty are deliberately NOT paired with each other — a
+// player's position rank legitimately differs there for real reasons (age,
+// contract, rookie capital), unlike the 1QB/SF split.
+const SYNCED_FORMAT_PAIRS = {
+  "Redraft 1QB": "Redraft SF",
+  "Redraft SF": "Redraft 1QB",
+  "Dynasty 1QB": "Dynasty SF",
+  "Dynasty SF": "Dynasty 1QB",
+};
+
 function getTierNumber(rank, tiers) {
   for (let i = tiers.length - 1; i >= 0; i--) {
     if (rank >= tiers[i]) return i + 1;
@@ -793,10 +810,11 @@ export default function DashboardPage() {
     setRankings(prev => ({ ...prev, [activeFormat]: newFull }));
   }
 
-  async function saveRankingsNow(full, tiersOverride) {
+  async function saveRankingsNow(full, tiersOverride, formatOverride) {
+    const format = formatOverride || activeFormat;
     const rankedOnly = full.filter(p => !p.unranked).map(p => p.id);
     const unrankedOnly = full.filter(p => p.unranked).map(p => p.id);
-    const tiers = tiersOverride !== undefined ? tiersOverride : (tiersByFormat[activeFormat] || DEFAULT_TIERS);
+    const tiers = tiersOverride !== undefined ? tiersOverride : (tiersByFormat[format] || DEFAULT_TIERS);
     setRankingsSaving(true);
     try {
       const supabase = createClient();
@@ -807,7 +825,7 @@ export default function DashboardPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session?.access_token}`,
         },
-        body: JSON.stringify({ creator_id: profile.creator_id, format: activeFormat, players: rankedOnly, unranked: unrankedOnly, tiers }),
+        body: JSON.stringify({ creator_id: profile.creator_id, format, players: rankedOnly, unranked: unrankedOnly, tiers }),
       });
       const responseBody = await res.json();
       if (!res.ok) throw new Error(responseBody.error || 'Save failed');
@@ -822,6 +840,49 @@ export default function DashboardPage() {
     }
   }
 
+  // Mirrors a player's position-rank (their index among same-position
+  // players) from the format just edited into its paired format (see
+  // SYNCED_FORMAT_PAIRS) — e.g. dragging a TE from TE12 to TE9 in Redraft
+  // 1QB moves them to TE9 in Redraft SF too, without touching anything else
+  // in that format: other positions keep their order, and the moved
+  // player's placement relative to non-positionmates falls out naturally
+  // from being inserted next to the same position-mates. Skips players who
+  // are unranked in the paired format — syncing a position-rank move
+  // shouldn't also auto-promote someone out of the unranked pool there.
+  function syncPairedPositionRank(movedPlayer, sourceFull) {
+    const pairedFormat = SYNCED_FORMAT_PAIRS[activeFormat];
+    if (!pairedFormat || !movedPlayer) return;
+
+    const sourceRanked = sourceFull.filter(p => !p.unranked && p.pos === movedPlayer.pos);
+    const newPosRank = sourceRanked.findIndex(p => p.id === movedPlayer.id);
+    if (newPosRank === -1) return;
+
+    const pairedFull = rankings[pairedFormat] || [];
+    const pairedEntry = pairedFull.find(p => p.id === movedPlayer.id);
+    if (!pairedEntry || pairedEntry.unranked) return;
+
+    const withoutPlayer = pairedFull.filter(p => p.id !== movedPlayer.id);
+    const rankedWithout = withoutPlayer.filter(p => !p.unranked);
+    const unrankedWithout = withoutPlayer.filter(p => p.unranked);
+
+    // Defaults to right after the last position-mate found (not the end of
+    // the whole array) so a target rank beyond how many position-mates
+    // exist here still lands among them, not after unrelated positions.
+    let insertAt = 0;
+    let seen = 0;
+    for (let i = 0; i < rankedWithout.length; i++) {
+      if (rankedWithout[i].pos === movedPlayer.pos) {
+        if (seen === newPosRank) { insertAt = i; break; }
+        seen++;
+        insertAt = i + 1;
+      }
+    }
+    rankedWithout.splice(insertAt, 0, pairedEntry);
+    const newPairedFull = [...rankedWithout, ...unrankedWithout];
+    setRankings(prev => ({ ...prev, [pairedFormat]: newPairedFull }));
+    saveRankingsNow(newPairedFull, tiersByFormat[pairedFormat], pairedFormat);
+  }
+
   async function handleDragEnd() {
     if (draggedSeparatorTier.current !== null) return;
     const players = pendingRankings.current;
@@ -830,8 +891,10 @@ export default function DashboardPage() {
     pendingRankings.current = null;
     if (!players) return;
     const ranked = players.filter(p => !p.unranked);
-    if (finalIdx !== null && ranked[finalIdx]) lastEditedPlayerRef.current = ranked[finalIdx].name;
+    const movedPlayer = finalIdx !== null ? ranked[finalIdx] : null;
+    if (movedPlayer) lastEditedPlayerRef.current = movedPlayer.name;
     await saveRankingsNow(players);
+    if (movedPlayer) syncPairedPositionRank(movedPlayer, players);
   }
 
   function moveToUnranked(playerName) {
@@ -963,6 +1026,7 @@ export default function DashboardPage() {
     lastEditedPlayerRef.current = playerName;
     setRankings(prev => ({ ...prev, [activeFormat]: newFull }));
     saveRankingsNow(newFull);
+    syncPairedPositionRank(moved, newFull);
   }
 
   function handlePlayerClick(e, playerName, list, listPlayers) {
