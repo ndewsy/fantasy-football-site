@@ -42,14 +42,6 @@ function AuctionIcon(props) {
     </svg>
   );
 }
-function PicksIcon(props) {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <rect x="3" y="3" width="14" height="14" rx="3" />
-      <path d="M6.5 10l2.3 2.3L14 7.5" />
-    </svg>
-  );
-}
 function LeaderboardIcon(props) {
   return (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -168,8 +160,7 @@ export default function NavBar({ activePath = "/" }) {
     { href: "/", label: "Rankings", icon: RankingsIcon },
     { href: "/start-sit", label: "Start/Sit", icon: StartSitIcon },
     { href: "/auction", label: "Auction Draft", icon: AuctionIcon },
-    { href: "/creators", label: "Creators", icon: CreatorsIcon },
-    { href: "/picks", label: "Picks", icon: PicksIcon },
+    { href: "/posts", label: "Posts", icon: CreatorsIcon },
     ...(user ? [{ href: "/leaderboard", label: "Leaderboard", icon: LeaderboardIcon }] : []),
     { href: "/feedback", label: "Feedback", icon: FeedbackIcon },
     ...(isDashboardUser ? [{ href: "/waiver-wire", label: "Waiver Wire", icon: WaiverWireIcon }] : []),

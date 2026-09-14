@@ -123,9 +123,15 @@ export default function DynastyDavePage() {
             <p className="text-gray-400 text-sm">Check back soon for new content.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {posts.map((post) => (
-              <PostCard key={post.id} post={post} isSubscribed={isSubscribed} />
+              <PostCard
+                key={post.id}
+                post={post}
+                isSubscribed={isSubscribed}
+                creatorName={creatorProfile?.display_name || "RookieRager"}
+                creatorLogoUrl={creatorProfile?.logo_url}
+              />
             ))}
           </div>
         )}
