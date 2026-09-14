@@ -575,8 +575,6 @@ export default function StartSitPage() {
           Fantasy point projections built from live sportsbook player prop lines — pick two players and see who projects higher.
         </p>
 
-        <TopStartsSection topStarts={topStarts} loading={topStartsLoading} />
-
         {isPreLaunchSubscriber && (
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8 text-center">
             <p className="text-blue-700 font-semibold text-lg mb-1">🚀 This tool will be live September 5th</p>
@@ -692,6 +690,8 @@ export default function StartSitPage() {
             </div>
           </>
         )}
+
+        <TopStartsSection topStarts={topStarts} loading={topStartsLoading} />
       </div>
 
       {gateModal && (
