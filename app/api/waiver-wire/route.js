@@ -38,7 +38,7 @@ export async function GET(request) {
   const playerIdParam = searchParams.get('player_id');
   const week = weekParam ? parseInt(weekParam, 10) : null;
 
-  const selectCols = 'id, creator_id, week, category, position, player_id, term, faab_pct, rank, players(name, position, team, espn_id, sleeper_id, percent_rostered)';
+  const selectCols = 'id, creator_id, week, category, position, player_id, term, faab_pct, rank, updated_at, players(name, position, team, espn_id, sleeper_id, percent_rostered)';
 
   // One player, across every creator — powers the player card's "waiver
   // wire mentions" section rather than a single creator's board.

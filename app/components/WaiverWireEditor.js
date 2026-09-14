@@ -29,7 +29,10 @@ export default function WaiverWireEditor({ creatorId, creatorLabel }) {
   const [rows, setRows] = useState([]); // [{ player_id, term, faab_pct }] enriched with pool info at render time
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [savedAt, setSavedAt] = useState(null);
+  // Persisted (from the DB, survives reloads/tab switches), not just this
+  // session's save — so a creator can tell which tabs still need updating
+  // this week without having to open each one and check for entries.
+  const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
   const [search, setSearch] = useState("");
   const [token, setToken] = useState(null);
 
@@ -73,7 +76,11 @@ export default function WaiverWireEditor({ creatorId, creatorLabel }) {
       .then((d) => {
         const entries = (d?.entries || []).map((e) => ({ player_id: e.player_id, term: e.term, faab_pct: e.faab_pct }));
         setRows(entries);
-        setSavedAt(null);
+        const latest = (d?.entries || []).reduce(
+          (max, e) => (e.updated_at && (!max || e.updated_at > max) ? e.updated_at : max),
+          null
+        );
+        setLastUpdatedAt(latest);
       })
       .finally(() => setLoading(false));
   }, [creatorId, week, category, position, isPositional]);
@@ -131,7 +138,7 @@ export default function WaiverWireEditor({ creatorId, creatorLabel }) {
           })),
         }),
       });
-      if (res.ok) setSavedAt(new Date().toISOString());
+      if (res.ok) setLastUpdatedAt(new Date().toISOString());
     } finally {
       setSaving(false);
     }
@@ -287,7 +294,9 @@ export default function WaiverWireEditor({ creatorId, creatorLabel }) {
 
           <div className="flex items-center justify-between mt-4">
             <p className="text-xs text-gray-400">
-              {savedAt ? `Saved ${new Date(savedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : "Not saved yet"}
+              {lastUpdatedAt
+                ? `Updated ${new Date(lastUpdatedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`
+                : "Not saved yet"}
             </p>
             <button
               onClick={save}
