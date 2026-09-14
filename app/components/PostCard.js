@@ -249,7 +249,7 @@ function PostDetailModal({ post, creatorName, creatorLogoUrl, onClose }) {
       onClick={onClose}
     >
       <div
-        className="bg-card/95 rounded-3xl border border-card/80 ring-1 ring-white/10 w-full max-w-xl lg:max-w-2xl relative animate-modal-card"
+        className="bg-card/95 rounded-3xl border border-card/80 ring-1 ring-white/10 w-full max-w-xl lg:max-w-4xl relative animate-modal-card"
         onClick={(e) => e.stopPropagation()}
       >
         <button
