@@ -90,6 +90,36 @@ function seasonStatLine(position, stats, perGame, gamesPlayed) {
   return line;
 }
 
+// Compact per-position column set for the game log table — fewer stats than
+// seasonStatLine's full breakdown above, since these sit as table columns
+// next to Week/Opp/FPTS rather than standalone chips.
+const GAME_LOG_COLUMNS = {
+  QB: [
+    { key: "pass_yd", label: "PASS YD" },
+    { key: "pass_td", label: "PASS TD" },
+    { key: "pass_int", label: "INT" },
+    { key: "rush_yd", label: "RUSH YD" },
+    { key: "rush_td", label: "RUSH TD" },
+  ],
+  RB: [
+    { key: "rush_yd", label: "RUSH YD" },
+    { key: "rush_td", label: "RUSH TD" },
+    { key: "rec", label: "REC" },
+    { key: "rec_yd", label: "REC YD" },
+    { key: "rec_td", label: "REC TD" },
+  ],
+  WR: [
+    { key: "rec", label: "REC" },
+    { key: "rec_yd", label: "REC YD" },
+    { key: "rec_td", label: "REC TD" },
+  ],
+  TE: [
+    { key: "rec", label: "REC" },
+    { key: "rec_yd", label: "REC YD" },
+    { key: "rec_td", label: "REC TD" },
+  ],
+};
+
 // Player profile modal — deliberately owns its own data-loading state
 // (season stats, waiver mentions, rankings-by-format) rather than lifting it
 // into the Rankings page. Those requests resolve ~300-500ms after opening,
@@ -124,6 +154,7 @@ export default function PlayerCardModal({
   const [playerRankingsLoading, setPlayerRankingsLoading] = useState(true);
   const [seasonStats, setSeasonStats] = useState(null);
   const [seasonStatsLoading, setSeasonStatsLoading] = useState(true);
+  const [gameLog, setGameLog] = useState([]);
   const [statsMode, setStatsMode] = useState("total"); // "total" | "perGame"
   const [waiverMentions, setWaiverMentions] = useState([]);
   const [waiverMentionsLoading, setWaiverMentionsLoading] = useState(true);
@@ -135,14 +166,19 @@ export default function PlayerCardModal({
     setPlayerRankings({});
     setSeasonStatsLoading(true);
     setSeasonStats(null);
+    setGameLog([]);
     setStatsMode("total");
     setWaiverMentionsLoading(true);
     setWaiverMentions([]);
 
     fetch(`/api/player-stats?playerId=${player.id}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (!cancelled) setSeasonStats(d?.seasonStats || null); })
-      .catch(() => { if (!cancelled) setSeasonStats(null); })
+      .then((d) => {
+        if (cancelled) return;
+        setSeasonStats(d?.seasonStats || null);
+        setGameLog(d?.gameLog || []);
+      })
+      .catch(() => { if (!cancelled) { setSeasonStats(null); setGameLog([]); } })
       .finally(() => { if (!cancelled) setSeasonStatsLoading(false); });
 
     fetch(`/api/waiver-wire?player_id=${player.id}&week=${weeklyCurrentNflWeek}`)
@@ -378,6 +414,45 @@ export default function PlayerCardModal({
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* 2026 Game Log — sourced from player_week_stats, synced weekly
+            (app/api/cron/sync-week-stats/route.js) once each week's games
+            wrap; empty until the first week finishes, so the whole section
+            stays hidden rather than showing a confusing blank table. */}
+        {!seasonStatsLoading && gameLog.length > 0 && (
+          <div className="px-7 pt-6 border-t border-white/10">
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2.5">2026 Game Log</h3>
+            <div className="overflow-x-auto rounded-xl border border-white/10">
+              <table className="w-full text-xs">
+                <thead className="bg-white/5 text-gray-500">
+                  <tr>
+                    <th className="text-left px-3 py-2 font-medium">WK</th>
+                    <th className="text-left px-3 py-2 font-medium">OPP</th>
+                    {(GAME_LOG_COLUMNS[player.pos] || []).map((c) => (
+                      <th key={c.key} className="text-center px-3 py-2 font-medium whitespace-nowrap">{c.label}</th>
+                    ))}
+                    <th className="text-center px-3 py-2 font-medium">FPTS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {gameLog.map((g) => (
+                    <tr key={g.week} className="border-t border-white/10">
+                      <td className="px-3 py-2 text-ink font-medium">{g.week}</td>
+                      <td className="px-3 py-2 text-gray-400 whitespace-nowrap">
+                        {g.opponent ? `${g.homeAway === "home" ? "vs" : "@"} ${g.opponent}` : "—"}
+                      </td>
+                      {(GAME_LOG_COLUMNS[player.pos] || []).map((c) => (
+                        <td key={c.key} className="text-center px-3 py-2 text-gray-600">{g.stats?.[c.key] ?? 0}</td>
+                      ))}
+                      <td className="text-center px-3 py-2 font-bold text-ink">{g.fantasyPoints}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-2">Full PPR scoring</p>
           </div>
         )}
 
