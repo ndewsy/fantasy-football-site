@@ -148,6 +148,23 @@ export async function GET(request) {
     return Response.json({ error: 'SPORTSGAMEODDS_API_KEY not configured' }, { status: 500 });
   }
 
+  // Everything below hits Supabase and SportsGameOdds, both of which can
+  // blip transiently — without this, an unhandled rejection here (e.g. from
+  // fetchAllPlayers, which had no error handling of its own) crashes the
+  // function before it can send a body, so the GitHub Actions caller sees a
+  // bare 500 with nothing in the response to diagnose. Confirmed live: two
+  // scheduled runs failed this way on 2026-09-15, both empty-bodied, both
+  // gone on the very next run with no code change — this makes the next one
+  // self-explanatory instead of requiring a live log capture to root-cause.
+  try {
+    return await syncPlayerProps();
+  } catch (err) {
+    console.error('[sync-player-props] unhandled failure:', err);
+    return Response.json({ error: err.message || String(err) }, { status: 500 });
+  }
+}
+
+async function syncPlayerProps() {
   const players = await fetchAllPlayers();
   const byNorm = new Map();
   for (const p of players) {
