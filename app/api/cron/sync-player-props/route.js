@@ -108,6 +108,23 @@ async function fetchAllPlayers() {
   return all;
 }
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// SportsGameOdds occasionally 429s this route — confirmed live on
+// 2026-09-16, twice, both from the 10-page pagination loop below firing in
+// quick succession. Retries a 429 up to 3 times, honoring Retry-After when
+// SGO sends one, else backing off 1s/2s/4s; any other non-ok status still
+// fails immediately (not a rate limit, retrying won't help).
+async function fetchWithRetry(url, options) {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, options);
+    if (res.status !== 429 || attempt >= 3) return res;
+    const retryAfterSec = Number(res.headers.get('retry-after'));
+    const waitMs = Number.isFinite(retryAfterSec) && retryAfterSec > 0 ? retryAfterSec * 1000 : 1000 * 2 ** attempt;
+    await sleep(waitMs);
+  }
+}
+
 async function fetchUpcomingEvents() {
   const now = new Date();
   const until = new Date(now.getTime() + 9 * 24 * 60 * 60 * 1000);
@@ -126,7 +143,11 @@ async function fetchUpcomingEvents() {
     });
     if (cursor) params.set('cursor', cursor);
 
-    const res = await fetch(`${SGO_BASE}/events?${params.toString()}`, {
+    // Small gap between pages — the failures we saw were a burst-rate 429
+    // from firing all ~10 requests back to back, not a sustained quota.
+    if (page > 0) await sleep(300);
+
+    const res = await fetchWithRetry(`${SGO_BASE}/events?${params.toString()}`, {
       headers: { 'X-API-Key': process.env.SPORTSGAMEODDS_API_KEY },
     });
     if (!res.ok) throw new Error(`SportsGameOdds events fetch failed: ${res.status} ${await res.text()}`);
