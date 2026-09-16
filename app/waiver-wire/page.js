@@ -8,9 +8,21 @@ import PlayerHeadshot from "@/app/components/PlayerHeadshot";
 import PillToggle from "@/app/components/PillToggle";
 import PromoPrice from "@/app/components/PromoPrice";
 import CreatorAvatar from "@/app/components/CreatorAvatar";
+import PlayerCardModal from "@/app/components/PlayerCardModal";
 import { getCurrentWeekFromGames } from "@/lib/currentWeek";
 import { getViewMode } from "@/lib/viewMode";
 import { isPromoActive } from "@/lib/promo";
+
+// Same format/creator lists PlayerCardModal expects — duplicated from
+// app/page.js (which owns the real tab-switching state these drive there);
+// here the modal is always shown in its read-only consensus view, so no
+// per-creator activeFormat/activeCreator state is needed to go with them.
+const FORMATS = ["Redraft 1QB", "Redraft SF", "Dynasty 1QB", "Dynasty SF"];
+const CREATORS = [
+  { id: "rookierager", name: "RookieRager", short: "RookieRager" },
+  { id: "ffhuddle", name: "FantasyFootballHuddle", short: "FFHuddle" },
+];
+const ACTIVE_CREATORS = CREATORS;
 
 const WEEKS = Array.from({ length: 18 }, (_, i) => i + 1);
 const CATEGORIES = [
@@ -43,32 +55,44 @@ function TermBadge({ term }) {
   );
 }
 
-function CreatorCategoryCard({ creatorName, entries }) {
+// A single waiver-wire pick — gray panel instead of a plain divider-only
+// row, and clickable through to the player's full card.
+function WaiverRow({ entry, index, onOpenPlayer }) {
+  const p = entry.players;
+  return (
+    <div
+      onClick={() => onOpenPlayer(entry)}
+      className="flex items-center gap-2.5 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-lg cursor-pointer transition-colors"
+    >
+      <span className="text-xs text-gray-400 font-mono w-5 shrink-0 text-right">{index + 1}</span>
+      <PlayerHeadshot espnId={p?.espn_id} sleeperId={p?.sleeper_id} name={p?.name} size="sm" />
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-ink truncate">{p?.name || `#${entry.player_id}`}</p>
+        <p className="text-xs text-gray-400">{p?.position} · {p?.team}</p>
+      </div>
+      {p?.percent_rostered !== null && p?.percent_rostered !== undefined && (
+        <span className="text-[11px] text-gray-400 shrink-0" title="% of ESPN leagues rostering this player">
+          {Math.round(p.percent_rostered)}% rost.
+        </span>
+      )}
+      <TermBadge term={entry.term} />
+      {entry.faab_pct !== null && entry.faab_pct !== undefined && (
+        <span className="text-xs font-semibold text-ink shrink-0">{Number(entry.faab_pct).toFixed(1)}%</span>
+      )}
+    </div>
+  );
+}
+
+function CreatorCategoryCard({ creatorName, entries, onOpenPlayer }) {
   return (
     <div className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg p-5">
       <h3 className="font-bold text-ink mb-4">{creatorName}</h3>
       {entries.length === 0 ? (
         <p className="text-sm text-gray-400">Nothing posted yet.</p>
       ) : (
-        <div className="divide-y divide-gray-100">
+        <div className="space-y-1.5">
           {entries.map((e, i) => (
-            <div key={e.id} className="flex items-center gap-2.5 py-2">
-              <span className="text-xs text-gray-400 font-mono w-5 shrink-0 text-right">{i + 1}</span>
-              <PlayerHeadshot espnId={e.players?.espn_id} sleeperId={e.players?.sleeper_id} name={e.players?.name} size="sm" />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-ink truncate">{e.players?.name || `#${e.player_id}`}</p>
-                <p className="text-xs text-gray-400">{e.players?.position} · {e.players?.team}</p>
-              </div>
-              {e.players?.percent_rostered !== null && e.players?.percent_rostered !== undefined && (
-                <span className="text-[11px] text-gray-400 shrink-0" title="% of ESPN leagues rostering this player">
-                  {Math.round(e.players.percent_rostered)}% rost.
-                </span>
-              )}
-              <TermBadge term={e.term} />
-              {e.faab_pct !== null && e.faab_pct !== undefined && (
-                <span className="text-xs font-semibold text-ink shrink-0">{Number(e.faab_pct).toFixed(1)}%</span>
-              )}
-            </div>
+            <WaiverRow key={e.id} entry={e} index={i} onOpenPlayer={onOpenPlayer} />
           ))}
         </div>
       )}
@@ -79,7 +103,7 @@ function CreatorCategoryCard({ creatorName, entries }) {
 // Full-width, unboxed layout matching Weekly Rankings — used when there's
 // only one creator's picks to show, so it doesn't look stranded in a narrow
 // centered card next to a lot of empty page.
-function CreatorList({ creatorId, creatorName, logoUrl, entries }) {
+function CreatorList({ creatorId, creatorName, logoUrl, entries, onOpenPlayer }) {
   const badge = CREATOR_BADGE[creatorId] || {};
   return (
     <div>
@@ -90,25 +114,9 @@ function CreatorList({ creatorId, creatorName, logoUrl, entries }) {
       {entries.length === 0 ? (
         <p className="text-sm text-gray-400">Nothing posted yet.</p>
       ) : (
-        <div className="divide-y divide-gray-100 border border-gray-100 rounded-xl overflow-hidden">
+        <div className="space-y-1.5">
           {entries.map((e, i) => (
-            <div key={e.id} className="flex items-center gap-3 px-4 py-2.5">
-              <span className="text-sm text-gray-400 font-mono w-6 shrink-0 text-right">{i + 1}</span>
-              <PlayerHeadshot espnId={e.players?.espn_id} sleeperId={e.players?.sleeper_id} name={e.players?.name} size="sm" />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-ink truncate">{e.players?.name || `#${e.player_id}`}</p>
-                <p className="text-xs text-gray-400">{e.players?.position} · {e.players?.team}</p>
-              </div>
-              {e.players?.percent_rostered !== null && e.players?.percent_rostered !== undefined && (
-                <span className="text-[11px] text-gray-400 shrink-0" title="% of ESPN leagues rostering this player">
-                  {Math.round(e.players.percent_rostered)}% rost.
-                </span>
-              )}
-              <TermBadge term={e.term} />
-              {e.faab_pct !== null && e.faab_pct !== undefined && (
-                <span className="text-xs font-semibold text-ink shrink-0">{Number(e.faab_pct).toFixed(1)}%</span>
-              )}
-            </div>
+            <WaiverRow key={e.id} entry={e} index={i} onOpenPlayer={onOpenPlayer} />
           ))}
         </div>
       )}
@@ -128,6 +136,75 @@ export default function WaiverWirePage() {
   const [creatorsById, setCreatorsById] = useState({});
   const [dataLoading, setDataLoading] = useState(true);
   const [creators, setCreators] = useState({});
+  const [playerPool, setPlayerPool] = useState([]);
+  const [riskRatings, setRiskRatings] = useState({}); // { [playerId]: { [creatorId]: rating } }
+  const [rankingsCache, setRankingsCache] = useState({});
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [playerModalOpen, setPlayerModalOpen] = useState(false);
+
+  // Backs the player-card modal (full pool for its Rankings-by-Format table,
+  // risk ratings for its consensus display) — loaded in the background
+  // rather than gating the page's own `loading` flag on it, since neither is
+  // needed until a row is actually clicked.
+  useEffect(() => {
+    async function loadPool() {
+      const supabase = createClient();
+      const data = [];
+      const PAGE = 1000;
+      for (let from = 0; ; from += PAGE) {
+        const { data: batch } = await supabase
+          .from("players")
+          .select("id, name, position, team, sleeper_id, espn_id, height_inches, weight_lbs, age, percent_rostered")
+          .order("id")
+          .range(from, from + PAGE - 1);
+        data.push(...(batch || []));
+        if (!batch || batch.length < PAGE) break;
+      }
+      setPlayerPool(data.map((p) => ({ id: p.id, name: p.name, pos: p.position, team: p.team || "FA", sleeper_id: p.sleeper_id, espn_id: p.espn_id, height_inches: p.height_inches, weight_lbs: p.weight_lbs, age: p.age, percent_rostered: p.percent_rostered })));
+    }
+    loadPool();
+
+    fetch("/api/players/risk-ratings")
+      .then((r) => (r.ok ? r.json() : { ratings: [] }))
+      .then(({ ratings }) => {
+        const map = {};
+        for (const r of ratings || []) {
+          (map[r.player_id] ??= {})[r.creator_id] = r.risk_rating;
+        }
+        setRiskRatings(map);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Constructs the same player shape playerPool entries use (PlayerCardModal
+  // expects `.pos`, not `.position`) from a waiver-wire entry's joined
+  // player row, and opens the modal in its read-only consensus view — this
+  // page has no creator-tab concept of its own to key an editable view off.
+  function openPlayerModal(entry) {
+    const p = entry.players;
+    setSelectedPlayer({
+      id: entry.player_id,
+      name: p?.name,
+      pos: p?.position,
+      team: p?.team || "FA",
+      sleeper_id: p?.sleeper_id,
+      espn_id: p?.espn_id,
+      percent_rostered: p?.percent_rostered,
+    });
+    setPlayerModalOpen(true);
+  }
+
+  const creatorRatings = selectedPlayer
+    ? Object.fromEntries(
+        ACTIVE_CREATORS
+          .map((c) => [c.id, riskRatings[selectedPlayer.id]?.[c.id]])
+          .filter(([, v]) => v != null)
+      )
+    : {};
+  const ratedValues = Object.values(creatorRatings);
+  const displayedRisk = ratedValues.length > 0
+    ? Math.round((ratedValues.reduce((a, b) => a + b, 0) / ratedValues.length) * 10) / 10
+    : null;
 
   useEffect(() => {
     async function load() {
@@ -234,6 +311,7 @@ export default function WaiverWirePage() {
                     creatorName={creatorsById[creatorId]?.name || creatorId}
                     logoUrl={creatorsById[creatorId]?.logoUrl}
                     entries={getEntries(byCategory)}
+                    onOpenPlayer={openPlayerModal}
                   />
                 ))}
               </>
@@ -244,6 +322,7 @@ export default function WaiverWirePage() {
                     key={creatorId}
                     creatorName={creatorsById[creatorId]?.name || creatorId}
                     entries={getEntries(byCategory)}
+                    onOpenPlayer={openPlayerModal}
                   />
                 ))}
               </div>
@@ -272,6 +351,30 @@ export default function WaiverWirePage() {
           );
         })()}
       </div>
+
+      {playerModalOpen && selectedPlayer && (
+        <PlayerCardModal
+          player={selectedPlayer}
+          onClose={() => setPlayerModalOpen(false)}
+          displayPosRanks={{}}
+          weeklyCurrentNflWeek={week}
+          activeFormat={FORMATS[0]}
+          FORMATS={FORMATS}
+          ACTIVE_CREATORS={ACTIVE_CREATORS}
+          playerPool={playerPool}
+          rankingsCache={rankingsCache}
+          onCacheFormat={(fmt, data) => setRankingsCache((prev) => ({ ...prev, [fmt]: data }))}
+          isConsensusTab={true}
+          displayedRisk={displayedRisk}
+          canEditRisk={false}
+          creatorRatings={creatorRatings}
+          riskSaveStatus={null}
+          activeCreator="consensus"
+          onUpdateRiskLocal={() => {}}
+          onCommitRisk={() => {}}
+          onClearRisk={() => {}}
+        />
+      )}
     </main>
   );
 }
