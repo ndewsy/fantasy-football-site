@@ -41,6 +41,17 @@ const POSITIONS = [
 // Only Streamers splits into position tabs — Drop/Cut and Priority Adds are
 // both flat lists.
 const POSITIONAL_CATEGORIES = new Set(["streamer"]);
+// Sleeper's own position color scheme — used both for the position tabs
+// above and each row's position badge (most useful on Priority Adds now
+// that it's a single list mixing every position together).
+const POSITION_COLORS = {
+  QB: { badge: "bg-red-100 text-red-700", active: "bg-red-500 text-white shadow-red-600/30" },
+  RB: { badge: "bg-green-100 text-green-700", active: "bg-green-500 text-white shadow-green-600/30" },
+  WR: { badge: "bg-blue-100 text-blue-700", active: "bg-blue-500 text-white shadow-blue-600/30" },
+  TE: { badge: "bg-orange-100 text-orange-700", active: "bg-orange-500 text-white shadow-orange-600/30" },
+  K: { badge: "bg-purple-100 text-purple-700", active: "bg-purple-500 text-white shadow-purple-600/30" },
+  DST: { badge: "bg-[#8B5E34]/10 text-[#8B5E34]", active: "bg-[#8B5E34] text-white shadow-[#8B5E34]/30" },
+};
 const CREATOR_BADGE = {
   rookierager: { label: "RR", className: "bg-orange-100 text-orange-700" },
   ffhuddle: { label: "FFH", className: "bg-blue-100 text-blue-700" },
@@ -70,7 +81,14 @@ function WaiverRow({ entry, index, onOpenPlayer }) {
       <PlayerHeadshot espnId={p?.espn_id} sleeperId={p?.sleeper_id} name={p?.name} size="sm" />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-ink truncate">{p?.name || `#${entry.player_id}`}</p>
-        <p className="text-xs text-gray-400">{p?.position} · {p?.team}</p>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          {p?.position && (
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${POSITION_COLORS[p.position]?.badge || "bg-gray-100 text-gray-600"}`}>
+              {p.position}
+            </span>
+          )}
+          <span className="text-xs text-gray-400">{p?.team}</span>
+        </div>
       </div>
       {p?.percent_rostered !== null && p?.percent_rostered !== undefined && (
         <span className="text-[11px] text-gray-400 shrink-0" title="% of ESPN leagues rostering this player">
@@ -266,7 +284,13 @@ export default function WaiverWirePage() {
         <PillToggle options={CATEGORIES.map((c) => ({ id: c.id, label: c.label }))} value={category} onChange={setCategory} className="mb-5" />
 
         {POSITIONAL_CATEGORIES.has(category) && (
-          <PillToggle options={POSITIONS} value={position} onChange={setPosition} className="mb-5" />
+          <PillToggle
+            options={POSITIONS}
+            value={position}
+            onChange={setPosition}
+            className="mb-5"
+            activeClassFor={(id) => POSITION_COLORS[id]?.active}
+          />
         )}
 
         <div className="flex items-center justify-center gap-2 mb-8">
