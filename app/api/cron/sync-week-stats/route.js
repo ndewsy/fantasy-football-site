@@ -61,7 +61,7 @@ export async function GET(request) {
         rushYd: s.rush_yd, rushTd: s.rush_td,
         recYd: s.rec_yd, recTd: s.rec_td, rec: s.rec,
       });
-      return { sleeperId: e.player_id, position: e.player.position, stats: s, fantasyPoints };
+      return { sleeperId: e.player_id, position: e.player.position, stats: s, fantasyPoints, opponent: e.opponent || null };
     });
 
   // Supabase caps a plain select at 1000 rows — paginate to get every player.
@@ -89,6 +89,7 @@ export async function GET(request) {
       position: e.position,
       stats: e.stats,
       fantasy_points: e.fantasyPoints,
+      opponent: e.opponent,
       updated_at: new Date().toISOString(),
     }));
 

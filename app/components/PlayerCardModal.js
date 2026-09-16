@@ -155,6 +155,11 @@ function statQualityClass(key, value) {
 // than a raw stat — a finish rank already accounts for position/scoring
 // scale, so it's a cleaner "was this a good fantasy week" signal than a
 // fixed FPTS number would be across positions that score very differently.
+// The season currently in progress — bump this once the 2027 season starts.
+// Matches the constant in app/api/player-stats/route.js.
+const CURRENT_SEASON = 2026;
+const SEASON_TABS = [2026, 2025, 2024, 2023];
+
 function finishQualityClass(rank) {
   if (rank == null) return "text-gray-400";
   if (rank <= 12) return "text-green-400";
@@ -194,36 +199,46 @@ export default function PlayerCardModal({
 }) {
   const [playerRankings, setPlayerRankings] = useState({});
   const [playerRankingsLoading, setPlayerRankingsLoading] = useState(true);
-  const [seasonStats, setSeasonStats] = useState(null);
+  const [seasonTotals, setSeasonTotals] = useState(null);
   const [seasonStatsLoading, setSeasonStatsLoading] = useState(true);
   const [gameLog, setGameLog] = useState([]);
   const [statsMode, setStatsMode] = useState("total"); // "total" | "perGame"
   const [logMode, setLogMode] = useState("weekly"); // "weekly" | "season"
+  const [logSeason, setLogSeason] = useState(CURRENT_SEASON);
   const [waiverMentions, setWaiverMentions] = useState([]);
   const [waiverMentionsLoading, setWaiverMentionsLoading] = useState(true);
+
+  // player-stats (weekly log + season totals) is its own effect, keyed on
+  // logSeason too, so switching the year tab re-fetches without re-running
+  // the player-rankings/waiver-mentions fetches below (those don't depend
+  // on which season is selected).
+  useEffect(() => {
+    let cancelled = false;
+    setSeasonStatsLoading(true);
+
+    fetch(`/api/player-stats?playerId=${player.id}&season=${logSeason}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (cancelled) return;
+        setSeasonTotals(d?.seasonTotals || null);
+        setGameLog(d?.gameLog || []);
+      })
+      .catch(() => { if (!cancelled) { setSeasonTotals(null); setGameLog([]); } })
+      .finally(() => { if (!cancelled) setSeasonStatsLoading(false); });
+
+    return () => { cancelled = true; };
+  }, [player.id, logSeason]);
 
   useEffect(() => {
     let cancelled = false;
 
     setPlayerRankingsLoading(true);
     setPlayerRankings({});
-    setSeasonStatsLoading(true);
-    setSeasonStats(null);
-    setGameLog([]);
     setStatsMode("total");
     setLogMode("weekly");
+    setLogSeason(CURRENT_SEASON);
     setWaiverMentionsLoading(true);
     setWaiverMentions([]);
-
-    fetch(`/api/player-stats?playerId=${player.id}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (cancelled) return;
-        setSeasonStats(d?.seasonStats || null);
-        setGameLog(d?.gameLog || []);
-      })
-      .catch(() => { if (!cancelled) { setSeasonStats(null); setGameLog([]); } })
-      .finally(() => { if (!cancelled) setSeasonStatsLoading(false); });
 
     fetch(`/api/waiver-wire?player_id=${player.id}&week=${weeklyCurrentNflWeek}`)
       .then((r) => (r.ok ? r.json() : null))
@@ -463,120 +478,148 @@ export default function PlayerCardModal({
 
         {/* Fantasy Log — weekly rows (stats + fantasy points + that week's
             positional finish, e.g. "RB3") sourced from player_week_stats,
-            synced weekly (app/api/cron/sync-week-stats/route.js); or season
-            totals with the season-long positional finish, via the same
-            toggle other sites use to switch a log between week-by-week and
-            full-season views. */}
-        {!seasonStatsLoading && (gameLog.length > 0 || seasonStats) && (
-          <div className="px-7 pt-6 border-t border-white/10">
-            <div className="flex items-center justify-between mb-2.5">
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Fantasy Log</h3>
-              <div className="inline-flex items-center bg-white/5 border border-white/10 rounded-full p-0.5">
-                {[{ id: "weekly", label: "Weekly" }, { id: "season", label: "Season" }].map((mode) => (
-                  <button
-                    key={mode.id}
-                    onClick={() => setLogMode(mode.id)}
-                    className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wide transition-colors ${
-                      logMode === mode.id ? "bg-blue-600 text-white" : "text-gray-400 hover:text-ink"
-                    }`}
-                  >
-                    {mode.label}
-                  </button>
-                ))}
-              </div>
+            synced weekly (app/api/cron/sync-week-stats/route.js) for the
+            current season, backfilled for 2023-2025 (scripts/backfill-week-
+            stats.js); or season totals with the season-long positional
+            finish, via the same toggle other sites use to switch a log
+            between week-by-week and full-season views. Year tabs switch
+            which season's data both views show. */}
+        <div className="px-7 pt-6 border-t border-white/10">
+          <div className="flex items-center justify-between mb-2.5 flex-wrap gap-2">
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Fantasy Log</h3>
+            <div className="inline-flex items-center bg-white/5 border border-white/10 rounded-full p-0.5">
+              {[{ id: "weekly", label: "Weekly" }, { id: "season", label: "Season" }].map((mode) => (
+                <button
+                  key={mode.id}
+                  onClick={() => setLogMode(mode.id)}
+                  className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wide transition-colors ${
+                    logMode === mode.id ? "bg-blue-600 text-white" : "text-gray-400 hover:text-ink"
+                  }`}
+                >
+                  {mode.label}
+                </button>
+              ))}
             </div>
+          </div>
 
-            {logMode === "weekly" ? (
-              gameLog.length > 0 ? (
-                <>
-                  <div className="overflow-x-auto rounded-xl border border-white/10">
-                    <table className="w-full text-xs">
-                      <thead className="bg-white/5 text-gray-500">
-                        <tr>
-                          <th className="text-left px-2 py-2 font-medium">WK</th>
-                          <th className="text-left px-2 py-2 font-medium">OPP</th>
-                          {(GAME_LOG_COLUMNS[player.pos] || []).map((c) => (
-                            <th key={c.key} className="text-center px-2 py-2 font-medium whitespace-nowrap">{c.label}</th>
-                          ))}
-                          <th className="text-center px-2 py-2 font-medium">RK</th>
-                          <th className="text-center px-2 py-2 font-medium">FPTS</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {gameLog.map((g) => {
-                          const finishClass = finishQualityClass(g.positionalFinish);
-                          const fptsClass = finishClass === "text-gray-400" ? "text-ink" : finishClass;
-                          return (
-                            <tr key={g.week} className="border-t border-white/10">
-                              <td className="px-2 py-2 text-ink font-medium">{g.week}</td>
-                              <td className="px-2 py-2 text-gray-400 whitespace-nowrap">
-                                {g.opponent ? `${g.homeAway === "home" ? "vs" : "@"} ${g.opponent}` : "—"}
-                              </td>
-                              {(GAME_LOG_COLUMNS[player.pos] || []).map((c) => (
-                                <td key={c.key} className={`text-center px-2 py-2 ${statQualityClass(c.key, g.stats?.[c.key])}`}>{g.stats?.[c.key] ?? 0}</td>
-                              ))}
-                              <td className={`text-center px-2 py-2 font-medium ${finishClass}`}>
-                                {g.positionalFinish ? `${player.pos}${g.positionalFinish}` : "—"}
-                              </td>
-                              <td className={`text-center px-2 py-2 font-bold ${fptsClass}`}>{g.fantasyPoints}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                  <p className="text-[10px] text-gray-400 mt-2">Full PPR scoring</p>
-                </>
-              ) : (
-                <p className="text-xs text-gray-400 text-center py-6">No games logged yet this season.</p>
-              )
-            ) : seasonStats ? (
+          <div className="flex items-center gap-1 mb-3 border-b border-white/10">
+            {SEASON_TABS.map((yr) => (
+              <button
+                key={yr}
+                onClick={() => setLogSeason(yr)}
+                className={`px-3 py-1.5 text-xs font-semibold border-b-2 -mb-px transition-colors ${
+                  logSeason === yr ? "border-blue-500 text-ink" : "border-transparent text-gray-400 hover:text-ink"
+                }`}
+              >
+                {yr}
+              </button>
+            ))}
+          </div>
+
+          {seasonStatsLoading ? (
+            <p className="text-xs text-gray-400 text-center py-6">Loading...</p>
+          ) : logMode === "weekly" ? (
+            gameLog.length > 0 ? (
               <>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-gray-400">{seasonStats.season} Season</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-ink">
-                      {statsMode === "perGame" && seasonStats.games_played > 0
-                        ? Math.round((seasonStats.fantasy_points / seasonStats.games_played) * 10) / 10
-                        : seasonStats.fantasy_points} pts
-                    </span>
-                    {seasonStats.fantasy_finish && (
-                      <span className="text-[10px] font-bold uppercase bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
-                        {seasonStats.position}{seasonStats.fantasy_finish}
-                      </span>
-                    )}
-                  </div>
+                <div className="overflow-x-auto rounded-xl border border-white/10">
+                  <table className="w-full text-xs">
+                    <thead className="bg-white/5 text-gray-500">
+                      <tr>
+                        <th className="text-left px-2 py-2 font-medium">WK</th>
+                        <th className="text-left px-2 py-2 font-medium">OPP</th>
+                        {(GAME_LOG_COLUMNS[player.pos] || []).map((c) => (
+                          <th key={c.key} className="text-center px-2 py-2 font-medium whitespace-nowrap">{c.label}</th>
+                        ))}
+                        <th className="text-center px-2 py-2 font-medium">RK</th>
+                        <th className="text-center px-2 py-2 font-medium">FPTS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {gameLog.map((g) => {
+                        const finishClass = finishQualityClass(g.positionalFinish);
+                        const fptsClass = finishClass === "text-gray-400" ? "text-ink" : finishClass;
+                        return (
+                          <tr key={g.week} className="border-t border-white/10">
+                            <td className="px-2 py-2 text-ink font-medium">{g.week}</td>
+                            <td className="px-2 py-2 text-gray-400 whitespace-nowrap">
+                              {g.isBye ? "BYE" : g.opponent ? `${g.homeAway === "home" ? "vs" : "@"} ${g.opponent}` : "—"}
+                            </td>
+                            {g.hasStats ? (
+                              <>
+                                {(GAME_LOG_COLUMNS[player.pos] || []).map((c) => (
+                                  <td key={c.key} className={`text-center px-2 py-2 ${statQualityClass(c.key, g.stats?.[c.key])}`}>{g.stats?.[c.key] ?? 0}</td>
+                                ))}
+                                <td className={`text-center px-2 py-2 font-medium ${finishClass}`}>
+                                  {g.positionalFinish ? `${player.pos}${g.positionalFinish}` : "—"}
+                                </td>
+                                <td className={`text-center px-2 py-2 font-bold ${fptsClass}`}>{g.fantasyPoints}</td>
+                              </>
+                            ) : (
+                              <>
+                                {(GAME_LOG_COLUMNS[player.pos] || []).map((c) => (
+                                  <td key={c.key} className="text-center px-2 py-2 text-gray-600">—</td>
+                                ))}
+                                <td className="text-center px-2 py-2 text-gray-600">—</td>
+                                <td className="text-center px-2 py-2 text-gray-600">—</td>
+                              </>
+                            )}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-                <div className="flex items-center justify-end mb-2">
-                  <div className="inline-flex items-center bg-white/5 border border-white/10 rounded-full p-0.5">
-                    {[{ id: "total", label: "Total" }, { id: "perGame", label: "Per Game" }].map((mode) => (
-                      <button
-                        key={mode.id}
-                        onClick={() => setStatsMode(mode.id)}
-                        className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wide transition-colors ${
-                          statsMode === mode.id ? "bg-blue-600 text-white" : "text-gray-400 hover:text-ink"
-                        }`}
-                      >
-                        {mode.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
-                  {seasonStatLine(seasonStats.position, seasonStats.stats, statsMode === "perGame", seasonStats.games_played).map((s) => (
-                    <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-2 text-center">
-                      <p className="text-sm font-bold text-ink">{s.value}</p>
-                      <p className="text-[9px] text-gray-400 uppercase tracking-wide">{s.label}</p>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-[10px] text-gray-400 mt-2">Full PPR scoring · {seasonStats.games_played} games played</p>
+                <p className="text-[10px] text-gray-400 mt-2">Full PPR scoring</p>
               </>
             ) : (
-              <p className="text-xs text-gray-400 text-center py-6">No season data available yet.</p>
-            )}
-          </div>
-        )}
+              <p className="text-xs text-gray-400 text-center py-6">No games logged for {logSeason} yet.</p>
+            )
+          ) : seasonTotals ? (
+            <>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-gray-400">{seasonTotals.season} Season</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-ink">
+                    {statsMode === "perGame" && seasonTotals.games_played > 0
+                      ? Math.round((seasonTotals.fantasy_points / seasonTotals.games_played) * 10) / 10
+                      : seasonTotals.fantasy_points} pts
+                  </span>
+                  {seasonTotals.fantasy_finish && (
+                    <span className="text-[10px] font-bold uppercase bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                      {seasonTotals.position}{seasonTotals.fantasy_finish}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center justify-end mb-2">
+                <div className="inline-flex items-center bg-white/5 border border-white/10 rounded-full p-0.5">
+                  {[{ id: "total", label: "Total" }, { id: "perGame", label: "Per Game" }].map((mode) => (
+                    <button
+                      key={mode.id}
+                      onClick={() => setStatsMode(mode.id)}
+                      className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wide transition-colors ${
+                        statsMode === mode.id ? "bg-blue-600 text-white" : "text-gray-400 hover:text-ink"
+                      }`}
+                    >
+                      {mode.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
+                {seasonStatLine(seasonTotals.position, seasonTotals.stats, statsMode === "perGame", seasonTotals.games_played).map((s) => (
+                  <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-2 text-center">
+                    <p className="text-sm font-bold text-ink">{s.value}</p>
+                    <p className="text-[9px] text-gray-400 uppercase tracking-wide">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-gray-400 mt-2">Full PPR scoring · {seasonTotals.games_played} games played</p>
+            </>
+          ) : (
+            <p className="text-xs text-gray-400 text-center py-6">No season data available for {logSeason}.</p>
+          )}
+        </div>
 
         {/* Rankings table */}
         <div className="p-7 border-t border-white/10">

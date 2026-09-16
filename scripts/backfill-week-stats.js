@@ -93,6 +93,7 @@ async function main() {
             position: e.player.position,
             stats: s,
             fantasy_points: fantasyPoints(s),
+            opponent: e.opponent || null,
             updated_at: new Date().toISOString(),
           };
         });
