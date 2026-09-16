@@ -120,6 +120,48 @@ const GAME_LOG_COLUMNS = {
   ],
 };
 
+// Rough, widely-used weekly thresholds for "was this stat clearly good or
+// clearly bad at a glance" — not scientific, just the numbers fantasy
+// analysis generally treats as a strong or weak showing. TD stats have no
+// `bad` threshold (0 or 1 TD isn't really a bad game on its own, TD counts
+// are too binary/variance-heavy to read that way) — only a `good` one, so a
+// standout multi-TD game still gets called out.
+const STAT_QUALITY = {
+  pass_yd: { good: 275, bad: 175 },
+  pass_td: { good: 3, bad: 1 },
+  pass_int: { good: 0, bad: 2, lowerIsBetter: true },
+  rush_yd: { good: 90, bad: 30 },
+  rush_td: { good: 2 },
+  rec: { good: 7, bad: 2 },
+  rec_yd: { good: 90, bad: 25 },
+  rec_td: { good: 2 },
+};
+
+function statQualityClass(key, value) {
+  const t = STAT_QUALITY[key];
+  if (!t || value === null || value === undefined) return "text-gray-600";
+  const v = Number(value);
+  if (t.lowerIsBetter) {
+    if (v <= t.good) return "text-green-400 font-semibold";
+    if (t.bad !== undefined && v >= t.bad) return "text-red-400 font-semibold";
+    return "text-gray-600";
+  }
+  if (v >= t.good) return "text-green-400 font-semibold";
+  if (t.bad !== undefined && v <= t.bad) return "text-red-400 font-semibold";
+  return "text-gray-600";
+}
+
+// Same idea for the RK/FPTS columns, but keyed off positional finish rather
+// than a raw stat — a finish rank already accounts for position/scoring
+// scale, so it's a cleaner "was this a good fantasy week" signal than a
+// fixed FPTS number would be across positions that score very differently.
+function finishQualityClass(rank) {
+  if (rank == null) return "text-gray-400";
+  if (rank <= 12) return "text-green-400";
+  if (rank >= 30) return "text-red-400";
+  return "text-gray-400";
+}
+
 // Player profile modal — deliberately owns its own data-loading state
 // (season stats, waiver mentions, rankings-by-format) rather than lifting it
 // into the Rankings page. Those requests resolve ~300-500ms after opening,
@@ -237,7 +279,7 @@ export default function PlayerCardModal({
       onClick={onClose}
     >
       <div
-        className="bg-card/95 rounded-3xl border border-card/80 ring-1 ring-white/10 w-full max-w-xl lg:max-w-2xl relative animate-modal-card"
+        className="bg-card/95 rounded-3xl border border-card/80 ring-1 ring-white/10 w-full max-w-xl lg:max-w-[90vw] relative animate-modal-card"
         style={{
           boxShadow: `0 25px 60px -15px rgba(0,0,0,0.6), 0 0 70px 10px ${hexToRgba(teamColors(player.team).primary, 0.3)}`,
           willChange: "transform, opacity",
@@ -461,21 +503,25 @@ export default function PlayerCardModal({
                         </tr>
                       </thead>
                       <tbody>
-                        {gameLog.map((g) => (
-                          <tr key={g.week} className="border-t border-white/10">
-                            <td className="px-2 py-2 text-ink font-medium">{g.week}</td>
-                            <td className="px-2 py-2 text-gray-400 whitespace-nowrap">
-                              {g.opponent ? `${g.homeAway === "home" ? "vs" : "@"} ${g.opponent}` : "—"}
-                            </td>
-                            {(GAME_LOG_COLUMNS[player.pos] || []).map((c) => (
-                              <td key={c.key} className="text-center px-2 py-2 text-gray-600">{g.stats?.[c.key] ?? 0}</td>
-                            ))}
-                            <td className="text-center px-2 py-2 text-gray-400">
-                              {g.positionalFinish ? `${player.pos}${g.positionalFinish}` : "—"}
-                            </td>
-                            <td className="text-center px-2 py-2 font-bold text-ink">{g.fantasyPoints}</td>
-                          </tr>
-                        ))}
+                        {gameLog.map((g) => {
+                          const finishClass = finishQualityClass(g.positionalFinish);
+                          const fptsClass = finishClass === "text-gray-400" ? "text-ink" : finishClass;
+                          return (
+                            <tr key={g.week} className="border-t border-white/10">
+                              <td className="px-2 py-2 text-ink font-medium">{g.week}</td>
+                              <td className="px-2 py-2 text-gray-400 whitespace-nowrap">
+                                {g.opponent ? `${g.homeAway === "home" ? "vs" : "@"} ${g.opponent}` : "—"}
+                              </td>
+                              {(GAME_LOG_COLUMNS[player.pos] || []).map((c) => (
+                                <td key={c.key} className={`text-center px-2 py-2 ${statQualityClass(c.key, g.stats?.[c.key])}`}>{g.stats?.[c.key] ?? 0}</td>
+                              ))}
+                              <td className={`text-center px-2 py-2 font-medium ${finishClass}`}>
+                                {g.positionalFinish ? `${player.pos}${g.positionalFinish}` : "—"}
+                              </td>
+                              <td className={`text-center px-2 py-2 font-bold ${fptsClass}`}>{g.fantasyPoints}</td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -516,7 +562,7 @@ export default function PlayerCardModal({
                     ))}
                   </div>
                 </div>
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
+                <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
                   {seasonStatLine(seasonStats.position, seasonStats.stats, statsMode === "perGame", seasonStats.games_played).map((s) => (
                     <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-2 text-center">
                       <p className="text-sm font-bold text-ink">{s.value}</p>
