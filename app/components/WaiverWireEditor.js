@@ -9,8 +9,10 @@ const CATEGORIES = [
   { id: "drop", label: "Drop/Cut" },
   { id: "streamer", label: "Streamers" },
 ];
-// Drop/Cut stays one flat list (no position, no term/FAAB); Priority Adds
-// and Streamers split into position tabs.
+// Only Streamers splits into position tabs — Drop/Cut and Priority Adds are
+// both flat lists. Term/FAAB is a separate concept from position tabs
+// (Priority Adds still uses it, just without a position split), so it's
+// keyed off its own set rather than reusing POSITIONAL_CATEGORIES.
 const POSITIONS = [
   { id: "QB", label: "QB" },
   { id: "FLEX", label: "FLEX" },
@@ -18,7 +20,8 @@ const POSITIONS = [
   { id: "K", label: "K" },
   { id: "DST", label: "DST" },
 ];
-const POSITIONAL_CATEGORIES = new Set(["priority", "streamer"]);
+const POSITIONAL_CATEGORIES = new Set(["streamer"]);
+const TERM_FAAB_CATEGORIES = new Set(["priority", "streamer"]);
 const WEEKS = Array.from({ length: 18 }, (_, i) => i + 1);
 
 export default function WaiverWireEditor({ creatorId, creatorLabel }) {
@@ -65,6 +68,7 @@ export default function WaiverWireEditor({ creatorId, creatorLabel }) {
   }, []);
 
   const isPositional = POSITIONAL_CATEGORIES.has(category);
+  const allowsTermFaab = TERM_FAAB_CATEGORIES.has(category);
 
   useEffect(() => {
     if (!creatorId) return;
@@ -134,7 +138,7 @@ export default function WaiverWireEditor({ creatorId, creatorLabel }) {
           ...(isPositional ? { position } : {}),
           entries: rows.map((r) => ({
             player_id: r.player_id,
-            ...(isPositional ? { term: r.term || null, faab_pct: r.faab_pct === "" ? null : r.faab_pct } : {}),
+            ...(allowsTermFaab ? { term: r.term || null, faab_pct: r.faab_pct === "" ? null : r.faab_pct } : {}),
           })),
         }),
       });
@@ -150,7 +154,7 @@ export default function WaiverWireEditor({ creatorId, creatorLabel }) {
         <div>
           <h3 className="font-bold text-ink">Waiver Wire{creatorLabel ? ` — ${creatorLabel}` : ""}</h3>
           <p className="text-xs text-gray-400">
-            {isPositional ? "Order sets priority. Term and FAAB % are optional per player." : "Order sets priority."}
+            {allowsTermFaab ? "Order sets priority. Term and FAAB % are optional per player." : "Order sets priority."}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -247,7 +251,7 @@ export default function WaiverWireEditor({ creatorId, creatorLabel }) {
                       {Math.round(p.percent_rostered)}% rost.
                     </span>
                   )}
-                  {isPositional && (
+                  {allowsTermFaab && (
                     <>
                       <div className="flex items-center gap-1 shrink-0">
                         <button

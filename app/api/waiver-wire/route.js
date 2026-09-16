@@ -5,9 +5,12 @@ const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPAB
 
 const CATEGORIES = ['drop', 'streamer', 'priority'];
 const POSITIONS = ['QB', 'FLEX', 'TE', 'K', 'DST'];
-// Drop/Cut is a single flat list (no position split, no term/FAAB); Priority
-// Adds and Streamers are split into position tabs.
-const POSITIONAL_CATEGORIES = new Set(['priority', 'streamer']);
+// Only Streamers is split into position tabs — Drop/Cut and Priority Adds
+// are both single flat lists. Term/FAAB stays a separate concept from
+// position tabs (Priority Adds still uses them, just without a position
+// split), so it's keyed off its own set rather than reusing this one.
+const POSITIONAL_CATEGORIES = new Set(['streamer']);
+const TERM_FAAB_CATEGORIES = new Set(['priority', 'streamer']);
 
 function emptyPositionMap() {
   return Object.fromEntries(POSITIONS.map((p) => [p, []]));
@@ -19,12 +22,16 @@ function groupByPosition(rows) {
   return grouped;
 }
 
-// { drop: [...], priority: {QB:[],FLEX:[],...}, streamer: {QB:[],FLEX:[],...} }
+// { drop: [...], priority: [...], streamer: {QB:[],FLEX:[],...} } — shape
+// per category depends on POSITIONAL_CATEGORIES rather than hardcoding which
+// ones are flat, so this and the per-creator grouping below (week-only GET)
+// automatically follow whatever's in that set.
 function groupByCategoryAndPosition(rows) {
-  const grouped = { drop: [], streamer: emptyPositionMap(), priority: emptyPositionMap() };
+  const grouped = {};
+  for (const cat of CATEGORIES) grouped[cat] = POSITIONAL_CATEGORIES.has(cat) ? emptyPositionMap() : [];
   for (const row of rows) {
-    if (row.category === 'drop') grouped.drop.push(row);
-    else grouped[row.category][row.position]?.push(row);
+    if (POSITIONAL_CATEGORIES.has(row.category)) grouped[row.category][row.position]?.push(row);
+    else grouped[row.category].push(row);
   }
   return grouped;
 }
@@ -92,9 +99,12 @@ export async function GET(request) {
     if (error) return Response.json({ error: error.message }, { status: 500 });
     const byCreator = {};
     for (const row of (data || [])) {
-      if (!byCreator[row.creator_id]) byCreator[row.creator_id] = { drop: [], streamer: emptyPositionMap(), priority: emptyPositionMap() };
-      if (row.category === 'drop') byCreator[row.creator_id].drop.push(row);
-      else byCreator[row.creator_id][row.category][row.position]?.push(row);
+      if (!byCreator[row.creator_id]) {
+        byCreator[row.creator_id] = {};
+        for (const cat of CATEGORIES) byCreator[row.creator_id][cat] = POSITIONAL_CATEGORIES.has(cat) ? emptyPositionMap() : [];
+      }
+      if (POSITIONAL_CATEGORIES.has(row.category)) byCreator[row.creator_id][row.category][row.position]?.push(row);
+      else byCreator[row.creator_id][row.category].push(row);
     }
     return Response.json({ creators: byCreator });
   }
@@ -114,6 +124,7 @@ export async function POST(request) {
   const { creator_id, category, entries } = body;
   const week = parseInt(body.week, 10);
   const isPositional = POSITIONAL_CATEGORIES.has(category);
+  const allowsTermFaab = TERM_FAAB_CATEGORIES.has(category);
   const position = isPositional ? body.position : null;
 
   if (!creator_id || !Number.isInteger(week) || week < 1 || !CATEGORIES.includes(category)) {
@@ -129,7 +140,7 @@ export async function POST(request) {
     if (!Number.isInteger(Number(e.player_id))) {
       return Response.json({ error: 'each entry needs a player_id' }, { status: 400 });
     }
-    if (isPositional && e.term !== undefined && e.term !== null && e.term !== 'short' && e.term !== 'long') {
+    if (allowsTermFaab && e.term !== undefined && e.term !== null && e.term !== 'short' && e.term !== 'long') {
       return Response.json({ error: "term must be 'short', 'long', or null" }, { status: 400 });
     }
   }
@@ -163,8 +174,8 @@ export async function POST(request) {
       category,
       position,
       player_id: Number(e.player_id),
-      term: isPositional ? (e.term || null) : null,
-      faab_pct: isPositional ? (e.faab_pct === null || e.faab_pct === '' || e.faab_pct === undefined ? null : Number(e.faab_pct)) : null,
+      term: allowsTermFaab ? (e.term || null) : null,
+      faab_pct: allowsTermFaab ? (e.faab_pct === null || e.faab_pct === '' || e.faab_pct === undefined ? null : Number(e.faab_pct)) : null,
       rank: i + 1,
       updated_at: new Date().toISOString(),
     }));

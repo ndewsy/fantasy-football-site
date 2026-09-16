@@ -38,7 +38,9 @@ const POSITIONS = [
   { id: "K", label: "K" },
   { id: "DST", label: "DST" },
 ];
-const POSITIONAL_CATEGORIES = new Set(["priority", "streamer"]);
+// Only Streamers splits into position tabs — Drop/Cut and Priority Adds are
+// both flat lists.
+const POSITIONAL_CATEGORIES = new Set(["streamer"]);
 const CREATOR_BADGE = {
   rookierager: { label: "RR", className: "bg-orange-100 text-orange-700" },
   ffhuddle: { label: "FFH", className: "bg-blue-100 text-blue-700" },
