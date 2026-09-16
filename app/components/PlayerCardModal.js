@@ -156,6 +156,7 @@ export default function PlayerCardModal({
   const [seasonStatsLoading, setSeasonStatsLoading] = useState(true);
   const [gameLog, setGameLog] = useState([]);
   const [statsMode, setStatsMode] = useState("total"); // "total" | "perGame"
+  const [logMode, setLogMode] = useState("weekly"); // "weekly" | "season"
   const [waiverMentions, setWaiverMentions] = useState([]);
   const [waiverMentionsLoading, setWaiverMentionsLoading] = useState(true);
 
@@ -168,6 +169,7 @@ export default function PlayerCardModal({
     setSeasonStats(null);
     setGameLog([]);
     setStatsMode("total");
+    setLogMode("weekly");
     setWaiverMentionsLoading(true);
     setWaiverMentions([]);
 
@@ -417,71 +419,23 @@ export default function PlayerCardModal({
           </div>
         )}
 
-        {/* 2026 Game Log — sourced from player_week_stats, synced weekly
-            (app/api/cron/sync-week-stats/route.js) once each week's games
-            wrap; empty until the first week finishes, so the whole section
-            stays hidden rather than showing a confusing blank table. */}
-        {!seasonStatsLoading && gameLog.length > 0 && (
-          <div className="px-7 pt-6 border-t border-white/10">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2.5">2026 Game Log</h3>
-            <div className="overflow-x-auto rounded-xl border border-white/10">
-              <table className="w-full text-xs">
-                <thead className="bg-white/5 text-gray-500">
-                  <tr>
-                    <th className="text-left px-3 py-2 font-medium">WK</th>
-                    <th className="text-left px-3 py-2 font-medium">OPP</th>
-                    {(GAME_LOG_COLUMNS[player.pos] || []).map((c) => (
-                      <th key={c.key} className="text-center px-3 py-2 font-medium whitespace-nowrap">{c.label}</th>
-                    ))}
-                    <th className="text-center px-3 py-2 font-medium">FPTS</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {gameLog.map((g) => (
-                    <tr key={g.week} className="border-t border-white/10">
-                      <td className="px-3 py-2 text-ink font-medium">{g.week}</td>
-                      <td className="px-3 py-2 text-gray-400 whitespace-nowrap">
-                        {g.opponent ? `${g.homeAway === "home" ? "vs" : "@"} ${g.opponent}` : "—"}
-                      </td>
-                      {(GAME_LOG_COLUMNS[player.pos] || []).map((c) => (
-                        <td key={c.key} className="text-center px-3 py-2 text-gray-600">{g.stats?.[c.key] ?? 0}</td>
-                      ))}
-                      <td className="text-center px-3 py-2 font-bold text-ink">{g.fantasyPoints}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <p className="text-[10px] text-gray-400 mt-2">Full PPR scoring</p>
-          </div>
-        )}
-
-        {/* Previous Season Stats */}
-        {!seasonStatsLoading && seasonStats && (
+        {/* Fantasy Log — weekly rows (stats + fantasy points + that week's
+            positional finish, e.g. "RB3") sourced from player_week_stats,
+            synced weekly (app/api/cron/sync-week-stats/route.js); or season
+            totals with the season-long positional finish, via the same
+            toggle other sites use to switch a log between week-by-week and
+            full-season views. */}
+        {!seasonStatsLoading && (gameLog.length > 0 || seasonStats) && (
           <div className="px-7 pt-6 border-t border-white/10">
             <div className="flex items-center justify-between mb-2.5">
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{seasonStats.season} Season</h3>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-ink">
-                  {statsMode === "perGame" && seasonStats.games_played > 0
-                    ? Math.round((seasonStats.fantasy_points / seasonStats.games_played) * 10) / 10
-                    : seasonStats.fantasy_points} pts
-                </span>
-                {seasonStats.fantasy_finish && (
-                  <span className="text-[10px] font-bold uppercase bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
-                    {seasonStats.position}{seasonStats.fantasy_finish}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center justify-end mb-2">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Fantasy Log</h3>
               <div className="inline-flex items-center bg-white/5 border border-white/10 rounded-full p-0.5">
-                {[{ id: "total", label: "Total" }, { id: "perGame", label: "Per Game" }].map((mode) => (
+                {[{ id: "weekly", label: "Weekly" }, { id: "season", label: "Season" }].map((mode) => (
                   <button
                     key={mode.id}
-                    onClick={() => setStatsMode(mode.id)}
+                    onClick={() => setLogMode(mode.id)}
                     className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wide transition-colors ${
-                      statsMode === mode.id ? "bg-blue-600 text-white" : "text-gray-400 hover:text-ink"
+                      logMode === mode.id ? "bg-blue-600 text-white" : "text-gray-400 hover:text-ink"
                     }`}
                   >
                     {mode.label}
@@ -489,15 +443,92 @@ export default function PlayerCardModal({
                 ))}
               </div>
             </div>
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
-              {seasonStatLine(seasonStats.position, seasonStats.stats, statsMode === "perGame", seasonStats.games_played).map((s) => (
-                <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-2 text-center">
-                  <p className="text-sm font-bold text-ink">{s.value}</p>
-                  <p className="text-[9px] text-gray-400 uppercase tracking-wide">{s.label}</p>
+
+            {logMode === "weekly" ? (
+              gameLog.length > 0 ? (
+                <>
+                  <div className="overflow-x-auto rounded-xl border border-white/10">
+                    <table className="w-full text-xs">
+                      <thead className="bg-white/5 text-gray-500">
+                        <tr>
+                          <th className="text-left px-2 py-2 font-medium">WK</th>
+                          <th className="text-left px-2 py-2 font-medium">OPP</th>
+                          {(GAME_LOG_COLUMNS[player.pos] || []).map((c) => (
+                            <th key={c.key} className="text-center px-2 py-2 font-medium whitespace-nowrap">{c.label}</th>
+                          ))}
+                          <th className="text-center px-2 py-2 font-medium">RK</th>
+                          <th className="text-center px-2 py-2 font-medium">FPTS</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {gameLog.map((g) => (
+                          <tr key={g.week} className="border-t border-white/10">
+                            <td className="px-2 py-2 text-ink font-medium">{g.week}</td>
+                            <td className="px-2 py-2 text-gray-400 whitespace-nowrap">
+                              {g.opponent ? `${g.homeAway === "home" ? "vs" : "@"} ${g.opponent}` : "—"}
+                            </td>
+                            {(GAME_LOG_COLUMNS[player.pos] || []).map((c) => (
+                              <td key={c.key} className="text-center px-2 py-2 text-gray-600">{g.stats?.[c.key] ?? 0}</td>
+                            ))}
+                            <td className="text-center px-2 py-2 text-gray-400">
+                              {g.positionalFinish ? `${player.pos}${g.positionalFinish}` : "—"}
+                            </td>
+                            <td className="text-center px-2 py-2 font-bold text-ink">{g.fantasyPoints}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-2">Full PPR scoring</p>
+                </>
+              ) : (
+                <p className="text-xs text-gray-400 text-center py-6">No games logged yet this season.</p>
+              )
+            ) : seasonStats ? (
+              <>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-gray-400">{seasonStats.season} Season</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-ink">
+                      {statsMode === "perGame" && seasonStats.games_played > 0
+                        ? Math.round((seasonStats.fantasy_points / seasonStats.games_played) * 10) / 10
+                        : seasonStats.fantasy_points} pts
+                    </span>
+                    {seasonStats.fantasy_finish && (
+                      <span className="text-[10px] font-bold uppercase bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                        {seasonStats.position}{seasonStats.fantasy_finish}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              ))}
-            </div>
-            <p className="text-[10px] text-gray-400 mt-2">Full PPR scoring · {seasonStats.games_played} games played</p>
+                <div className="flex items-center justify-end mb-2">
+                  <div className="inline-flex items-center bg-white/5 border border-white/10 rounded-full p-0.5">
+                    {[{ id: "total", label: "Total" }, { id: "perGame", label: "Per Game" }].map((mode) => (
+                      <button
+                        key={mode.id}
+                        onClick={() => setStatsMode(mode.id)}
+                        className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wide transition-colors ${
+                          statsMode === mode.id ? "bg-blue-600 text-white" : "text-gray-400 hover:text-ink"
+                        }`}
+                      >
+                        {mode.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
+                  {seasonStatLine(seasonStats.position, seasonStats.stats, statsMode === "perGame", seasonStats.games_played).map((s) => (
+                    <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-2 text-center">
+                      <p className="text-sm font-bold text-ink">{s.value}</p>
+                      <p className="text-[9px] text-gray-400 uppercase tracking-wide">{s.label}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] text-gray-400 mt-2">Full PPR scoring · {seasonStats.games_played} games played</p>
+              </>
+            ) : (
+              <p className="text-xs text-gray-400 text-center py-6">No season data available yet.</p>
+            )}
           </div>
         )}
 

@@ -67,6 +67,41 @@ export async function GET(request) {
         homeAway: game ? (game.home_team === team ? 'home' : 'away') : null,
       };
     });
+
+    // That week's positional finish (e.g. "RB3") — ranks this player against
+    // every other player at the same position who has a stat line the same
+    // week, same way sync-season-stats ranks the season-long fantasy_finish.
+    // One query for the whole position across the season rather than one
+    // per week in the log.
+    const position = weekStatsResult.data[0]?.position;
+    if (position) {
+      const { data: positionRows, error: positionError } = await supabase()
+        .from('player_week_stats')
+        .select('player_id, week, stats')
+        .eq('season', CURRENT_SEASON)
+        .eq('season_type', 'regular')
+        .eq('position', position);
+      if (positionError) return Response.json({ error: positionError.message }, { status: 500 });
+
+      const byWeek = new Map();
+      for (const row of positionRows || []) {
+        const s = row.stats || {};
+        const points = fantasyPointsFromRealStats({
+          passYd: s.pass_yd, passTd: s.pass_td,
+          rushYd: s.rush_yd, rushTd: s.rush_td,
+          recYd: s.rec_yd, recTd: s.rec_td, rec: s.rec,
+        });
+        if (!byWeek.has(row.week)) byWeek.set(row.week, []);
+        byWeek.get(row.week).push({ player_id: row.player_id, points });
+      }
+
+      const numericPlayerId = Number(playerId);
+      for (const entry of gameLog) {
+        const weekRows = (byWeek.get(entry.week) || []).sort((a, b) => b.points - a.points);
+        const idx = weekRows.findIndex((r) => r.player_id === numericPlayerId);
+        entry.positionalFinish = idx >= 0 ? idx + 1 : null;
+      }
+    }
   }
 
   return Response.json({ seasonStats: seasonStatsResult.data || null, gameLog });
