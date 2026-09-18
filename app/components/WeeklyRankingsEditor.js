@@ -13,6 +13,10 @@ const POSITIONS = [
   { id: "K", label: "K" },
 ];
 const WEEKS = Array.from({ length: 18 }, (_, i) => i + 1);
+const RECOMMENDED_LIMIT = 24;
+// Start/Sit projections only cover skill positions with prop markets —
+// DST/K have no player_prop_lines, so there's nothing to recommend there.
+const RECOMMENDED_POSITIONS = new Set(["QB", "RB", "WR", "TE"]);
 
 // tiers is a sorted array of rank thresholds where a new tier starts —
 // tiers[0] is always 1 (implicit, not user-removable), same model as the
@@ -42,6 +46,9 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
   const [search, setSearch] = useState("");
   const [token, setToken] = useState(null);
   const [seasonGames, setSeasonGames] = useState([]);
+  const [recommended, setRecommended] = useState([]);
+  const [recommendedLoading, setRecommendedLoading] = useState(false);
+  const [showRecommended, setShowRecommended] = useState(false);
   const dragIndex = useRef(null);
 
   useEffect(() => {
@@ -88,6 +95,21 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
       .finally(() => setLoading(false));
   }, [creatorId, week, position]);
 
+  // Projections only exist for skill positions (no prop markets for DST/K) —
+  // skip the fetch there and just show the empty state.
+  useEffect(() => {
+    if (!RECOMMENDED_POSITIONS.has(position)) {
+      setRecommended([]);
+      return;
+    }
+    setRecommendedLoading(true);
+    fetch(`/api/start-sit/top-starts?position=${position}&limit=${RECOMMENDED_LIMIT}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setRecommended(d?.topStarts || []))
+      .catch(() => setRecommended([]))
+      .finally(() => setRecommendedLoading(false));
+  }, [position]);
+
   // Week-level, not per-position — reload only when creator/week changes so
   // switching position tabs doesn't clobber an unsaved disclaimer edit.
   useEffect(() => {
@@ -111,7 +133,7 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
       ])
   );
   const searchResults = search.trim().length >= 2
-    ? playerPool.filter((p) => !usedIds.has(p.id) && p.name.toLowerCase().includes(search.toLowerCase().trim())).slice(0, 10)
+    ? playerPool.filter((p) => p.position === position && !usedIds.has(p.id) && p.name.toLowerCase().includes(search.toLowerCase().trim())).slice(0, 10)
     : [];
 
   function movePlayer(index, dir) {
@@ -315,6 +337,42 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
                     <span className="text-xs text-gray-400">{p.position} · {p.team}</span>
                   </button>
                 ))}
+              </div>
+            )}
+          </div>
+
+          <div className="mb-3">
+            <button
+              onClick={() => setShowRecommended((v) => !v)}
+              className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+            >
+              {showRecommended ? "Hide" : "Show"} Top {RECOMMENDED_LIMIT} Recommended {position}s
+            </button>
+            {showRecommended && (
+              <div className="mt-2 max-h-64 overflow-y-auto divide-y divide-gray-100 border border-gray-100 rounded-lg">
+                {!RECOMMENDED_POSITIONS.has(position) && (
+                  <p className="text-xs text-gray-400 text-center py-4">No projections available for {position}.</p>
+                )}
+                {RECOMMENDED_POSITIONS.has(position) && recommendedLoading && (
+                  <p className="text-xs text-gray-400 text-center py-4">Loading...</p>
+                )}
+                {RECOMMENDED_POSITIONS.has(position) && !recommendedLoading && recommended.length === 0 && (
+                  <p className="text-xs text-gray-400 text-center py-4">No upcoming projections for {position}.</p>
+                )}
+                {recommended
+                  .filter((r) => !usedIds.has(r.player.id))
+                  .map((r, i) => (
+                    <button
+                      key={r.player.id}
+                      onClick={() => addPlayer(r.player.id)}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 text-left text-sm"
+                    >
+                      <span className="text-xs text-gray-400 font-mono w-5 shrink-0 text-right">{i + 1}</span>
+                      <span className="font-medium text-ink flex-1 truncate">{r.player.name}</span>
+                      <span className="text-xs text-gray-400 shrink-0">{r.player.team}</span>
+                      <span className="text-xs text-gray-400 shrink-0 w-14 text-right">{r.projectedPoints.toFixed(1)} pts</span>
+                    </button>
+                  ))}
               </div>
             )}
           </div>

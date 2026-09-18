@@ -9,6 +9,8 @@ const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPAB
 const CURRENT_SEASON = 2026;
 
 const TOP_N = 5;
+const MAX_LIMIT = 50;
+const POSITIONS = ['QB', 'RB', 'WR', 'TE'];
 const PAGE = 1000;
 
 async function fetchAllRows(table, selectCols, applyFilters) {
@@ -31,6 +33,9 @@ async function fetchAllRows(table, selectCols, applyFilters) {
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const scoring = SCORING_FORMATS.includes(searchParams.get('scoring')) ? searchParams.get('scoring') : 'ppr';
+  const position = POSITIONS.includes(searchParams.get('position')) ? searchParams.get('position') : null;
+  const parsedLimit = parseInt(searchParams.get('limit'), 10);
+  const limit = Number.isInteger(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, MAX_LIMIT) : TOP_N;
 
   try {
     // Ordered player_id, then game_starts_at — grouping by player_id below
@@ -51,7 +56,10 @@ export async function GET(request) {
     const playerIds = [...linesByPlayer.keys()];
 
     const [players, seasonStatsRows, gameLines] = await Promise.all([
-      fetchAllRows('players', 'id, name, position, team, espn_id, sleeper_id, rookie_year', (q) => q.in('id', playerIds)),
+      fetchAllRows('players', 'id, name, position, team, espn_id, sleeper_id, rookie_year', (q) => {
+        const withIds = q.in('id', playerIds);
+        return position ? withIds.eq('position', position) : withIds;
+      }),
       fetchAllRows('player_season_stats', 'player_id, games_played, stats, season', (q) => q.in('player_id', playerIds).order('season', { ascending: false })),
       fetchAllRows('game_lines', '*', (q) => q.in('sgo_event_id', [...new Set(allLines.map((l) => l.sgo_event_id))])),
     ]);
@@ -90,7 +98,7 @@ export async function GET(request) {
 
     projected.sort((a, b) => b.projectedPoints - a.projectedPoints);
 
-    return Response.json({ scoring, topStarts: projected.slice(0, TOP_N) });
+    return Response.json({ scoring, topStarts: projected.slice(0, limit) });
   } catch (err) {
     console.error('[/api/start-sit/top-starts] failed:', err);
     return Response.json({ error: err.message }, { status: 500 });
