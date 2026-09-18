@@ -192,17 +192,16 @@ export default function Home() {
       setWeeklyCreatorProfiles(Object.fromEntries((profilesResult.data || []).map((p) => [p.creator_id, p])));
       setWeeklySeasonGames(gamesResult.data || []);
 
-      // Default to the current week if the active creator (ffhuddle, on a
-      // fresh page load) has already published it, otherwise fall back to
-      // the most recent archived week available.
+      // Only the latest published week is ever shown (older weeks are
+      // archived out of the public toggle — see weeklyWeeks below), so the
+      // default is simply whichever week the active creator most recently
+      // published, regardless of where that falls relative to the actual
+      // NFL week.
       const currentWeek = getCurrentWeekFromGames(gamesResult.data || []);
       setWeeklyCurrentNflWeek(currentWeek);
       const availableWeeks = Object.keys(dataByCreator[activeCreator]?.weeks || {}).map(Number).sort((a, b) => a - b);
       if (availableWeeks.length > 0) {
-        const defaultWeek = availableWeeks.includes(currentWeek)
-          ? currentWeek
-          : availableWeeks.filter((w) => w <= currentWeek).pop() ?? availableWeeks[availableWeeks.length - 1];
-        setWeeklyWeek(defaultWeek);
+        setWeeklyWeek(availableWeeks[availableWeeks.length - 1]);
       }
     }
     loadWeekly();
@@ -355,11 +354,7 @@ export default function Home() {
   function handleWeeklyCreatorChange(creatorId) {
     setActiveCreator(creatorId);
     const availableWeeks = Object.keys(weeklyRankingsData[creatorId]?.weeks || {}).map(Number).sort((a, b) => a - b);
-    if (availableWeeks.length === 0) { setWeeklyWeek(null); return; }
-    const defaultWeek = availableWeeks.includes(weeklyCurrentNflWeek)
-      ? weeklyCurrentNflWeek
-      : availableWeeks.filter((w) => w <= weeklyCurrentNflWeek).pop() ?? availableWeeks[availableWeeks.length - 1];
-    setWeeklyWeek(defaultWeek);
+    setWeeklyWeek(availableWeeks.length > 0 ? availableWeeks[availableWeeks.length - 1] : null);
   }
 
   const formatData = rankingsCache[effectiveFormat];
@@ -389,7 +384,11 @@ export default function Home() {
     : (selectedPlayer ? riskRatings[selectedPlayer.id]?.[activeCreator] ?? null : null);
   const canEditRisk = isDashboardUser && !isConsensusTab && (isAdmin || myCreatorId === activeCreator);
 
-  const weeklyWeeks = Object.keys(weeklyRankingsData[activeCreator]?.weeks || {}).map(Number).sort((a, b) => a - b);
+  // Only the latest published week is shown publicly — older weeks stay in
+  // weeklyRankingsData but are archived out of this toggle rather than left
+  // visible alongside the current week.
+  const weeklyAllWeeks = Object.keys(weeklyRankingsData[activeCreator]?.weeks || {}).map(Number).sort((a, b) => a - b);
+  const weeklyWeeks = weeklyAllWeeks.length > 0 ? [weeklyAllWeeks[weeklyAllWeeks.length - 1]] : [];
   const weeklyRows = weeklyWeek ? (weeklyRankingsData[activeCreator]?.weeks?.[String(weeklyWeek)]?.[weeklyPosition] || []) : [];
   const weeklyTiers = weeklyWeek ? (weeklyRankingsData[activeCreator]?.tiers?.[String(weeklyWeek)]?.[weeklyPosition] || []) : [];
   const weeklyNote = weeklyWeek ? (weeklyRankingsData[activeCreator]?.notes?.[String(weeklyWeek)] || "") : "";
