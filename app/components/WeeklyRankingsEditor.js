@@ -34,9 +34,6 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
   const [playerPool, setPlayerPool] = useState([]);
   const [rows, setRows] = useState([]); // [{ player_id }] enriched with pool info at render time
   const [tiers, setTiers] = useState([1]);
-  const [showAddTier, setShowAddTier] = useState(false);
-  const [addTierRank, setAddTierRank] = useState("");
-  const [addTierError, setAddTierError] = useState("");
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -47,9 +44,11 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
   const [token, setToken] = useState(null);
   const [seasonGames, setSeasonGames] = useState([]);
   const [recommended, setRecommended] = useState([]);
+  const [recommendedWeek, setRecommendedWeek] = useState(null);
   const [recommendedLoading, setRecommendedLoading] = useState(false);
   const [showRecommended, setShowRecommended] = useState(false);
   const dragIndex = useRef(null);
+  const dragTierRank = useRef(null);
 
   useEffect(() => {
     async function loadPoolAndWeek() {
@@ -105,7 +104,7 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
     setRecommendedLoading(true);
     fetch(`/api/weekly-rankings/recommended?position=${position}&limit=${RECOMMENDED_LIMIT}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => setRecommended(d?.topStarts || []))
+      .then((d) => { setRecommended(d?.topStarts || []); setRecommendedWeek(d?.week ?? null); })
       .catch(() => setRecommended([]))
       .finally(() => setRecommendedLoading(false));
   }, [position]);
@@ -132,6 +131,17 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
         [g.away_team, { opponent: g.home_team, homeAway: "away" }],
       ])
   );
+  // Recommended is always for whichever week Sleeper just projected (see
+  // /api/weekly-rankings/recommended), which can differ from the week
+  // selected above — keyed off recommendedWeek rather than reusing matchups.
+  const recommendedMatchups = Object.fromEntries(
+    seasonGames
+      .filter((g) => g.week === recommendedWeek)
+      .flatMap((g) => [
+        [g.home_team, { opponent: g.away_team, homeAway: "home" }],
+        [g.away_team, { opponent: g.home_team, homeAway: "away" }],
+      ])
+  );
   const searchResults = search.trim().length >= 2
     ? playerPool.filter((p) => p.position === position && !usedIds.has(p.id) && p.name.toLowerCase().includes(search.toLowerCase().trim())).slice(0, 10)
     : [];
@@ -153,25 +163,11 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
     setSearch("");
   }
 
-  function confirmAddTier() {
-    const pos = parseInt(addTierRank, 10);
-    if (!Number.isInteger(pos) || pos < 1) {
-      setAddTierError("Please enter a positive whole number.");
-      return;
-    }
-    if (pos >= rows.length) {
-      setAddTierError(`Must be less than ${rows.length} (your total ranked players).`);
-      return;
-    }
-    const newTierStart = pos + 1;
-    if (tiers.includes(newTierStart)) {
-      setAddTierError(`A tier boundary already exists after rank ${pos}.`);
-      return;
-    }
-    setTiers([...tiers, newTierStart].sort((a, b) => a - b));
-    setShowAddTier(false);
-    setAddTierRank("");
-    setAddTierError("");
+  // rank is 1-indexed; a break "before rank" makes that player the first of
+  // a new tier. Rank 1 already implicitly starts tier 1, so it's a no-op.
+  function addTierBreakBeforeRank(rank) {
+    if (rank <= 1 || tiers.includes(rank)) return;
+    setTiers([...tiers, rank].sort((a, b) => a - b));
   }
 
   function removeTier(tierIndex) {
@@ -203,11 +199,23 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
   // the existing Save button below persists it, same as the ▲/▼ buttons.
   function handleDragStart(e, index) {
     dragIndex.current = index;
+    dragTierRank.current = null;
     e.dataTransfer.effectAllowed = "move";
   }
 
   function handleDragOver(e, index) {
     e.preventDefault();
+    if (dragTierRank.current !== null) {
+      // Same live-update approach as the row reorder below — move the
+      // dragged boundary to sit right before whichever row is under the
+      // pointer, unless that would collide with rank 1 or another boundary.
+      const targetRank = index + 1;
+      if (targetRank === 1 || targetRank === dragTierRank.current || tiers.includes(targetRank)) return;
+      const next = tiers.map((t) => (t === dragTierRank.current ? targetRank : t)).sort((a, b) => a - b);
+      dragTierRank.current = targetRank;
+      setTiers(next);
+      return;
+    }
     if (dragIndex.current === null || dragIndex.current === index) return;
     // Splice synchronously here (not inside the setRows updater) — the
     // updater callback can run after this function returns, by which point
@@ -220,8 +228,16 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
     setRows(next);
   }
 
+  function handleTierDragStart(e, rank) {
+    e.stopPropagation();
+    dragTierRank.current = rank;
+    dragIndex.current = null;
+    e.dataTransfer.effectAllowed = "move";
+  }
+
   function handleDragEnd() {
     dragIndex.current = null;
+    dragTierRank.current = null;
   }
 
   async function save() {
@@ -361,48 +377,31 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
                 )}
                 {recommended
                   .filter((r) => !usedIds.has(r.player.id))
-                  .map((r, i) => (
-                    <button
-                      key={r.player.id}
-                      onClick={() => addPlayer(r.player.id)}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 text-left text-sm"
-                    >
-                      <span className="text-xs text-gray-400 font-mono w-5 shrink-0 text-right">{i + 1}</span>
-                      <span className="font-medium text-ink flex-1 truncate">{r.player.name}</span>
-                      <span className="text-xs text-gray-400 shrink-0">{r.player.team}</span>
-                      <span className="text-xs text-gray-400 shrink-0 w-14 text-right">{r.projectedPoints.toFixed(1)} pts</span>
-                    </button>
-                  ))}
+                  .map((r, i) => {
+                    const matchup = recommendedMatchups[r.player.team];
+                    return (
+                      <button
+                        key={r.player.id}
+                        onClick={() => addPlayer(r.player.id)}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 text-left text-sm"
+                      >
+                        <span className="text-xs text-gray-400 font-mono w-5 shrink-0 text-right">{i + 1}</span>
+                        <span className="font-medium text-ink flex-1 truncate">{r.player.name}</span>
+                        <span className="text-xs text-gray-400 shrink-0">{r.player.team}</span>
+                        <span className="text-xs text-gray-400 shrink-0 w-16 text-right">
+                          {matchup ? `${matchup.homeAway === "home" ? "vs" : "@"} ${matchup.opponent}` : "BYE"}
+                        </span>
+                        <span className="text-xs text-gray-400 shrink-0 w-14 text-right">{r.projectedPoints.toFixed(1)} pts</span>
+                      </button>
+                    );
+                  })}
               </div>
             )}
           </div>
 
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-gray-400">Tiers group players visually on the public page.</p>
-            <button
-              onClick={() => { setShowAddTier(true); setAddTierRank(""); setAddTierError(""); }}
-              className="text-xs font-semibold text-blue-600 hover:text-blue-700"
-            >
-              + Add Tier
-            </button>
-          </div>
-          {showAddTier && (
-            <div className="flex items-center gap-2 mb-3 bg-gray-50 border border-gray-200 rounded-lg p-2.5">
-              <span className="text-xs text-gray-500 shrink-0">New tier starts after rank</span>
-              <input
-                type="number"
-                min="1"
-                value={addTierRank}
-                onChange={(e) => setAddTierRank(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && confirmAddTier()}
-                autoFocus
-                className="w-16 bg-card rounded border border-gray-200 px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button onClick={confirmAddTier} className="text-xs font-semibold bg-blue-600 text-white px-2.5 py-1 rounded">Add</button>
-              <button onClick={() => setShowAddTier(false)} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
-              {addTierError && <p className="text-[11px] text-red-500 ml-1">{addTierError}</p>}
-            </div>
-          )}
+          <p className="text-xs text-gray-400 mb-2">
+            Tiers group players visually on the public page. Hover between players to add a break, or drag a tier's ⠿ handle to move it.
+          </p>
 
           <div className="max-h-[32rem] overflow-y-auto divide-y divide-gray-100 border border-gray-100 rounded-lg">
             {rows.length === 0 && (
@@ -416,11 +415,18 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
               const p = byId[row.player_id];
               const matchup = matchups[p?.team];
               return (
-                <div key={`${row.player_id}-${i}`}>
-                {showDivider && (
-                  <div className="flex items-center gap-3 px-3 py-1.5 bg-blue-50">
+                <div key={`${row.player_id}-${i}`} className="group relative">
+                {showDivider ? (
+                  <div
+                    draggable={tierNum > 1}
+                    onDragStart={tierNum > 1 ? (e) => handleTierDragStart(e, rank) : undefined}
+                    onDragOver={(e) => handleDragOver(e, i)}
+                    onDragEnd={handleDragEnd}
+                    className={`flex items-center gap-3 px-3 py-1.5 bg-blue-50 ${tierNum > 1 ? "cursor-grab active:cursor-grabbing" : ""}`}
+                  >
                     <div className="flex-1 h-px bg-blue-200" />
-                    <span className="text-[11px] font-semibold text-blue-600 tracking-wider uppercase">Tier {tierNum}</span>
+                    {tierNum > 1 && <span className="text-blue-300 select-none" title="Drag to move this tier break">⠿</span>}
+                    <span className="text-[11px] font-semibold text-blue-600 tracking-wider uppercase select-none">Tier {tierNum}</span>
                     {tierNum > 1 && (
                       <button
                         onClick={() => removeTier(tiers.indexOf(rank))}
@@ -432,6 +438,14 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
                     )}
                     <div className="flex-1 h-px bg-blue-200" />
                   </div>
+                ) : rank > 1 && (
+                  <button
+                    onClick={() => addTierBreakBeforeRank(rank)}
+                    title={`Add a tier break before rank ${rank}`}
+                    className="w-full h-0 group-hover:h-5 overflow-hidden transition-[height] flex items-center justify-center bg-blue-50 hover:bg-blue-100 text-[10px] font-semibold text-blue-500 uppercase tracking-wide"
+                  >
+                    + Tier
+                  </button>
                 )}
                 <div
                   draggable
