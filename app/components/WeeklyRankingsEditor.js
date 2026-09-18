@@ -103,7 +103,7 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
       return;
     }
     setRecommendedLoading(true);
-    fetch(`/api/start-sit/top-starts?position=${position}&limit=${RECOMMENDED_LIMIT}`)
+    fetch(`/api/weekly-rankings/recommended?position=${position}&limit=${RECOMMENDED_LIMIT}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => setRecommended(d?.topStarts || []))
       .catch(() => setRecommended([]))
