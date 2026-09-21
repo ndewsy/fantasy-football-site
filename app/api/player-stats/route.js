@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { fantasyPointsFromRealStats } from '@/lib/fantasyProjection';
+import { computeMatchupStats } from '@/lib/matchupStrength';
 
 let _supabase;
 const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY));
@@ -67,10 +68,15 @@ export async function GET(request) {
   // season-long positional finish, rather than a separate query for each.
   const weeklyRankRows = new Map(); // week -> [{player_id, points}]
   const seasonTotalsByPlayer = new Map(); // player_id -> points
+  // Every player-week row at this position, reshaped for
+  // computeMatchupStats — reused below to grade each game-log week's
+  // opponent the same way the Matchups tab does, just re-run per week so
+  // week W's grade only ever reflects weeks 1..W-1 (see lib/matchupStrength.js).
+  const positionWeekStatsForMatchup = [];
   if (position) {
     const { data: positionRows, error: positionError } = await supabase()
       .from('player_week_stats')
-      .select('player_id, week, stats')
+      .select('player_id, week, stats, opponent')
       .eq('season', season)
       .eq('season_type', 'regular')
       .eq('position', position);
@@ -81,6 +87,7 @@ export async function GET(request) {
       if (!weeklyRankRows.has(row.week)) weeklyRankRows.set(row.week, []);
       weeklyRankRows.get(row.week).push({ player_id: row.player_id, points });
       seasonTotalsByPlayer.set(row.player_id, (seasonTotalsByPlayer.get(row.player_id) || 0) + points);
+      positionWeekStatsForMatchup.push({ position, opponent: row.opponent, week: row.week, fantasy_points: points });
     }
     for (const list of weeklyRankRows.values()) list.sort((a, b) => b.points - a.points);
   }
@@ -111,7 +118,21 @@ export async function GET(request) {
       positionalFinish = idx >= 0 ? idx + 1 : null;
     }
 
-    gameLog.push({ week, opponent, homeAway, isBye, hasStats, stats, fantasyPoints, positionalFinish });
+    // Graded from weeks 1..week-1 only, same as the Matchups tab — so this
+    // reflects what was actually knowable entering that week, not a
+    // look-ahead computed with data that didn't exist yet.
+    let matchupTier = null;
+    let matchupRank = null;
+    if (opponent && position) {
+      const statsThroughWeek = computeMatchupStats(positionWeekStatsForMatchup, week);
+      const opponentStats = (statsThroughWeek[position] || []).find((t) => t.team === opponent);
+      if (opponentStats) {
+        matchupTier = opponentStats.tier;
+        matchupRank = opponentStats.rank;
+      }
+    }
+
+    gameLog.push({ week, opponent, homeAway, isBye, hasStats, stats, fantasyPoints, positionalFinish, matchupTier, matchupRank });
   }
 
   // Season totals + season-long positional finish, computed live from the

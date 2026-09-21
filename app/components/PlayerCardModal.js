@@ -5,6 +5,7 @@ import { anton } from "@/lib/fonts";
 import { riskColor } from "@/lib/riskColor";
 import { teamColors } from "@/lib/teamColors";
 import { expandIds, normalizeName, computeConsensus } from "@/lib/rankingsHelpers";
+import { MATCHUP_TIER_CLASSES, MATCHUP_TIER_LABELS } from "@/lib/matchupStrength";
 
 const WAIVER_CATEGORY_LABELS = { priority: "Priority Add", drop: "Drop/Cut", streamer: "Streamer" };
 
@@ -592,8 +593,21 @@ export default function PlayerCardModal({
                                 <span className="ml-1.5 text-[9px] font-bold uppercase tracking-wide text-[#2563EB] align-middle">Latest</span>
                               )}
                             </td>
-                            <td className={`px-2 py-2 whitespace-nowrap ${g.isBye ? "italic text-[#9CA3AF]" : "text-[#6B7280]"}`}>
-                              {g.isBye ? "BYE" : g.opponent ? `${g.homeAway === "home" ? "vs" : "@"} ${g.opponent}` : "—"}
+                            <td className="px-2 py-2 whitespace-nowrap">
+                              {g.isBye ? (
+                                <span className="italic text-[#9CA3AF]">BYE</span>
+                              ) : g.opponent ? (
+                                <span
+                                  className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold ${
+                                    g.matchupTier ? MATCHUP_TIER_CLASSES[g.matchupTier] : "text-[#6B7280]"
+                                  }`}
+                                  title={g.matchupTier ? `${MATCHUP_TIER_LABELS[g.matchupTier]} matchup — #${g.matchupRank} vs ${player.pos} entering week ${g.week}` : undefined}
+                                >
+                                  {g.homeAway === "home" ? "vs" : "@"} {g.opponent}
+                                </span>
+                              ) : (
+                                <span className="text-[#6B7280]">—</span>
+                              )}
                             </td>
                             {g.hasStats ? (
                               <>
