@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import { getCurrentWeekFromGames } from "@/lib/currentWeek";
+import { MATCHUP_TIER_CLASSES } from "@/lib/matchupStrength";
 import PlayerHeadshot from "./PlayerHeadshot";
 
 const POSITIONS = [
@@ -17,11 +18,6 @@ const RECOMMENDED_LIMIT = 24;
 // Start/Sit projections only cover skill positions with prop markets —
 // DST/K have no player_prop_lines, so there's nothing to recommend there.
 const RECOMMENDED_POSITIONS = new Set(["QB", "RB", "WR", "TE"]);
-const MATCHUP_TIER_CLASSES = {
-  red: "bg-red-100 text-red-600",
-  yellow: "bg-amber-100 text-amber-600",
-  green: "bg-green-100 text-green-600",
-};
 
 // tiers is a sorted array of rank thresholds where a new tier starts —
 // tiers[0] is always 1 (implicit, not user-removable), same model as the
@@ -85,7 +81,7 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
     loadPoolAndWeek();
 
     // Season-wide, not week/position-scoped — one fetch covers every tab.
-    fetch("/api/weekly-rankings/matchup-strength")
+    fetch("/api/matchup-strength")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => setMatchupTiers(d?.tiers || {}))
       .catch(() => setMatchupTiers({}));

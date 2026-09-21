@@ -42,13 +42,13 @@ function AuctionIcon(props) {
     </svg>
   );
 }
-function LeaderboardIcon(props) {
+function MatchupsIcon(props) {
   return (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M6.5 2.5h7V7a3.5 3.5 0 01-7 0V2.5z" />
-      <path d="M6.5 3.5H4a1 1 0 00-.95 1.3l.5 1.6a2 2 0 001.9 1.4h.6" />
-      <path d="M13.5 3.5H16a1 1 0 01.95 1.3l-.5 1.6a2 2 0 01-1.9 1.4h-.6" />
-      <path d="M10 10.5v2.3M7.3 17h5.4M8.3 12.8h3.4v4.2H8.3z" />
+      <rect x="2.5" y="2.5" width="6" height="6" rx="1" />
+      <rect x="11.5" y="2.5" width="6" height="6" rx="1" />
+      <rect x="2.5" y="11.5" width="6" height="6" rx="1" />
+      <rect x="11.5" y="11.5" width="6" height="6" rx="1" />
     </svg>
   );
 }
@@ -161,7 +161,7 @@ export default function NavBar({ activePath = "/" }) {
     { href: "/start-sit", label: "Start/Sit", icon: StartSitIcon },
     { href: "/auction", label: "Auction Draft", icon: AuctionIcon },
     { href: "/posts", label: "Posts", icon: CreatorsIcon },
-    ...(user ? [{ href: "/leaderboard", label: "Leaderboard", icon: LeaderboardIcon }] : []),
+    ...(user ? [{ href: "/matchups", label: "Matchups", icon: MatchupsIcon }] : []),
     { href: "/feedback", label: "Feedback", icon: FeedbackIcon },
     ...(isDashboardUser ? [{ href: "/waiver-wire", label: "Waiver Wire", icon: WaiverWireIcon }] : []),
     ...(isDashboardUser ? [{ href: "/dashboard", label: "Dashboard", icon: DashboardIcon }] : []),

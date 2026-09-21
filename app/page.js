@@ -15,6 +15,7 @@ import { teamColors } from "@/lib/teamColors";
 import { DST_FORMAT, KICKER_FORMAT } from "@/lib/dstKickerFormats";
 import { getViewMode } from "@/lib/viewMode";
 import { getCurrentWeekFromGames } from "@/lib/currentWeek";
+import { MATCHUP_TIER_CLASSES } from "@/lib/matchupStrength";
 import { expandIds, normalizeName, computeConsensus } from "@/lib/rankingsHelpers";
 import PlayerCardModal from "@/app/components/PlayerCardModal";
 
@@ -43,14 +44,6 @@ const ACTIVE_CREATORS = CREATORS.filter(c => !c.comingSoon);
 const CREATOR_MOBILE_BADGE = {
   rookierager: { label: "RR", className: "bg-orange-100 text-orange-700" },
   ffhuddle: { label: "FFH", className: "bg-blue-100 text-blue-700" },
-};
-
-// Defense-vs-Position "strength of matchup" coloring — see
-// lib/matchupStrength.js for how these tiers are computed.
-const MATCHUP_TIER_CLASSES = {
-  red: "bg-red-100 text-red-600",
-  yellow: "bg-amber-100 text-amber-600",
-  green: "bg-green-100 text-green-600",
 };
 
 const posColors = {
@@ -195,7 +188,7 @@ export default function Home() {
         )),
         supabase.from("season_games").select("week, status, kickoff_at, home_team, away_team").order("kickoff_at", { ascending: true }),
         supabase.from("profiles").select("creator_id, logo_url").in("creator_id", creatorIds).eq("is_creator", true),
-        fetch("/api/weekly-rankings/matchup-strength").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        fetch("/api/matchup-strength").then((r) => (r.ok ? r.json() : null)).catch(() => null),
       ]);
       const dataByCreator = Object.fromEntries(creatorIds.map((id, i) => [id, weeklyResults[i]]));
       setWeeklyRankingsData(dataByCreator);
