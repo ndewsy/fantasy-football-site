@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { normalizePlayerName } from '@/lib/normalizePlayerName';
+import { fetchOddsApiRows } from '@/lib/oddsApiFallback';
 
 let _supabase;
 const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY));
@@ -194,12 +195,13 @@ async function syncPlayerProps() {
     byNorm.get(n).push(p);
   }
 
-  let events;
+  let events = null;
+  let sgoError = null;
   try {
     events = await fetchUpcomingEvents();
   } catch (err) {
-    console.error('[sync-player-props] events fetch failed:', err);
-    return Response.json({ error: err.message }, { status: 500 });
+    sgoError = err;
+    console.error('[sync-player-props] SGO events fetch failed:', err);
   }
 
   // Keyed by player_id|sgo_event_id|stat_id (the table's real unique
@@ -211,109 +213,139 @@ async function syncPlayerProps() {
   const gameLineRows = [];
   const unmatchedRows = [];
   let skippedNoLine = 0;
+  let eventCount = 0;
+  let source = 'sgo';
 
-  for (const event of events) {
-    const teams = event.teams || {};
-    const homeID = teams.home?.teamID;
-    const awayID = teams.away?.teamID;
-    const gameStartsAt = event.status?.startsAt;
-    if (!gameStartsAt) continue;
-
-    const eventPlayers = event.players || {};
-    const odds = event.odds || {};
-
-    // Game-level total + each team's implied total — deterministic oddIDs,
-    // no need to scan for them like the per-player markets below.
-    const gameTotal = fairestLine(odds['points-all-game-ou-over']);
-    const homeTeamTotal = fairestLine(odds['points-home-game-ou-over']);
-    const awayTeamTotal = fairestLine(odds['points-away-game-ou-over']);
-    if (gameTotal !== null || homeTeamTotal !== null || awayTeamTotal !== null) {
-      gameLineRows.push({
-        sgo_event_id: event.eventID,
-        home_team_id: homeID || null,
-        away_team_id: awayID || null,
-        game_total: gameTotal,
-        home_team_total: homeTeamTotal,
-        away_team_total: awayTeamTotal,
-        game_starts_at: gameStartsAt,
-        updated_at: new Date().toISOString(),
-      });
+  if (events) {
+    eventCount = events.length;
+    buildSgoRows();
+  } else {
+    // SGO's own request failed (typically a rate-limit/quota 429 — see
+    // fetchWithRetry above) — fall back to The Odds API rather than
+    // failing the whole sync outright. See lib/oddsApiFallback.js for why
+    // this is a resilience layer, not a permanent second primary source.
+    source = 'odds_api';
+    if (!process.env.ODDS_API_KEY) {
+      return Response.json({ error: `SGO failed and ODDS_API_KEY not configured: ${sgoError.message}` }, { status: 500 });
     }
+    try {
+      const fallback = await fetchOddsApiRows(byNorm);
+      eventCount = fallback.eventCount;
+      skippedNoLine = fallback.skippedNoLine;
+      gameLineRows.push(...fallback.gameLineRows);
+      unmatchedRows.push(...fallback.unmatchedRows);
+      for (const row of fallback.lineRows) lineRowsByKey.set(`${row.player_id}|${row.sgo_event_id}|${row.stat_id}`, row);
+      console.error(`[sync-player-props] Odds API fallback: events=${fallback.eventCount} lines=${fallback.lineRows.length} propsFetchFailures=${fallback.propsFetchFailures}`);
+    } catch (fallbackErr) {
+      console.error('[sync-player-props] Odds API fallback also failed:', fallbackErr);
+      return Response.json({ error: `Both providers failed. SGO: ${sgoError.message}. OddsAPI: ${fallbackErr.message}` }, { status: 500 });
+    }
+  }
 
-    for (const odd of Object.values(odds)) {
-      if (odd.periodID !== 'game') continue; // full-game line only — skip 1q/2q/1h/etc sub-markets
+  function buildSgoRows() {
+    for (const event of events) {
+      const teams = event.teams || {};
+      const homeID = teams.home?.teamID;
+      const awayID = teams.away?.teamID;
+      const gameStartsAt = event.status?.startsAt;
+      if (!gameStartsAt) continue;
 
-      const isOverUnderStat = odd.sideID === 'over' && TARGET_STAT_IDS.has(odd.statID);
-      // Anytime-touchdown moneyline: the only broadly-offered TD market for
-      // skill players (rushing_touchdowns/receiving_touchdowns O/U markets
-      // barely exist). "yes" side gives the blended probability of >=1 TD.
-      const isAnytimeTd = odd.statID === 'touchdowns' && odd.betTypeID === 'yn' && odd.sideID === 'yes';
-      if (!isOverUnderStat && !isAnytimeTd) continue;
+      const eventPlayers = event.players || {};
+      const odds = event.odds || {};
 
-      const sgoPlayerID = odd.playerID || odd.statEntityID;
-      if (!sgoPlayerID || !eventPlayers[sgoPlayerID]) continue;
-
-      const statId = isAnytimeTd ? 'anytime_touchdowns' : odd.statID;
-      let line;
-      let overOdds;
-      let underOdds;
-
-      if (isAnytimeTd) {
-        const prob = blendedProbability(odd);
-        if (prob === null) { skippedNoLine++; continue; }
-        line = prob;
-        overOdds = probabilityToAmericanOdds(prob);
-        const noOdd = odd.opposingOddID ? odds[odd.opposingOddID] : null;
-        const noProb = noOdd ? blendedProbability(noOdd) : null;
-        underOdds = noProb !== null ? probabilityToAmericanOdds(noProb) : null;
-      } else {
-        const picked = fairestBook(odd);
-        if (!picked) { skippedNoLine++; continue; }
-        line = picked.overUnder;
-        overOdds = picked.odds;
-        const underOdd = odd.opposingOddID ? odds[odd.opposingOddID] : null;
-        // Prefer the same book's price on the under side for consistency
-        // with the chosen over line; fall back to that side's own fairest
-        // price (byBookmaker or aggregate) if the one we picked didn't
-        // quote it there specifically.
-        const sameBookUnder = picked.book !== 'aggregate' ? underOdd?.byBookmaker?.[picked.book] : null;
-        underOdds = sameBookUnder?.available ? sameBookUnder.odds : (fairestBook(underOdd)?.odds ?? null);
+      // Game-level total + each team's implied total — deterministic oddIDs,
+      // no need to scan for them like the per-player markets below.
+      const gameTotal = fairestLine(odds['points-all-game-ou-over']);
+      const homeTeamTotal = fairestLine(odds['points-home-game-ou-over']);
+      const awayTeamTotal = fairestLine(odds['points-away-game-ou-over']);
+      if (gameTotal !== null || homeTeamTotal !== null || awayTeamTotal !== null) {
+        gameLineRows.push({
+          sgo_event_id: event.eventID,
+          home_team_id: homeID || null,
+          away_team_id: awayID || null,
+          game_total: gameTotal,
+          home_team_total: homeTeamTotal,
+          away_team_total: awayTeamTotal,
+          game_starts_at: gameStartsAt,
+          updated_at: new Date().toISOString(),
+        });
       }
 
-      const playerInfo = eventPlayers[sgoPlayerID];
-      const playerTeamID = playerInfo.teamID;
-      const homeAway = playerTeamID === homeID ? 'home' : playerTeamID === awayID ? 'away' : null;
-      const opponentID = playerTeamID === homeID ? awayID : playerTeamID === awayID ? homeID : null;
+      for (const odd of Object.values(odds)) {
+        if (odd.periodID !== 'game') continue; // full-game line only — skip 1q/2q/1h/etc sub-markets
 
-      const n = normalize(playerInfo.name);
-      const candidates = byNorm.get(n) || [];
-      const match = candidates.length === 1 ? candidates[0] : null;
+        const isOverUnderStat = odd.sideID === 'over' && TARGET_STAT_IDS.has(odd.statID);
+        // Anytime-touchdown moneyline: the only broadly-offered TD market for
+        // skill players (rushing_touchdowns/receiving_touchdowns O/U markets
+        // barely exist). "yes" side gives the blended probability of >=1 TD.
+        const isAnytimeTd = odd.statID === 'touchdowns' && odd.betTypeID === 'yn' && odd.sideID === 'yes';
+        if (!isOverUnderStat && !isAnytimeTd) continue;
 
-      if (!match) {
-        unmatchedRows.push({
+        const sgoPlayerID = odd.playerID || odd.statEntityID;
+        if (!sgoPlayerID || !eventPlayers[sgoPlayerID]) continue;
+
+        const statId = isAnytimeTd ? 'anytime_touchdowns' : odd.statID;
+        let line;
+        let overOdds;
+        let underOdds;
+
+        if (isAnytimeTd) {
+          const prob = blendedProbability(odd);
+          if (prob === null) { skippedNoLine++; continue; }
+          line = prob;
+          overOdds = probabilityToAmericanOdds(prob);
+          const noOdd = odd.opposingOddID ? odds[odd.opposingOddID] : null;
+          const noProb = noOdd ? blendedProbability(noOdd) : null;
+          underOdds = noProb !== null ? probabilityToAmericanOdds(noProb) : null;
+        } else {
+          const picked = fairestBook(odd);
+          if (!picked) { skippedNoLine++; continue; }
+          line = picked.overUnder;
+          overOdds = picked.odds;
+          const underOdd = odd.opposingOddID ? odds[odd.opposingOddID] : null;
+          // Prefer the same book's price on the under side for consistency
+          // with the chosen over line; fall back to that side's own fairest
+          // price (byBookmaker or aggregate) if the one we picked didn't
+          // quote it there specifically.
+          const sameBookUnder = picked.book !== 'aggregate' ? underOdd?.byBookmaker?.[picked.book] : null;
+          underOdds = sameBookUnder?.available ? sameBookUnder.odds : (fairestBook(underOdd)?.odds ?? null);
+        }
+
+        const playerInfo = eventPlayers[sgoPlayerID];
+        const playerTeamID = playerInfo.teamID;
+        const homeAway = playerTeamID === homeID ? 'home' : playerTeamID === awayID ? 'away' : null;
+        const opponentID = playerTeamID === homeID ? awayID : playerTeamID === awayID ? homeID : null;
+
+        const n = normalize(playerInfo.name);
+        const candidates = byNorm.get(n) || [];
+        const match = candidates.length === 1 ? candidates[0] : null;
+
+        if (!match) {
+          unmatchedRows.push({
+            sgo_player_id: sgoPlayerID,
+            sgo_event_id: event.eventID,
+            stat_id: statId,
+            line: Number(line),
+          });
+          continue;
+        }
+
+        const key = `${match.id}|${event.eventID}|${statId}`;
+        lineRowsByKey.set(key, {
+          player_id: match.id,
           sgo_player_id: sgoPlayerID,
           sgo_event_id: event.eventID,
           stat_id: statId,
           line: Number(line),
+          over_odds: overOdds,
+          under_odds: underOdds,
+          team_id: playerTeamID || null,
+          opponent_id: opponentID || null,
+          home_away: homeAway,
+          game_starts_at: gameStartsAt,
+          updated_at: new Date().toISOString(),
         });
-        continue;
       }
-
-      const key = `${match.id}|${event.eventID}|${statId}`;
-      lineRowsByKey.set(key, {
-        player_id: match.id,
-        sgo_player_id: sgoPlayerID,
-        sgo_event_id: event.eventID,
-        stat_id: statId,
-        line: Number(line),
-        over_odds: overOdds,
-        under_odds: underOdds,
-        team_id: playerTeamID || null,
-        opponent_id: opponentID || null,
-        home_away: homeAway,
-        game_starts_at: gameStartsAt,
-        updated_at: new Date().toISOString(),
-      });
     }
   }
 
@@ -354,10 +386,22 @@ async function syncPlayerProps() {
     .in('stat_id', ['rushing_touchdowns', 'receiving_touchdowns']);
   if (purgeError) console.error('[sync-player-props] purge legacy TD stat_ids failed:', purgeError);
 
-  console.log(`[sync-player-props] events=${events.length} lines=${lineRows.length} gameLines=${gameLineRows.length} unmatched=${unmatchedRows.length} skippedNoLine=${skippedNoLine}`);
+  // A successful SGO sync means fresh real coverage for this whole window —
+  // any rows a prior outage's Odds API fallback left behind are now stale
+  // and redundant (upsert never deletes a row for something it just stops
+  // seeing), so clear them out rather than leaving two sources' data mixed.
+  if (source === 'sgo') {
+    const { error: purgeLinesErr } = await supabase().from('player_prop_lines').delete().like('sgo_event_id', 'oddsapi:%');
+    if (purgeLinesErr) console.error('[sync-player-props] purge stale odds-api lines failed:', purgeLinesErr);
+    const { error: purgeGameLinesErr } = await supabase().from('game_lines').delete().like('sgo_event_id', 'oddsapi:%');
+    if (purgeGameLinesErr) console.error('[sync-player-props] purge stale odds-api game lines failed:', purgeGameLinesErr);
+  }
+
+  console.log(`[sync-player-props] source=${source} events=${eventCount} lines=${lineRows.length} gameLines=${gameLineRows.length} unmatched=${unmatchedRows.length} skippedNoLine=${skippedNoLine}`);
   return Response.json({
     ok: true,
-    events: events.length,
+    source,
+    events: eventCount,
     lines: lineRows.length,
     gameLines: gameLineRows.length,
     unmatched: unmatchedRows.length,
