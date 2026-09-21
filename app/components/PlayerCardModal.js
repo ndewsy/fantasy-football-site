@@ -120,35 +120,61 @@ const GAME_LOG_COLUMNS = {
   ],
 };
 
-// Rough, widely-used weekly thresholds for "was this stat clearly good or
-// clearly bad at a glance" — not scientific, just the numbers fantasy
-// analysis generally treats as a strong or weak showing. TD stats have no
-// `bad` threshold (0 or 1 TD isn't really a bad game on its own, TD counts
-// are too binary/variance-heavy to read that way) — only a `good` one, so a
-// standout multi-TD game still gets called out.
+// Rough, widely-used weekly thresholds for "was this stat clearly good,
+// average, or clearly bad at a glance" — not scientific, just the numbers
+// fantasy analysis generally treats as a strong, middling, or weak showing.
+// Every stat now gets a real `bad` floor too (0 for TDs/INTs included) so
+// the game log can render a genuine 3-way good/mid/bad read on each cell
+// instead of only calling out the good games.
 const STAT_QUALITY = {
   pass_yd: { good: 275, bad: 175 },
   pass_td: { good: 3, bad: 1 },
   pass_int: { good: 0, bad: 2, lowerIsBetter: true },
   rush_yd: { good: 90, bad: 30 },
-  rush_td: { good: 2 },
+  rush_td: { good: 2, bad: 0 },
   rec: { good: 7, bad: 2 },
   rec_yd: { good: 90, bad: 25 },
-  rec_td: { good: 2 },
+  rec_td: { good: 2, bad: 0 },
 };
 
-function statQualityClass(key, value) {
+// Fixed hex colors rather than named Tailwind shades — this site remaps the
+// entire red/green/amber palette for dark mode by swapping light and dark
+// shades (see the `.dark` block in app/globals.css and the same fix in
+// lib/matchupStrength.js), so a "good/bad" chip built from bg-green-500/
+// bg-red-500 can silently invert once dark mode is live. These read the
+// same in both themes.
+const QUALITY_CHIP_CLASSES = {
+  good: "bg-[#16A34A] text-white",
+  mid: "bg-white/10 text-gray-300",
+  bad: "bg-[#DC2626] text-white",
+};
+
+function statQualityTier(key, value) {
   const t = STAT_QUALITY[key];
-  if (!t || value === null || value === undefined) return "text-gray-600";
+  if (!t || value === null || value === undefined) return null;
   const v = Number(value);
   if (t.lowerIsBetter) {
-    if (v <= t.good) return "text-green-400 font-semibold";
-    if (t.bad !== undefined && v >= t.bad) return "text-red-400 font-semibold";
-    return "text-gray-600";
+    if (v <= t.good) return "good";
+    if (t.bad !== undefined && v >= t.bad) return "bad";
+    return "mid";
   }
-  if (v >= t.good) return "text-green-400 font-semibold";
-  if (t.bad !== undefined && v <= t.bad) return "text-red-400 font-semibold";
-  return "text-gray-600";
+  if (v >= t.good) return "good";
+  if (t.bad !== undefined && v <= t.bad) return "bad";
+  return "mid";
+}
+
+// A small colored chip for one game-log cell — shared by both the raw stat
+// columns and the weekly positional-finish column below, so the whole row
+// reads as one consistent good/mid/bad visual language.
+function StatChip({ tier, children, bold }) {
+  if (!tier) return <span className="text-gray-600">{children}</span>;
+  return (
+    <span
+      className={`inline-flex items-center justify-center min-w-[2.25rem] px-1.5 py-0.5 rounded ${bold ? "font-bold" : "font-semibold"} ${QUALITY_CHIP_CLASSES[tier]}`}
+    >
+      {children}
+    </span>
+  );
 }
 
 // Same idea for the RK/FPTS columns, but keyed off positional finish rather
@@ -160,12 +186,21 @@ function statQualityClass(key, value) {
 const CURRENT_SEASON = 2026;
 const SEASON_TABS = [2026, 2025, 2024, 2023];
 
-function finishQualityClass(rank) {
-  if (rank == null) return "text-gray-400";
-  if (rank <= 12) return "text-green-400";
-  if (rank >= 30) return "text-red-400";
-  return "text-gray-400";
+function finishQualityTier(rank) {
+  if (rank == null) return null;
+  if (rank <= 12) return "good";
+  if (rank >= 25) return "bad";
+  return "mid";
 }
+
+// Plain colored text (no chip background) for FPTS — it's the headline
+// number in the row, so it stays the biggest/boldest thing rather than
+// getting boxed in like the shorter stat/finish cells next to it.
+const QUALITY_TEXT_CLASSES = {
+  good: "text-[#4ADE80]",
+  mid: "text-ink",
+  bad: "text-[#F87171]",
+};
 
 // Player profile modal — deliberately owns its own data-loading state
 // (season stats, waiver mentions, rankings-by-format) rather than lifting it
@@ -535,24 +570,38 @@ export default function PlayerCardModal({
                       </tr>
                     </thead>
                     <tbody>
-                      {gameLog.map((g) => {
-                        const finishClass = finishQualityClass(g.positionalFinish);
-                        const fptsClass = finishClass === "text-gray-400" ? "text-ink" : finishClass;
+                      {gameLog.map((g, i) => {
+                        const finishTier = finishQualityTier(g.positionalFinish);
+                        const isLatest = logSeason === CURRENT_SEASON && g.week === weeklyCurrentNflWeek - 1;
                         return (
-                          <tr key={g.week} className="border-t border-white/10">
-                            <td className="px-2 py-2 text-ink font-medium">{g.week}</td>
-                            <td className="px-2 py-2 text-gray-400 whitespace-nowrap">
+                          <tr
+                            key={g.week}
+                            className={`border-t border-white/10 ${
+                              isLatest ? "bg-blue-500/10 border-l-2 border-l-blue-500" : i % 2 === 1 ? "bg-white/[0.02]" : ""
+                            }`}
+                          >
+                            <td className="px-2 py-2 text-ink font-medium">
+                              {g.week}
+                              {isLatest && (
+                                <span className="ml-1.5 text-[9px] font-bold uppercase tracking-wide text-blue-400 align-middle">Latest</span>
+                              )}
+                            </td>
+                            <td className={`px-2 py-2 whitespace-nowrap ${g.isBye ? "italic text-gray-500" : "text-gray-400"}`}>
                               {g.isBye ? "BYE" : g.opponent ? `${g.homeAway === "home" ? "vs" : "@"} ${g.opponent}` : "—"}
                             </td>
                             {g.hasStats ? (
                               <>
                                 {(GAME_LOG_COLUMNS[player.pos] || []).map((c) => (
-                                  <td key={c.key} className={`text-center px-2 py-2 ${statQualityClass(c.key, g.stats?.[c.key])}`}>{g.stats?.[c.key] ?? 0}</td>
+                                  <td key={c.key} className="text-center px-2 py-2">
+                                    <StatChip tier={statQualityTier(c.key, g.stats?.[c.key])}>{g.stats?.[c.key] ?? 0}</StatChip>
+                                  </td>
                                 ))}
-                                <td className={`text-center px-2 py-2 font-medium ${finishClass}`}>
-                                  {g.positionalFinish ? `${player.pos}${g.positionalFinish}` : "—"}
+                                <td className="text-center px-2 py-2">
+                                  <StatChip tier={finishTier} bold>
+                                    {g.positionalFinish ? `${player.pos}${g.positionalFinish}` : "—"}
+                                  </StatChip>
                                 </td>
-                                <td className={`text-center px-2 py-2 font-bold ${fptsClass}`}>{g.fantasyPoints}</td>
+                                <td className={`text-center px-2 py-2 font-bold ${QUALITY_TEXT_CLASSES[finishTier] || "text-ink"}`}>{g.fantasyPoints}</td>
                               </>
                             ) : (
                               <>
@@ -569,7 +618,17 @@ export default function PlayerCardModal({
                     </tbody>
                   </table>
                 </div>
-                <p className="text-[10px] text-gray-400 mt-2">Full PPR scoring</p>
+                <div className="flex items-center justify-between mt-2 flex-wrap gap-1.5">
+                  <p className="text-[10px] text-gray-400">Full PPR scoring</p>
+                  <div className="flex items-center gap-3">
+                    {[["good", "Good"], ["mid", "Mid"], ["bad", "Bad"]].map(([tier, label]) => (
+                      <span key={tier} className="inline-flex items-center gap-1 text-[10px] text-gray-400">
+                        <span className={`w-2 h-2 rounded-sm ${tier === "mid" ? "bg-white/20" : QUALITY_CHIP_CLASSES[tier].split(" ")[0]}`} />
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               </>
             ) : (
               <p className="text-xs text-gray-400 text-center py-6">No games logged for {logSeason} yet.</p>
