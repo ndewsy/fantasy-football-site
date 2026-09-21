@@ -239,16 +239,22 @@ export default function Home() {
   const isDashboardUser = effectiveViewMode === "real" ? realIsDashboardUser : false;
   const isSubscribed = effectiveViewMode === "subscriber" ? true : effectiveViewMode === "free" ? false : rawIsSubscribed;
 
-  // Fire page_view when a creator tab is selected
-  useEffect(() => {
-    if (activeCreator === "consensus") return;
+  // Logs a page view for a creator's tab — called only from the actual
+  // click/select handlers below, not a useEffect on activeCreator. That
+  // used to fire on *any* change to activeCreator, including the initial
+  // "ffhuddle" default state and the Weekly Rankings tab's internal reuse
+  // of activeCreator (format === "Weekly Rankings" forces it to "ffhuddle"
+  // regardless of what the visitor actually picked) — both inflated
+  // FFHuddle's page-view count with visits that were never a real choice.
+  function trackCreatorPageView(creatorId) {
+    if (creatorId === "consensus") return;
     const supabase = createClient();
     supabase.from("events").insert({
       event_type: "page_view",
-      creator_id: activeCreator,
+      creator_id: creatorId,
       user_id: user?.id ?? null,
     }).then(() => {}).catch(() => {});
-  }, [activeCreator]); // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
   useEffect(() => {
     // Weekly Rankings has its own data source (see the weekly-rankings
@@ -357,6 +363,7 @@ export default function Home() {
   // risk-rating integration stays correct with no extra plumbing.
   function handleWeeklyCreatorChange(creatorId) {
     setActiveCreator(creatorId);
+    trackCreatorPageView(creatorId);
     const availableWeeks = Object.keys(weeklyRankingsData[creatorId]?.weeks || {}).map(Number).sort((a, b) => a - b);
     setWeeklyWeek(availableWeeks.length > 0 ? availableWeeks[availableWeeks.length - 1] : null);
   }
@@ -709,7 +716,7 @@ export default function Home() {
               <div className="lg:hidden flex-1 min-w-0 pb-2">
                 <select
                   value={activeCreator}
-                  onChange={e => setActiveCreator(e.target.value)}
+                  onChange={e => { setActiveCreator(e.target.value); trackCreatorPageView(e.target.value); }}
                   className="w-full bg-card/60 backdrop-blur-sm border border-card/70 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
                   {creatorTabItems.map(creator => (
@@ -726,7 +733,7 @@ export default function Home() {
                   {creatorTabItems.map(creator => (
                     <button
                       key={creator.id}
-                      onClick={() => !creator.comingSoon && setActiveCreator(creator.id)}
+                      onClick={() => { if (!creator.comingSoon) { setActiveCreator(creator.id); trackCreatorPageView(creator.id); } }}
                       disabled={creator.comingSoon}
                       className={`px-3 py-1.5 text-xs lg:px-4 lg:py-2 lg:text-sm font-medium transition-colors border-b-2 -mb-px shrink-0 text-left ${
                         creator.comingSoon
