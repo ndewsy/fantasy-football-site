@@ -351,11 +351,9 @@ export default function PlayerCardModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [player.id]);
 
-  // Most recent week first — a fresh view defaults to recent form, not
-  // week 1, which is what "top 3" is actually useful for as the season
-  // goes on. "Show all" reveals the rest in the same order.
-  const orderedGameLog = [...gameLog].reverse();
-  const visibleGameLog = showAllGames ? orderedGameLog : orderedGameLog.slice(0, 3);
+  // gameLog is already week 1 → 18 ascending (see /api/player-stats) — keep
+  // that order, just show the first 3 rows until "Show all" is clicked.
+  const visibleGameLog = showAllGames ? gameLog : gameLog.slice(0, 3);
 
   return (
     <div
@@ -709,12 +707,12 @@ export default function PlayerCardModal({
                     </tbody>
                   </table>
                 </div>
-                {orderedGameLog.length > 3 && (
+                {gameLog.length > 3 && (
                   <button
                     onClick={() => setShowAllGames((v) => !v)}
                     className="w-full mt-2 py-1.5 rounded-lg text-[11px] font-semibold text-blue-400 hover:text-blue-300 bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
                   >
-                    {showAllGames ? "Show fewer weeks" : `Show all ${orderedGameLog.length} weeks`}
+                    {showAllGames ? "Show fewer weeks" : `Show all ${gameLog.length} weeks`}
                   </button>
                 )}
                 <div className="flex items-center justify-between mt-2 flex-wrap gap-1.5">
