@@ -17,6 +17,11 @@ const RECOMMENDED_LIMIT = 24;
 // Start/Sit projections only cover skill positions with prop markets —
 // DST/K have no player_prop_lines, so there's nothing to recommend there.
 const RECOMMENDED_POSITIONS = new Set(["QB", "RB", "WR", "TE"]);
+const MATCHUP_TIER_CLASSES = {
+  red: "bg-red-100 text-red-600",
+  yellow: "bg-amber-100 text-amber-600",
+  green: "bg-green-100 text-green-600",
+};
 
 // tiers is a sorted array of rank thresholds where a new tier starts —
 // tiers[0] is always 1 (implicit, not user-removable), same model as the
@@ -43,6 +48,7 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
   const [search, setSearch] = useState("");
   const [token, setToken] = useState(null);
   const [seasonGames, setSeasonGames] = useState([]);
+  const [matchupTiers, setMatchupTiers] = useState({});
   const [recommended, setRecommended] = useState([]);
   const [recommendedWeek, setRecommendedWeek] = useState(null);
   const [recommendedLoading, setRecommendedLoading] = useState(false);
@@ -77,6 +83,12 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
       setWeek(getCurrentWeekFromGames(games || []));
     }
     loadPoolAndWeek();
+
+    // Season-wide, not week/position-scoped — one fetch covers every tab.
+    fetch("/api/weekly-rankings/matchup-strength")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setMatchupTiers(d?.tiers || {}))
+      .catch(() => setMatchupTiers({}));
   }, []);
 
   useEffect(() => {
@@ -388,7 +400,7 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
                         <span className="text-xs text-gray-400 font-mono w-5 shrink-0 text-right">{i + 1}</span>
                         <span className="font-medium text-ink flex-1 truncate">{r.player.name}</span>
                         <span className="text-xs text-gray-400 shrink-0">{r.player.team}</span>
-                        <span className="text-xs text-gray-400 shrink-0 w-16 text-right">
+                        <span className={`text-xs shrink-0 w-16 text-right px-1.5 py-0.5 rounded ${matchup ? (MATCHUP_TIER_CLASSES[matchupTiers[matchup.opponent]?.[position]] || "text-gray-400") : "text-gray-400"}`}>
                           {matchup ? `${matchup.homeAway === "home" ? "vs" : "@"} ${matchup.opponent}` : "BYE"}
                         </span>
                         <span className="text-xs text-gray-400 shrink-0 w-14 text-right">{r.projectedPoints.toFixed(1)} pts</span>
@@ -461,7 +473,7 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
                     <p className="text-sm font-medium text-ink truncate">{p?.name || `#${row.player_id}`}</p>
                     <p className="text-xs text-gray-400">{p?.position} · {p?.team}</p>
                   </div>
-                  <span className="text-xs text-gray-400 shrink-0">
+                  <span className={`text-xs shrink-0 px-1.5 py-0.5 rounded ${matchup ? (MATCHUP_TIER_CLASSES[matchupTiers[matchup.opponent]?.[position]] || "text-gray-400") : "text-gray-400"}`}>
                     {matchup ? `${matchup.homeAway === "home" ? "vs" : "@"} ${matchup.opponent}` : "BYE"}
                   </span>
                   <div className="flex flex-col shrink-0">

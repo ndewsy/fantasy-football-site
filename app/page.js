@@ -45,6 +45,14 @@ const CREATOR_MOBILE_BADGE = {
   ffhuddle: { label: "FFH", className: "bg-blue-100 text-blue-700" },
 };
 
+// Defense-vs-Position "strength of matchup" coloring — see
+// lib/matchupStrength.js for how these tiers are computed.
+const MATCHUP_TIER_CLASSES = {
+  red: "bg-red-100 text-red-600",
+  yellow: "bg-amber-100 text-amber-600",
+  green: "bg-green-100 text-green-600",
+};
+
 const posColors = {
   WR: "bg-blue-100 text-blue-700",
   RB: "bg-green-100 text-green-700",
@@ -117,6 +125,7 @@ export default function Home() {
   const [weeklyCreatorProfiles, setWeeklyCreatorProfiles] = useState({}); // { [creatorId]: { logo_url } }
   const [weeklySeasonGames, setWeeklySeasonGames] = useState([]);
   const [weeklyCurrentNflWeek, setWeeklyCurrentNflWeek] = useState(1);
+  const [weeklyMatchupTiers, setWeeklyMatchupTiers] = useState({});
   const [showCreatorColumns, setShowCreatorColumns] = useState(true);
   const [search, setSearch] = useState("");
   const [posFilter, setPosFilter] = useState("All");
@@ -180,17 +189,19 @@ export default function Home() {
     async function loadWeekly() {
       const supabase = createClient();
       const creatorIds = ACTIVE_CREATORS.map((c) => c.id);
-      const [weeklyResults, gamesResult, profilesResult] = await Promise.all([
+      const [weeklyResults, gamesResult, profilesResult, matchupStrengthResult] = await Promise.all([
         Promise.all(creatorIds.map((id) =>
           fetch(`/api/weekly-rankings?creator_id=${encodeURIComponent(id)}`).then((r) => (r.ok ? r.json() : { weeks: {} })).catch(() => ({ weeks: {} }))
         )),
         supabase.from("season_games").select("week, status, kickoff_at, home_team, away_team").order("kickoff_at", { ascending: true }),
         supabase.from("profiles").select("creator_id, logo_url").in("creator_id", creatorIds).eq("is_creator", true),
+        fetch("/api/weekly-rankings/matchup-strength").then((r) => (r.ok ? r.json() : null)).catch(() => null),
       ]);
       const dataByCreator = Object.fromEntries(creatorIds.map((id, i) => [id, weeklyResults[i]]));
       setWeeklyRankingsData(dataByCreator);
       setWeeklyCreatorProfiles(Object.fromEntries((profilesResult.data || []).map((p) => [p.creator_id, p])));
       setWeeklySeasonGames(gamesResult.data || []);
+      setWeeklyMatchupTiers(matchupStrengthResult?.tiers || {});
 
       // Only the latest published week is ever shown (older weeks are
       // archived out of the public toggle — see weeklyWeeks below), so the
@@ -1146,7 +1157,7 @@ export default function Home() {
                             <p className="text-sm font-medium text-ink truncate">{row.players?.name}</p>
                             <p className="text-xs text-gray-400">{row.players?.position} · {row.players?.team}</p>
                           </div>
-                          <span className="text-xs text-gray-400 shrink-0">
+                          <span className={`text-xs shrink-0 px-1.5 py-0.5 rounded ${matchup ? (MATCHUP_TIER_CLASSES[weeklyMatchupTiers[matchup.opponent]?.[weeklyPosition]] || "text-gray-400") : "text-gray-400"}`}>
                             {matchup ? `${matchup.homeAway === "home" ? "vs" : "@"} ${matchup.opponent}` : "BYE"}
                           </span>
                         </button>
