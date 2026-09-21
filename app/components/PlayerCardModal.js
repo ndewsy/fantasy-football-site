@@ -252,6 +252,7 @@ export default function PlayerCardModal({
   const [waiverMentions, setWaiverMentions] = useState([]);
   const [waiverMentionsLoading, setWaiverMentionsLoading] = useState(true);
   const [nextGame, setNextGame] = useState(null);
+  const [nextGameWeek, setNextGameWeek] = useState(null);
   const [huddleRank, setHuddleRank] = useState(null);
   const [nextGameLoading, setNextGameLoading] = useState(true);
 
@@ -289,6 +290,7 @@ export default function PlayerCardModal({
     setWaiverMentions([]);
     setNextGameLoading(true);
     setNextGame(null);
+    setNextGameWeek(null);
     setHuddleRank(null);
 
     fetch(`/api/waiver-wire?player_id=${player.id}&week=${weeklyCurrentNflWeek}`)
@@ -302,6 +304,7 @@ export default function PlayerCardModal({
       .then((d) => {
         if (cancelled) return;
         setNextGame(d?.nextGame || null);
+        setNextGameWeek(d?.week ?? null);
         setHuddleRank(d?.huddleRank || null);
       })
       .catch(() => { if (!cancelled) { setNextGame(null); setHuddleRank(null); } })
@@ -384,7 +387,7 @@ export default function PlayerCardModal({
 
         {/* Header */}
         <div
-          className="relative p-5 sm:p-8 rounded-t-3xl overflow-hidden flex items-end gap-4 sm:gap-5"
+          className="relative p-5 sm:p-8 rounded-t-3xl overflow-hidden flex items-end flex-wrap gap-4 sm:gap-5"
           style={{backgroundImage: modalBannerGradient(player.team)}}
         >
           {/* Glossy highlight for a premium sheen, independent of team color */}
@@ -423,6 +426,43 @@ export default function PlayerCardModal({
               )}
             </div>
           </div>
+
+          {/* Next Game — compact matchup card, same "one small box" layout
+              as competitor sites: a header line (week + opponent) over a
+              dotted-divider stat list, instead of separate tiles. Inherits
+              items-end from the row, so it naturally sits bottom-right,
+              clear of the close button pinned to the top-right corner. */}
+          {(nextGameLoading || nextGame || huddleRank) && (
+            <div className="relative ml-auto w-full sm:w-60 shrink-0 bg-black/35 backdrop-blur-md rounded-xl border border-white/15 shadow-lg overflow-hidden">
+              <div className="px-3 py-1.5 border-b border-white/10 bg-black/20 flex items-center justify-between gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-white/60 shrink-0">
+                  Week {nextGameWeek ?? "—"}
+                </span>
+                {nextGame && (
+                  <span className="text-xs font-bold text-white truncate">
+                    {nextGame.homeAway === "home" ? "vs" : "@"} {opponentLabelFor(nextGame.opponentId)}
+                  </span>
+                )}
+              </div>
+              {nextGameLoading ? (
+                <p className="text-xs text-white/50 text-center py-4">Loading...</p>
+              ) : (
+                <div className="px-3 divide-y divide-dashed divide-white/10">
+                  {[
+                    ["Over/Under", nextGame?.gameTotal != null ? nextGame.gameTotal.toFixed(1) : "—"],
+                    ["Implied Total", nextGame?.teamImpliedTotal != null ? nextGame.teamImpliedTotal.toFixed(1) : "—"],
+                    ["Huddle Rank", huddleRank ? `${player.pos}${huddleRank.rank}` : "—"],
+                    ["Proj. Pts", nextGame?.projectedPoints != null ? nextGame.projectedPoints.toFixed(1) : "—"],
+                  ].map(([label, value]) => (
+                    <div key={label} className="flex items-center justify-between py-1.5">
+                      <span className="text-xs text-white/60">{label}</span>
+                      <span className="text-sm font-bold text-white">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Risk Rating — each creator sets their own, only editable from their own tab; Consensus averages across creators */}
@@ -507,45 +547,6 @@ export default function PlayerCardModal({
             </>
           )}
         </div>
-
-        {/* Next Game — this week's matchup context: market signals (over/
-            under, team implied total, this site's own projection) sitting
-            right next to a human signal (Huddle's own weekly rank) rather
-            than folded into one number. */}
-        {(nextGameLoading || nextGame || huddleRank) && (
-          <div className="px-7 pt-6 border-t border-white/10">
-            <div className="flex items-center justify-between mb-2.5 flex-wrap gap-1">
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Next Game</h3>
-              {nextGame && (
-                <span className="text-xs text-gray-400">
-                  {nextGame.homeAway === "home" ? "vs" : "@"} {opponentLabelFor(nextGame.opponentId)}
-                </span>
-              )}
-            </div>
-            {nextGameLoading ? (
-              <p className="text-xs text-gray-400 text-center py-4">Loading...</p>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                <div className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-2 text-center">
-                  <p className="text-sm font-bold text-ink">{nextGame?.gameTotal != null ? nextGame.gameTotal.toFixed(1) : "—"}</p>
-                  <p className="text-[9px] text-gray-400 uppercase tracking-wide">Game O/U</p>
-                </div>
-                <div className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-2 text-center">
-                  <p className="text-sm font-bold text-ink">{nextGame?.teamImpliedTotal != null ? nextGame.teamImpliedTotal.toFixed(1) : "—"}</p>
-                  <p className="text-[9px] text-gray-400 uppercase tracking-wide">Team Total</p>
-                </div>
-                <div className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-2 text-center">
-                  <p className="text-sm font-bold text-ink">{huddleRank ? `${player.pos}${huddleRank.rank}` : "—"}</p>
-                  <p className="text-[9px] text-gray-400 uppercase tracking-wide">Huddle Rank</p>
-                </div>
-                <div className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-2 text-center">
-                  <p className="text-sm font-bold text-blue-400">{nextGame?.projectedPoints != null ? nextGame.projectedPoints.toFixed(1) : "—"}</p>
-                  <p className="text-[9px] text-gray-400 uppercase tracking-wide">Proj. Pts</p>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Waiver Wire — this week's mentions across creators, if any */}
         {!waiverMentionsLoading && waiverMentions.length > 0 && (

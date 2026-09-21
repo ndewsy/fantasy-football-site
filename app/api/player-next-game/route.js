@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { computeProjection, buildProjectionLines } from '@/lib/fantasyProjection';
+import { getTuesdayResetWeek } from '@/lib/currentWeek';
 
 let _supabase;
 const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY));
@@ -24,13 +25,21 @@ export async function GET(request) {
   if (!playerId) return Response.json({ error: 'playerId is required' }, { status: 400 });
 
   try {
-    const { data: player, error: playerError } = await supabase()
-      .from('players')
-      .select('id, position, rookie_year')
-      .eq('id', playerId)
-      .maybeSingle();
-    if (playerError) throw playerError;
+    const [playerResult, gamesResult] = await Promise.all([
+      supabase().from('players').select('id, position, rookie_year').eq('id', playerId).maybeSingle(),
+      supabase().from('season_games').select('week, status, kickoff_at'),
+    ]);
+    if (playerResult.error) throw playerResult.error;
+    if (gamesResult.error) throw gamesResult.error;
+    const player = playerResult.data;
     if (!player) return Response.json({ error: 'Player not found' }, { status: 404 });
+
+    // Same Tuesday-morning reset as the Matchups tab (lib/currentWeek.js) —
+    // just a label here (the actual opponent/odds below still come from
+    // whichever event's prop lines haven't started yet), so this stays
+    // "Week 2" through Monday night and flips to "Week 3" Tuesday morning
+    // rather than the instant the last kickoff time passes.
+    const week = getTuesdayResetWeek(gamesResult.data);
 
     const { data: lines, error: linesError } = await supabase()
       .from('player_prop_lines')
@@ -88,7 +97,7 @@ export async function GET(request) {
       .limit(1);
     if (huddleError) throw huddleError;
 
-    return Response.json({ nextGame, huddleRank: huddleRows?.[0] || null });
+    return Response.json({ week, nextGame, huddleRank: huddleRows?.[0] || null });
   } catch (err) {
     console.error('[/api/player-next-game] failed:', err);
     return Response.json({ error: err.message }, { status: 500 });
