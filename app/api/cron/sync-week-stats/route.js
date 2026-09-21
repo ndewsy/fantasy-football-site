@@ -38,31 +38,19 @@ export async function GET(request) {
     .order('kickoff_at', { ascending: true });
   if (gamesError) return Response.json({ error: gamesError.message }, { status: 500 });
 
-  // Only the most recently *completed* week has final stats worth syncing —
-  // the active/upcoming week (what this helper normally returns) is still in
-  // progress or hasn't kicked off.
-  const week = getCurrentWeekFromGames(games || []) - 1;
-  if (week < 1) {
-    return Response.json({ ok: true, skipped: true, reason: 'no completed week yet' });
+  // Syncs the active week (so a game already gets logged the moment it goes
+  // final, instead of waiting for the whole week to finish) *and* the prior
+  // week (Sleeper occasionally issues stat corrections for a day or two
+  // after a week wraps — this run, and each one after it this week, picks
+  // those up too). Sleeper's per-player gp (games played) filter below
+  // already excludes anyone whose game hasn't happened yet, so querying an
+  // in-progress week is safe — it just comes back with fewer rows until
+  // more games finish.
+  const activeWeek = getCurrentWeekFromGames(games || []);
+  const weeksToSync = [activeWeek, activeWeek - 1].filter((w) => w >= 1);
+  if (weeksToSync.length === 0) {
+    return Response.json({ ok: true, skipped: true, reason: 'no week to sync yet' });
   }
-
-  const res = await fetch(`https://api.sleeper.app/stats/nfl/${CURRENT_SEASON}/${week}?season_type=${SEASON_TYPE}`);
-  if (!res.ok) {
-    return Response.json({ error: `Sleeper stats fetch failed: ${res.status}` }, { status: 500 });
-  }
-  const entries = await res.json();
-
-  const withPoints = entries
-    .filter((e) => FANTASY_POSITIONS.has(e.player?.position) && (e.stats?.gp ?? 0) > 0)
-    .map((e) => {
-      const s = extractStats(e.stats || {});
-      const fantasyPoints = fantasyPointsFromRealStats({
-        passYd: s.pass_yd, passTd: s.pass_td,
-        rushYd: s.rush_yd, rushTd: s.rush_td,
-        recYd: s.rec_yd, recTd: s.rec_td, rec: s.rec,
-      });
-      return { sleeperId: e.player_id, position: e.player.position, stats: s, fantasyPoints, opponent: e.opponent || null };
-    });
 
   // Supabase caps a plain select at 1000 rows — paginate to get every player.
   const players = [];
@@ -79,32 +67,58 @@ export async function GET(request) {
   }
   const playerIdBySleeperId = Object.fromEntries(players.map((p) => [p.sleeper_id, p.id]));
 
-  const rows = withPoints
-    .filter((e) => playerIdBySleeperId[e.sleeperId])
-    .map((e) => ({
-      player_id: playerIdBySleeperId[e.sleeperId],
-      season: CURRENT_SEASON,
-      week,
-      season_type: SEASON_TYPE,
-      position: e.position,
-      stats: e.stats,
-      fantasy_points: e.fantasyPoints,
-      opponent: e.opponent,
-      updated_at: new Date().toISOString(),
-    }));
-
-  const BATCH = 500;
-  let upserted = 0;
-  for (let i = 0; i < rows.length; i += BATCH) {
-    const { error } = await supabase()
-      .from('player_week_stats')
-      .upsert(rows.slice(i, i + BATCH), { onConflict: 'player_id,season,week,season_type' });
-    if (error) {
-      console.error('[sync-week-stats] upsert failed:', error);
-      return Response.json({ error: error.message }, { status: 500 });
+  const results = [];
+  for (const week of weeksToSync) {
+    const res = await fetch(`https://api.sleeper.app/stats/nfl/${CURRENT_SEASON}/${week}?season_type=${SEASON_TYPE}`);
+    if (!res.ok) {
+      results.push({ week, error: `Sleeper stats fetch failed: ${res.status}` });
+      continue;
     }
-    upserted += Math.min(BATCH, rows.length - i);
+    const entries = await res.json();
+
+    const withPoints = entries
+      .filter((e) => FANTASY_POSITIONS.has(e.player?.position) && (e.stats?.gp ?? 0) > 0)
+      .map((e) => {
+        const s = extractStats(e.stats || {});
+        const fantasyPoints = fantasyPointsFromRealStats({
+          passYd: s.pass_yd, passTd: s.pass_td,
+          rushYd: s.rush_yd, rushTd: s.rush_td,
+          recYd: s.rec_yd, recTd: s.rec_td, rec: s.rec,
+        });
+        return { sleeperId: e.player_id, position: e.player.position, stats: s, fantasyPoints, opponent: e.opponent || null };
+      });
+
+    const rows = withPoints
+      .filter((e) => playerIdBySleeperId[e.sleeperId])
+      .map((e) => ({
+        player_id: playerIdBySleeperId[e.sleeperId],
+        season: CURRENT_SEASON,
+        week,
+        season_type: SEASON_TYPE,
+        position: e.position,
+        stats: e.stats,
+        fantasy_points: e.fantasyPoints,
+        opponent: e.opponent,
+        updated_at: new Date().toISOString(),
+      }));
+
+    const BATCH = 500;
+    let upserted = 0;
+    let upsertError = null;
+    for (let i = 0; i < rows.length; i += BATCH) {
+      const { error } = await supabase()
+        .from('player_week_stats')
+        .upsert(rows.slice(i, i + BATCH), { onConflict: 'player_id,season,week,season_type' });
+      if (error) {
+        console.error(`[sync-week-stats] upsert failed for week ${week}:`, error);
+        upsertError = error.message;
+        break;
+      }
+      upserted += Math.min(BATCH, rows.length - i);
+    }
+
+    results.push({ week, totalEntries: entries.length, fantasyRelevant: withPoints.length, upserted, error: upsertError });
   }
 
-  return Response.json({ ok: true, season: CURRENT_SEASON, week, totalEntries: entries.length, fantasyRelevant: withPoints.length, upserted });
+  return Response.json({ ok: true, season: CURRENT_SEASON, weeks: results });
 }
