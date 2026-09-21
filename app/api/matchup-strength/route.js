@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { computeMatchupStats, tiersFromStats } from '@/lib/matchupStrength';
-import { getCurrentWeekFromGames } from '@/lib/currentWeek';
+import { getTuesdayResetWeek } from '@/lib/currentWeek';
 
 let _supabase;
 const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY));
@@ -24,13 +24,15 @@ async function fetchAllRows(table, selectCols, applyFilters) {
 }
 
 // Defense-vs-Position "strength of matchup" — see lib/matchupStrength.js.
-// Returns both the compact team->position->tier map (for coloring a single
-// matchup badge) and the full per-position breakdown (rank, avg/high/low
-// points allowed) for the /matchups page.
+// Returns the compact team->position->tier map (for coloring a single
+// matchup badge), the full per-position breakdown (rank, avg/high/low
+// points allowed), and each team's actual next opponent — all for the
+// same "active week", which only advances Tuesday morning rather than
+// the instant the last game of the week ends.
 export async function GET() {
   try {
-    const games = await fetchAllRows('season_games', 'week, status, kickoff_at');
-    const week = getCurrentWeekFromGames(games);
+    const games = await fetchAllRows('season_games', 'week, status, kickoff_at, home_team, away_team');
+    const week = getTuesdayResetWeek(games);
 
     const weekStatsRows = await fetchAllRows(
       'player_week_stats',
@@ -39,7 +41,15 @@ export async function GET() {
     );
 
     const stats = computeMatchupStats(weekStatsRows, week);
-    return Response.json({ week, weeksUsed: week - 1, stats, tiers: tiersFromStats(stats) });
+
+    const nextMatchups = {};
+    for (const g of games) {
+      if (g.week !== week || !g.home_team || !g.away_team) continue;
+      nextMatchups[g.home_team] = { opponent: g.away_team, homeAway: 'home' };
+      nextMatchups[g.away_team] = { opponent: g.home_team, homeAway: 'away' };
+    }
+
+    return Response.json({ week, weeksUsed: week - 1, stats, tiers: tiersFromStats(stats), nextMatchups });
   } catch (err) {
     console.error('[/api/matchup-strength] failed:', err);
     return Response.json({ error: err.message }, { status: 500 });

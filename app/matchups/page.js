@@ -13,6 +13,7 @@ export default function MatchupsPage() {
   const [week, setWeek] = useState(null);
   const [weeksUsed, setWeeksUsed] = useState(0);
   const [stats, setStats] = useState({});
+  const [nextMatchups, setNextMatchups] = useState({});
 
   useEffect(() => {
     fetch("/api/matchup-strength")
@@ -21,6 +22,7 @@ export default function MatchupsPage() {
         setStats(d?.stats || {});
         setWeek(d?.week ?? null);
         setWeeksUsed(d?.weeksUsed ?? 0);
+        setNextMatchups(d?.nextMatchups || {});
       })
       .finally(() => setLoading(false));
   }, []);
@@ -39,6 +41,7 @@ export default function MatchupsPage() {
               ? `Week ${week} ratings, built from ${weeksUsed} week${weeksUsed === 1 ? "" : "s"} of actual game stats.`
               : "Defense-vs-Position ratings for the upcoming week."}
           </p>
+          <p className="text-gray-400 text-xs mt-0.5">Resets Tuesday morning to the new week.</p>
         </div>
 
         {loading ? (
@@ -63,9 +66,10 @@ export default function MatchupsPage() {
             </div>
 
             <div className="bg-card/60 backdrop-blur-md rounded-xl border border-card/70 shadow-lg overflow-hidden">
-              <div className="grid grid-cols-[2.5rem_1fr_6rem_3.5rem_3.5rem_3.5rem] items-center gap-3 px-4 py-2.5 border-b border-gray-100/80 bg-card/40">
+              <div className="grid grid-cols-[2.5rem_1fr_4rem_6rem_3.5rem_3.5rem_3.5rem] items-center gap-3 px-4 py-2.5 border-b border-gray-100/80 bg-card/40">
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Rank</span>
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Team</span>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Next</span>
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider text-center">Grade</span>
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right">Avg</span>
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right">High</span>
@@ -73,21 +77,27 @@ export default function MatchupsPage() {
               </div>
 
               <div className="divide-y divide-gray-100/60">
-                {rows.map((row, i) => (
-                  <div
-                    key={row.team}
-                    className={`grid grid-cols-[2.5rem_1fr_6rem_3.5rem_3.5rem_3.5rem] items-center gap-3 px-4 py-3 ${i % 2 === 0 ? "bg-card/20" : ""}`}
-                  >
-                    <span className="text-sm text-gray-400 font-mono">{row.rank}</span>
-                    <span className="text-sm font-semibold text-ink">{row.team}</span>
-                    <span className={`inline-flex items-center justify-center w-24 text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded ${MATCHUP_TIER_CLASSES[row.tier]}`}>
-                      {MATCHUP_TIER_LABELS[row.tier]}
-                    </span>
-                    <span className="text-sm font-bold text-ink tabular-nums text-right">{row.avgAllowed.toFixed(1)}</span>
-                    <span className="text-sm text-gray-400 tabular-nums text-right">{row.high.toFixed(1)}</span>
-                    <span className="text-sm text-gray-400 tabular-nums text-right">{row.low.toFixed(1)}</span>
-                  </div>
-                ))}
+                {rows.map((row, i) => {
+                  const next = nextMatchups[row.team];
+                  return (
+                    <div
+                      key={row.team}
+                      className={`grid grid-cols-[2.5rem_1fr_4rem_6rem_3.5rem_3.5rem_3.5rem] items-center gap-3 px-4 py-3 ${i % 2 === 0 ? "bg-card/20" : ""}`}
+                    >
+                      <span className="text-sm text-gray-400 font-mono">{row.rank}</span>
+                      <span className="text-sm font-semibold text-ink">{row.team}</span>
+                      <span className="text-xs text-gray-400">
+                        {next ? `${next.homeAway === "home" ? "vs" : "@"} ${next.opponent}` : "BYE"}
+                      </span>
+                      <span className={`inline-flex items-center justify-center w-24 text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded ${MATCHUP_TIER_CLASSES[row.tier]}`}>
+                        {MATCHUP_TIER_LABELS[row.tier]}
+                      </span>
+                      <span className="text-sm font-bold text-ink tabular-nums text-right">{row.avgAllowed.toFixed(1)}</span>
+                      <span className="text-sm text-gray-400 tabular-nums text-right">{row.high.toFixed(1)}</span>
+                      <span className="text-sm text-gray-400 tabular-nums text-right">{row.low.toFixed(1)}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
