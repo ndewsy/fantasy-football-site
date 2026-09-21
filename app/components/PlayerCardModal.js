@@ -187,6 +187,13 @@ function StatChip({ tier, children, bold }) {
 const CURRENT_SEASON = 2026;
 const SEASON_TABS = [2026, 2025, 2024, 2023];
 
+// SGO's opponent ids are their own team-name strings (e.g.
+// "KANSAS_CITY_CHIEFS_NFL"), not this app's team codes — same transform
+// app/start-sit/page.js already uses to make them readable.
+function opponentLabelFor(opponentId) {
+  return opponentId ? opponentId.replace(/_NFL$/, "").replaceAll("_", " ") : "TBD";
+}
+
 function finishQualityTier(rank) {
   if (rank == null) return null;
   if (rank <= 12) return "good";
@@ -238,11 +245,15 @@ export default function PlayerCardModal({
   const [seasonTotals, setSeasonTotals] = useState(null);
   const [seasonStatsLoading, setSeasonStatsLoading] = useState(true);
   const [gameLog, setGameLog] = useState([]);
+  const [showAllGames, setShowAllGames] = useState(false);
   const [statsMode, setStatsMode] = useState("total"); // "total" | "perGame"
   const [logMode, setLogMode] = useState("weekly"); // "weekly" | "season"
   const [logSeason, setLogSeason] = useState(CURRENT_SEASON);
   const [waiverMentions, setWaiverMentions] = useState([]);
   const [waiverMentionsLoading, setWaiverMentionsLoading] = useState(true);
+  const [nextGame, setNextGame] = useState(null);
+  const [huddleRank, setHuddleRank] = useState(null);
+  const [nextGameLoading, setNextGameLoading] = useState(true);
 
   // player-stats (weekly log + season totals) is its own effect, keyed on
   // logSeason too, so switching the year tab re-fetches without re-running
@@ -251,6 +262,7 @@ export default function PlayerCardModal({
   useEffect(() => {
     let cancelled = false;
     setSeasonStatsLoading(true);
+    setShowAllGames(false);
 
     fetch(`/api/player-stats?playerId=${player.id}&season=${logSeason}`)
       .then((r) => (r.ok ? r.json() : null))
@@ -275,12 +287,25 @@ export default function PlayerCardModal({
     setLogSeason(CURRENT_SEASON);
     setWaiverMentionsLoading(true);
     setWaiverMentions([]);
+    setNextGameLoading(true);
+    setNextGame(null);
+    setHuddleRank(null);
 
     fetch(`/api/waiver-wire?player_id=${player.id}&week=${weeklyCurrentNflWeek}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (!cancelled) setWaiverMentions(d?.entries || []); })
       .catch(() => { if (!cancelled) setWaiverMentions([]); })
       .finally(() => { if (!cancelled) setWaiverMentionsLoading(false); });
+
+    fetch(`/api/player-next-game?playerId=${player.id}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (cancelled) return;
+        setNextGame(d?.nextGame || null);
+        setHuddleRank(d?.huddleRank || null);
+      })
+      .catch(() => { if (!cancelled) { setNextGame(null); setHuddleRank(null); } })
+      .finally(() => { if (!cancelled) setNextGameLoading(false); });
 
     (async () => {
       const rankingsData = {};
@@ -322,6 +347,12 @@ export default function PlayerCardModal({
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [player.id]);
+
+  // Most recent week first — a fresh view defaults to recent form, not
+  // week 1, which is what "top 3" is actually useful for as the season
+  // goes on. "Show all" reveals the rest in the same order.
+  const orderedGameLog = [...gameLog].reverse();
+  const visibleGameLog = showAllGames ? orderedGameLog : orderedGameLog.slice(0, 3);
 
   return (
     <div
@@ -477,6 +508,45 @@ export default function PlayerCardModal({
           )}
         </div>
 
+        {/* Next Game — this week's matchup context: market signals (over/
+            under, team implied total, this site's own projection) sitting
+            right next to a human signal (Huddle's own weekly rank) rather
+            than folded into one number. */}
+        {(nextGameLoading || nextGame || huddleRank) && (
+          <div className="px-7 pt-6 border-t border-white/10">
+            <div className="flex items-center justify-between mb-2.5 flex-wrap gap-1">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Next Game</h3>
+              {nextGame && (
+                <span className="text-xs text-gray-400">
+                  {nextGame.homeAway === "home" ? "vs" : "@"} {opponentLabelFor(nextGame.opponentId)}
+                </span>
+              )}
+            </div>
+            {nextGameLoading ? (
+              <p className="text-xs text-gray-400 text-center py-4">Loading...</p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-2 text-center">
+                  <p className="text-sm font-bold text-ink">{nextGame?.gameTotal != null ? nextGame.gameTotal.toFixed(1) : "—"}</p>
+                  <p className="text-[9px] text-gray-400 uppercase tracking-wide">Game O/U</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-2 text-center">
+                  <p className="text-sm font-bold text-ink">{nextGame?.teamImpliedTotal != null ? nextGame.teamImpliedTotal.toFixed(1) : "—"}</p>
+                  <p className="text-[9px] text-gray-400 uppercase tracking-wide">Team Total</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-2 text-center">
+                  <p className="text-sm font-bold text-ink">{huddleRank ? `${player.pos}${huddleRank.rank}` : "—"}</p>
+                  <p className="text-[9px] text-gray-400 uppercase tracking-wide">Huddle Rank</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-2 text-center">
+                  <p className="text-sm font-bold text-blue-400">{nextGame?.projectedPoints != null ? nextGame.projectedPoints.toFixed(1) : "—"}</p>
+                  <p className="text-[9px] text-gray-400 uppercase tracking-wide">Proj. Pts</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Waiver Wire — this week's mentions across creators, if any */}
         {!waiverMentionsLoading && waiverMentions.length > 0 && (
           <div className="px-7 pt-6 border-t border-white/10">
@@ -577,7 +647,7 @@ export default function PlayerCardModal({
                       </tr>
                     </thead>
                     <tbody>
-                      {gameLog.map((g, i) => {
+                      {visibleGameLog.map((g, i) => {
                         const finishTier = finishQualityTier(g.positionalFinish);
                         const isLatest = logSeason === CURRENT_SEASON && g.week === weeklyCurrentNflWeek - 1;
                         return (
@@ -638,6 +708,14 @@ export default function PlayerCardModal({
                     </tbody>
                   </table>
                 </div>
+                {orderedGameLog.length > 3 && (
+                  <button
+                    onClick={() => setShowAllGames((v) => !v)}
+                    className="w-full mt-2 py-1.5 rounded-lg text-[11px] font-semibold text-blue-400 hover:text-blue-300 bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
+                  >
+                    {showAllGames ? "Show fewer weeks" : `Show all ${orderedGameLog.length} weeks`}
+                  </button>
+                )}
                 <div className="flex items-center justify-between mt-2 flex-wrap gap-1.5">
                   <p className="text-[10px] text-gray-400">Full PPR scoring</p>
                   <div className="flex items-center gap-3">
