@@ -26,20 +26,23 @@ export async function GET(request) {
 
   try {
     const [playerResult, gamesResult] = await Promise.all([
-      supabase().from('players').select('id, position, rookie_year').eq('id', playerId).maybeSingle(),
-      supabase().from('season_games').select('week, status, kickoff_at'),
+      supabase().from('players').select('id, position, team, rookie_year').eq('id', playerId).maybeSingle(),
+      supabase().from('season_games').select('week, status, kickoff_at, home_team, away_team'),
     ]);
     if (playerResult.error) throw playerResult.error;
     if (gamesResult.error) throw gamesResult.error;
     const player = playerResult.data;
     if (!player) return Response.json({ error: 'Player not found' }, { status: 404 });
+    const games = gamesResult.data;
 
-    // Same Tuesday-morning reset as the Matchups tab (lib/currentWeek.js) —
-    // just a label here (the actual opponent/odds below still come from
-    // whichever event's prop lines haven't started yet), so this stays
-    // "Week 2" through Monday night and flips to "Week 3" Tuesday morning
-    // rather than the instant the last kickoff time passes.
-    const week = getTuesdayResetWeek(gamesResult.data);
+    // Fallback only — used when there's no specific upcoming game to derive
+    // a week from (see below). This is the league-wide "active week" and
+    // only advances Tuesday morning; it is NOT the right number once a
+    // team's own next game is identified, since an early-week team (e.g. a
+    // Thursday game) can already be looking at *next* week's matchup while
+    // the league-wide week hasn't ticked over yet — exactly the "Week 2 vs
+    // a team that's actually Week 3" bug this replaced.
+    const fallbackWeek = getTuesdayResetWeek(games);
 
     const { data: lines, error: linesError } = await supabase()
       .from('player_prop_lines')
@@ -73,8 +76,23 @@ export async function GET(request) {
       }
 
       const gameLine = gameLineResult.data;
+      const gameStartsAt = nextLines[0].game_starts_at;
+
+      // The actual week that specific game belongs to — the closest-by-
+      // kickoff season_games row for this player's team, not a generic
+      // "current week" number, since this widget shows one concrete
+      // matchup rather than a league-wide summary.
+      const teamGames = (games || []).filter((g) => g.home_team === player.team || g.away_team === player.team);
+      let gameWeek = null;
+      let bestDiff = Infinity;
+      for (const g of teamGames) {
+        const diff = Math.abs(new Date(g.kickoff_at).getTime() - new Date(gameStartsAt).getTime());
+        if (diff < bestDiff) { bestDiff = diff; gameWeek = g.week; }
+      }
+
       nextGame = {
-        gameStartsAt: nextLines[0].game_starts_at,
+        week: gameWeek ?? fallbackWeek,
+        gameStartsAt,
         opponentId: nextLines[0].opponent_id,
         homeAway,
         gameTotal: gameLine?.game_total ?? null,
@@ -97,7 +115,7 @@ export async function GET(request) {
       .limit(1);
     if (huddleError) throw huddleError;
 
-    return Response.json({ week, nextGame, huddleRank: huddleRows?.[0] || null });
+    return Response.json({ week: nextGame?.week ?? fallbackWeek, nextGame, huddleRank: huddleRows?.[0] || null });
   } catch (err) {
     console.error('[/api/player-next-game] failed:', err);
     return Response.json({ error: err.message }, { status: 500 });
