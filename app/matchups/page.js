@@ -56,14 +56,14 @@ export default function MatchupsPage() {
 
             <div className="flex flex-wrap items-center gap-2 justify-center mb-5">
               {Object.entries(MATCHUP_TIER_LABELS).map(([tier, label]) => (
-                <span key={tier} className={`text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded ${MATCHUP_TIER_CLASSES[tier]}`}>
+                <span key={tier} className={`inline-flex items-center justify-center w-24 text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded ${MATCHUP_TIER_CLASSES[tier]}`}>
                   {label}
                 </span>
               ))}
             </div>
 
             <div className="bg-card/60 backdrop-blur-md rounded-xl border border-card/70 shadow-lg overflow-hidden">
-              <div className="grid grid-cols-[2.5rem_1fr_5rem_auto_auto_auto] items-center gap-3 px-4 py-2.5 border-b border-gray-100/80 bg-card/40">
+              <div className="grid grid-cols-[2.5rem_1fr_6rem_auto_auto_auto] items-center gap-3 px-4 py-2.5 border-b border-gray-100/80 bg-card/40">
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Rank</span>
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Team</span>
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider text-center">Grade</span>
@@ -76,11 +76,11 @@ export default function MatchupsPage() {
                 {rows.map((row, i) => (
                   <div
                     key={row.team}
-                    className={`grid grid-cols-[2.5rem_1fr_5rem_auto_auto_auto] items-center gap-3 px-4 py-3 ${i % 2 === 0 ? "bg-card/20" : ""}`}
+                    className={`grid grid-cols-[2.5rem_1fr_6rem_auto_auto_auto] items-center gap-3 px-4 py-3 ${i % 2 === 0 ? "bg-card/20" : ""}`}
                   >
                     <span className="text-sm text-gray-400 font-mono">{row.rank}</span>
                     <span className="text-sm font-semibold text-ink">{row.team}</span>
-                    <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded text-center ${MATCHUP_TIER_CLASSES[row.tier]}`}>
+                    <span className={`inline-flex items-center justify-center w-24 text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded ${MATCHUP_TIER_CLASSES[row.tier]}`}>
                       {MATCHUP_TIER_LABELS[row.tier]}
                     </span>
                     <span className="text-sm font-bold text-ink tabular-nums text-right">{row.avgAllowed.toFixed(1)}</span>
