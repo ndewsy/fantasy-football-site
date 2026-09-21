@@ -1150,8 +1150,8 @@ export default function Home() {
                             <p className="text-sm font-medium text-ink truncate">{row.players?.name}</p>
                             <p className="text-xs text-gray-400">{row.players?.position} · {row.players?.team}</p>
                           </div>
-                          <span className={`text-xs shrink-0 px-1.5 py-0.5 rounded ${matchup ? (MATCHUP_TIER_CLASSES[weeklyMatchupTiers[matchup.opponent]?.[weeklyPosition]] || "text-gray-400") : "text-gray-400"}`}>
-                            {matchup ? `${matchup.homeAway === "home" ? "vs" : "@"} ${matchup.opponent}` : "BYE"}
+                          <span className={`text-xs shrink-0 px-1.5 py-0.5 rounded ${matchup ? (MATCHUP_TIER_CLASSES[weeklyMatchupTiers[matchup.opponent]?.[weeklyPosition]?.tier] || "text-gray-400") : "text-gray-400"}`}>
+                            {matchup ? `${matchup.homeAway === "home" ? "vs" : "@"} ${matchup.opponent} (${weeklyMatchupTiers[matchup.opponent]?.[weeklyPosition]?.rank ?? "-"})` : "BYE"}
                           </span>
                         </button>
                       </Fragment>

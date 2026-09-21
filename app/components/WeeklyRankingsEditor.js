@@ -396,8 +396,8 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
                         <span className="text-xs text-gray-400 font-mono w-5 shrink-0 text-right">{i + 1}</span>
                         <span className="font-medium text-ink flex-1 truncate">{r.player.name}</span>
                         <span className="text-xs text-gray-400 shrink-0">{r.player.team}</span>
-                        <span className={`text-xs shrink-0 w-16 text-right px-1.5 py-0.5 rounded ${matchup ? (MATCHUP_TIER_CLASSES[matchupTiers[matchup.opponent]?.[position]] || "text-gray-400") : "text-gray-400"}`}>
-                          {matchup ? `${matchup.homeAway === "home" ? "vs" : "@"} ${matchup.opponent}` : "BYE"}
+                        <span className={`text-xs shrink-0 w-20 text-right px-1.5 py-0.5 rounded ${matchup ? (MATCHUP_TIER_CLASSES[matchupTiers[matchup.opponent]?.[position]?.tier] || "text-gray-400") : "text-gray-400"}`}>
+                          {matchup ? `${matchup.homeAway === "home" ? "vs" : "@"} ${matchup.opponent} (${matchupTiers[matchup.opponent]?.[position]?.rank ?? "-"})` : "BYE"}
                         </span>
                         <span className="text-xs text-gray-400 shrink-0 w-14 text-right">{r.projectedPoints.toFixed(1)} pts</span>
                       </button>
@@ -469,8 +469,8 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
                     <p className="text-sm font-medium text-ink truncate">{p?.name || `#${row.player_id}`}</p>
                     <p className="text-xs text-gray-400">{p?.position} · {p?.team}</p>
                   </div>
-                  <span className={`text-xs shrink-0 px-1.5 py-0.5 rounded ${matchup ? (MATCHUP_TIER_CLASSES[matchupTiers[matchup.opponent]?.[position]] || "text-gray-400") : "text-gray-400"}`}>
-                    {matchup ? `${matchup.homeAway === "home" ? "vs" : "@"} ${matchup.opponent}` : "BYE"}
+                  <span className={`text-xs shrink-0 px-1.5 py-0.5 rounded ${matchup ? (MATCHUP_TIER_CLASSES[matchupTiers[matchup.opponent]?.[position]?.tier] || "text-gray-400") : "text-gray-400"}`}>
+                    {matchup ? `${matchup.homeAway === "home" ? "vs" : "@"} ${matchup.opponent} (${matchupTiers[matchup.opponent]?.[position]?.rank ?? "-"})` : "BYE"}
                   </span>
                   <div className="flex flex-col shrink-0">
                     <button onClick={() => movePlayer(i, -1)} disabled={i === 0} className="text-gray-400 hover:text-gray-700 disabled:opacity-30 text-xs leading-none px-1">▲</button>
