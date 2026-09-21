@@ -145,7 +145,7 @@ const STAT_QUALITY = {
 // same in both themes.
 const QUALITY_CHIP_CLASSES = {
   good: "bg-[#16A34A] text-white",
-  mid: "bg-white/10 text-gray-300",
+  mid: "bg-[#F1F5F9] text-[#4B5563]",
   bad: "bg-[#DC2626] text-white",
 };
 
@@ -167,7 +167,7 @@ function statQualityTier(key, value) {
 // columns and the weekly positional-finish column below, so the whole row
 // reads as one consistent good/mid/bad visual language.
 function StatChip({ tier, children, bold }) {
-  if (!tier) return <span className="text-gray-600">{children}</span>;
+  if (!tier) return <span className="text-[#9CA3AF]">{children}</span>;
   return (
     <span
       className={`inline-flex items-center justify-center min-w-[2.25rem] px-1.5 py-0.5 rounded ${bold ? "font-bold" : "font-semibold"} ${QUALITY_CHIP_CLASSES[tier]}`}
@@ -197,9 +197,9 @@ function finishQualityTier(rank) {
 // number in the row, so it stays the biggest/boldest thing rather than
 // getting boxed in like the shorter stat/finish cells next to it.
 const QUALITY_TEXT_CLASSES = {
-  good: "text-[#4ADE80]",
-  mid: "text-ink",
-  bad: "text-[#F87171]",
+  good: "text-[#16A34A]",
+  mid: "text-[#0F172A]",
+  bad: "text-[#DC2626]",
 };
 
 // Player profile modal — deliberately owns its own data-loading state
@@ -556,9 +556,15 @@ export default function PlayerCardModal({
           ) : logMode === "weekly" ? (
             gameLog.length > 0 ? (
               <>
-                <div className="overflow-x-auto rounded-xl border border-white/10">
+                {/* Fixed hex text/border colors throughout this card, not the
+                    theme-aware text-ink/text-gray-* tokens the rest of the
+                    modal uses — this card's background is explicitly white
+                    regardless of site theme, and those tokens flip light in
+                    dark mode (see the `.dark` remap in app/globals.css),
+                    which would make them unreadable here. */}
+                <div className="overflow-x-auto rounded-xl border border-black/10 bg-gradient-to-b from-white to-[#F8FAFC] shadow-sm">
                   <table className="w-full text-xs">
-                    <thead className="bg-white/5 text-gray-500">
+                    <thead className="bg-black/[0.03] text-[#6B7280]">
                       <tr>
                         <th className="text-left px-2 py-2 font-medium">WK</th>
                         <th className="text-left px-2 py-2 font-medium">OPP</th>
@@ -576,17 +582,17 @@ export default function PlayerCardModal({
                         return (
                           <tr
                             key={g.week}
-                            className={`border-t border-white/10 ${
-                              isLatest ? "bg-blue-500/10 border-l-2 border-l-blue-500" : i % 2 === 1 ? "bg-white/[0.02]" : ""
+                            className={`border-t border-black/[0.06] ${
+                              isLatest ? "bg-blue-500/10 border-l-2 border-l-blue-500" : i % 2 === 1 ? "bg-black/[0.02]" : ""
                             }`}
                           >
-                            <td className="px-2 py-2 text-ink font-medium">
+                            <td className="px-2 py-2 text-[#0F172A] font-medium">
                               {g.week}
                               {isLatest && (
-                                <span className="ml-1.5 text-[9px] font-bold uppercase tracking-wide text-blue-400 align-middle">Latest</span>
+                                <span className="ml-1.5 text-[9px] font-bold uppercase tracking-wide text-[#2563EB] align-middle">Latest</span>
                               )}
                             </td>
-                            <td className={`px-2 py-2 whitespace-nowrap ${g.isBye ? "italic text-gray-500" : "text-gray-400"}`}>
+                            <td className={`px-2 py-2 whitespace-nowrap ${g.isBye ? "italic text-[#9CA3AF]" : "text-[#6B7280]"}`}>
                               {g.isBye ? "BYE" : g.opponent ? `${g.homeAway === "home" ? "vs" : "@"} ${g.opponent}` : "—"}
                             </td>
                             {g.hasStats ? (
@@ -601,15 +607,15 @@ export default function PlayerCardModal({
                                     {g.positionalFinish ? `${player.pos}${g.positionalFinish}` : "—"}
                                   </StatChip>
                                 </td>
-                                <td className={`text-center px-2 py-2 font-bold ${QUALITY_TEXT_CLASSES[finishTier] || "text-ink"}`}>{g.fantasyPoints}</td>
+                                <td className={`text-center px-2 py-2 font-bold ${QUALITY_TEXT_CLASSES[finishTier] || "text-[#0F172A]"}`}>{g.fantasyPoints}</td>
                               </>
                             ) : (
                               <>
                                 {(GAME_LOG_COLUMNS[player.pos] || []).map((c) => (
-                                  <td key={c.key} className="text-center px-2 py-2 text-gray-600">—</td>
+                                  <td key={c.key} className="text-center px-2 py-2 text-[#9CA3AF]">—</td>
                                 ))}
-                                <td className="text-center px-2 py-2 text-gray-600">—</td>
-                                <td className="text-center px-2 py-2 text-gray-600">—</td>
+                                <td className="text-center px-2 py-2 text-[#9CA3AF]">—</td>
+                                <td className="text-center px-2 py-2 text-[#9CA3AF]">—</td>
                               </>
                             )}
                           </tr>
@@ -623,7 +629,7 @@ export default function PlayerCardModal({
                   <div className="flex items-center gap-3">
                     {[["good", "Good"], ["mid", "Mid"], ["bad", "Bad"]].map(([tier, label]) => (
                       <span key={tier} className="inline-flex items-center gap-1 text-[10px] text-gray-400">
-                        <span className={`w-2 h-2 rounded-sm ${tier === "mid" ? "bg-white/20" : QUALITY_CHIP_CLASSES[tier].split(" ")[0]}`} />
+                        <span className={`w-2 h-2 rounded-sm ${tier === "mid" ? "bg-[#D1D5DB]" : QUALITY_CHIP_CLASSES[tier].split(" ")[0]}`} />
                         {label}
                       </span>
                     ))}
