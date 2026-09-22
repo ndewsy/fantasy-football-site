@@ -14,7 +14,7 @@ import CreatorAvatar from "@/app/components/CreatorAvatar";
 import { teamColors } from "@/lib/teamColors";
 import { DST_FORMAT, KICKER_FORMAT } from "@/lib/dstKickerFormats";
 import { getViewMode } from "@/lib/viewMode";
-import { getCurrentWeekFromGames } from "@/lib/currentWeek";
+import { getCurrentWeekFromGames, getTuesdayResetWeek } from "@/lib/currentWeek";
 import { MATCHUP_TIER_CLASSES } from "@/lib/matchupStrength";
 import { expandIds, normalizeName, computeConsensus } from "@/lib/rankingsHelpers";
 import PlayerCardModal from "@/app/components/PlayerCardModal";
@@ -196,17 +196,17 @@ export default function Home() {
       setWeeklySeasonGames(gamesResult.data || []);
       setWeeklyMatchupTiers(matchupStrengthResult?.tiers || {});
 
-      // Only the latest published week is ever shown (older weeks are
-      // archived out of the public toggle — see weeklyWeeks below), so the
-      // default is simply whichever week the active creator most recently
-      // published, regardless of where that falls relative to the actual
-      // NFL week.
       const currentWeek = getCurrentWeekFromGames(gamesResult.data || []);
       setWeeklyCurrentNflWeek(currentWeek);
-      const availableWeeks = Object.keys(dataByCreator[activeCreator]?.weeks || {}).map(Number).sort((a, b) => a - b);
-      if (availableWeeks.length > 0) {
-        setWeeklyWeek(availableWeeks[availableWeeks.length - 1]);
-      }
+      // The displayed week is always the current one by the same Tuesday-
+      // morning reset as the Matchups tab and Next Game (lib/currentWeek.js)
+      // — not "whichever week was last published". A creator's rankings for
+      // the old week disappear the moment the calendar rolls over, even if
+      // they haven't published anything for the new one yet (see the
+      // "Rankings coming soon" empty state below); this recomputes on every
+      // load, so it's a standing weekly process rather than something that
+      // needs manual upkeep each Tuesday.
+      setWeeklyWeek(getTuesdayResetWeek(gamesResult.data || []));
     }
     loadWeekly();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -364,8 +364,8 @@ export default function Home() {
   function handleWeeklyCreatorChange(creatorId) {
     setActiveCreator(creatorId);
     trackCreatorPageView(creatorId);
-    const availableWeeks = Object.keys(weeklyRankingsData[creatorId]?.weeks || {}).map(Number).sort((a, b) => a - b);
-    setWeeklyWeek(availableWeeks.length > 0 ? availableWeeks[availableWeeks.length - 1] : null);
+    // weeklyWeek is calendar-driven (the current week), not per-creator, so
+    // switching creators doesn't need to touch it — it's already correct.
   }
 
   const formatData = rankingsCache[effectiveFormat];
@@ -395,11 +395,12 @@ export default function Home() {
     : (selectedPlayer ? riskRatings[selectedPlayer.id]?.[activeCreator] ?? null : null);
   const canEditRisk = isDashboardUser && !isConsensusTab && (isAdmin || myCreatorId === activeCreator);
 
-  // Only the latest published week is shown publicly — older weeks stay in
-  // weeklyRankingsData but are archived out of this toggle rather than left
-  // visible alongside the current week.
-  const weeklyAllWeeks = Object.keys(weeklyRankingsData[activeCreator]?.weeks || {}).map(Number).sort((a, b) => a - b);
-  const weeklyWeeks = weeklyAllWeeks.length > 0 ? [weeklyAllWeeks[weeklyAllWeeks.length - 1]] : [];
+  // Only the current calendar week is ever shown publicly — see
+  // getTuesdayResetWeek above. Older weeks stay in weeklyRankingsData
+  // (still fetched, e.g. for admin/creator tooling) but are archived out of
+  // this toggle the moment the week turns over, whether or not the creator
+  // has published anything for the new one yet.
+  const weeklyWeeks = weeklyWeek ? [weeklyWeek] : [];
   const weeklyRows = weeklyWeek ? (weeklyRankingsData[activeCreator]?.weeks?.[String(weeklyWeek)]?.[weeklyPosition] || []) : [];
   const weeklyTiers = weeklyWeek ? (weeklyRankingsData[activeCreator]?.tiers?.[String(weeklyWeek)]?.[weeklyPosition] || []) : [];
   const weeklyNote = weeklyWeek ? (weeklyRankingsData[activeCreator]?.notes?.[String(weeklyWeek)] || "") : "";
@@ -1103,11 +1104,7 @@ export default function Home() {
               className="mb-4 !justify-start"
             />
 
-            {weeklyWeeks.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-12">
-                {ACTIVE_CREATORS.find((c) => c.id === activeCreator)?.short} hasn&apos;t published weekly rankings yet — check back soon.
-              </p>
-            ) : (
+            {weeklyWeeks.length > 0 && (
               <>
                 <PillToggle
                   options={weeklyWeeks.map((w) => ({ id: String(w), label: `Week ${w}` }))}
@@ -1129,7 +1126,9 @@ export default function Home() {
                 )}
 
                 {weeklyRows.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-12">No {weeklyPosition} rankings for Week {weeklyWeek} yet.</p>
+                  <p className="text-sm text-gray-400 text-center py-12">
+                    {weeklyPosition} Rankings coming soon.
+                  </p>
                 ) : (
                   <div className="divide-y divide-gray-100 border border-gray-100 rounded-xl overflow-hidden">
                     {weeklyRows.map((row, i) => {
