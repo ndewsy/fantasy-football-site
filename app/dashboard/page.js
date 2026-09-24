@@ -8,6 +8,7 @@ import PlayerHeadshot from "@/app/components/PlayerHeadshot";
 import AuctionRankingsEditor from "@/app/components/AuctionRankingsEditor";
 import WaiverWireEditor from "@/app/components/WaiverWireEditor";
 import WeeklyRankingsEditor from "@/app/components/WeeklyRankingsEditor";
+import RosRankingsEditor from "@/app/components/RosRankingsEditor";
 import PostEditor from "@/app/components/PostEditor";
 import { PostContent } from "@/app/components/PostContent";
 import Cropper from "react-easy-crop";
@@ -1467,10 +1468,11 @@ export default function DashboardPage() {
   const creatorTabs = [
     "rankings",
     "weekly-rankings",
+    "ros-rankings",
     "auction", "waiver-wire", "posts", "earnings", "analytics", "subscribers", "profile",
   ].map((t) => [
     t,
-    t === "rankings" ? "My Rankings" : t === "weekly-rankings" ? "Weekly Rankings" : t === "auction" ? "My Auction" : t === "waiver-wire" ? "My Waiver Wire" : t === "posts" ? "My Posts" : t === "earnings" ? "My Earnings" : t === "analytics" ? "My Analytics" : t === "subscribers" ? "Subscribers" : "My Profile",
+    t === "rankings" ? "My Rankings" : t === "weekly-rankings" ? "Weekly Rankings" : t === "ros-rankings" ? "ROS Rankings" : t === "auction" ? "My Auction" : t === "waiver-wire" ? "My Waiver Wire" : t === "posts" ? "My Posts" : t === "earnings" ? "My Earnings" : t === "analytics" ? "My Analytics" : t === "subscribers" ? "Subscribers" : "My Profile",
   ]);
 
   return (
@@ -3135,6 +3137,11 @@ export default function DashboardPage() {
         {/* ── Weekly Rankings Tab ── */}
         {tab === "weekly-rankings" && (
           <WeeklyRankingsEditor creatorId={profile.creator_id} />
+        )}
+
+        {/* ── ROS Rankings Tab ── */}
+        {tab === "ros-rankings" && (
+          <RosRankingsEditor creatorId={profile.creator_id} />
         )}
 
         {/* ── My Auction Tab ── */}

@@ -19,8 +19,12 @@ import { MATCHUP_TIER_CLASSES } from "@/lib/matchupStrength";
 import { expandIds, normalizeName, computeConsensus } from "@/lib/rankingsHelpers";
 import PlayerCardModal from "@/app/components/PlayerCardModal";
 
-const FORMATS = ["Redraft 1QB", "Redraft SF", "Dynasty 1QB", "Dynasty SF"];
-const FORMAT_TABS = ["Weekly Rankings", ...FORMATS, "DST/K"];
+// Archived from public view for the rest of the season (replaced below by
+// Weekly + ROS) — data and creator editing tools are untouched, just not
+// linked from FORMAT_TABS or shown in PlayerCardModal's format comparison,
+// so bringing them back later is just re-adding them to both.
+const ARCHIVED_FORMATS = ["Redraft 1QB", "Redraft SF", "Dynasty 1QB", "Dynasty SF"];
+const FORMAT_TABS = ["Weekly Rankings", "ROS", "DST/K"];
 const WEEKLY_POSITIONS = [
   { id: "QB", label: "QB" },
   { id: "RB", label: "RB" },
@@ -28,6 +32,12 @@ const WEEKLY_POSITIONS = [
   { id: "TE", label: "TE" },
   { id: "DST", label: "DST" },
   { id: "K", label: "K" },
+];
+const ROS_POSITIONS = [
+  { id: "QB", label: "QB" },
+  { id: "RB", label: "RB" },
+  { id: "WR", label: "WR" },
+  { id: "TE", label: "TE" },
 ];
 
 const CREATORS = [
@@ -119,6 +129,8 @@ export default function Home() {
   const [weeklySeasonGames, setWeeklySeasonGames] = useState([]);
   const [weeklyCurrentNflWeek, setWeeklyCurrentNflWeek] = useState(1);
   const [weeklyMatchupTiers, setWeeklyMatchupTiers] = useState({});
+  const [rosRankingsData, setRosRankingsData] = useState({}); // { [creatorId]: { positions, tiers, note } }
+  const [rosPosition, setRosPosition] = useState("QB");
   const [showCreatorColumns, setShowCreatorColumns] = useState(true);
   const [search, setSearch] = useState("");
   const [posFilter, setPosFilter] = useState("All");
@@ -182,9 +194,12 @@ export default function Home() {
     async function loadWeekly() {
       const supabase = createClient();
       const creatorIds = ACTIVE_CREATORS.map((c) => c.id);
-      const [weeklyResults, gamesResult, profilesResult, matchupStrengthResult] = await Promise.all([
+      const [weeklyResults, rosResults, gamesResult, profilesResult, matchupStrengthResult] = await Promise.all([
         Promise.all(creatorIds.map((id) =>
           fetch(`/api/weekly-rankings?creator_id=${encodeURIComponent(id)}`).then((r) => (r.ok ? r.json() : { weeks: {} })).catch(() => ({ weeks: {} }))
+        )),
+        Promise.all(creatorIds.map((id) =>
+          fetch(`/api/ros-rankings?creator_id=${encodeURIComponent(id)}`).then((r) => (r.ok ? r.json() : { positions: {} })).catch(() => ({ positions: {} }))
         )),
         supabase.from("season_games").select("week, status, kickoff_at, home_team, away_team").order("kickoff_at", { ascending: true }),
         supabase.from("profiles").select("creator_id, logo_url").in("creator_id", creatorIds).eq("is_creator", true),
@@ -192,6 +207,7 @@ export default function Home() {
       ]);
       const dataByCreator = Object.fromEntries(creatorIds.map((id, i) => [id, weeklyResults[i]]));
       setWeeklyRankingsData(dataByCreator);
+      setRosRankingsData(Object.fromEntries(creatorIds.map((id, i) => [id, rosResults[i]])));
       setWeeklyCreatorProfiles(Object.fromEntries((profilesResult.data || []).map((p) => [p.creator_id, p])));
       setWeeklySeasonGames(gamesResult.data || []);
       setWeeklyMatchupTiers(matchupStrengthResult?.tiers || {});
@@ -257,10 +273,10 @@ export default function Home() {
   }
 
   useEffect(() => {
-    // Weekly Rankings has its own data source (see the weekly-rankings
-    // effect below) — "Weekly Rankings" isn't a real season format, so
-    // there's nothing for /api/rankings to fetch here.
-    if (activeFormat === "Weekly Rankings") return;
+    // Weekly Rankings and ROS each have their own data source (see the
+    // weekly-rankings/ros-rankings effect below) — neither is a real season
+    // format, so there's nothing for /api/rankings to fetch here.
+    if (activeFormat === "Weekly Rankings" || activeFormat === "ROS") return;
 
     const cachedFormat = rankingsCache[effectiveFormat];
 
@@ -353,9 +369,10 @@ export default function Home() {
     // Weekly Rankings has no Consensus concept — default to ffhuddle so the
     // existing per-creator risk-rating logic (canEditRisk, displayedRisk,
     // etc.) works correctly with zero special-casing for weekly-ranked players.
-    setActiveCreator(format === "Weekly Rankings" ? "ffhuddle" : "consensus");
+    setActiveCreator((format === "Weekly Rankings" || format === "ROS") ? "ffhuddle" : "consensus");
     if (format === "DST/K") setDstkSubTab(DST_FORMAT);
     if (format === "Weekly Rankings") setWeeklyPosition("QB");
+    if (format === "ROS") setRosPosition("QB");
   }
 
   // Switches which creator's weekly rankings are shown — reuses activeCreator
@@ -404,6 +421,11 @@ export default function Home() {
   const weeklyRows = weeklyWeek ? (weeklyRankingsData[activeCreator]?.weeks?.[String(weeklyWeek)]?.[weeklyPosition] || []) : [];
   const weeklyTiers = weeklyWeek ? (weeklyRankingsData[activeCreator]?.tiers?.[String(weeklyWeek)]?.[weeklyPosition] || []) : [];
   const weeklyNote = weeklyWeek ? (weeklyRankingsData[activeCreator]?.notes?.[String(weeklyWeek)] || "") : "";
+  // ROS has no week to archive by — it's just whatever the creator has
+  // currently ranked for this position.
+  const rosRows = rosRankingsData[activeCreator]?.positions?.[rosPosition] || [];
+  const rosTiers = rosRankingsData[activeCreator]?.tiers?.[rosPosition] || [];
+  const rosNote = rosRankingsData[activeCreator]?.note || "";
   // team -> { opponent, homeAway } for whichever week is selected — BYE if
   // a team has no game that week.
   const weeklyMatchups = useMemo(() => Object.fromEntries(
@@ -691,9 +713,10 @@ export default function Home() {
         )}
 
         {/* Everything below is the normal season-rankings view (creator tabs,
-            filters, table) — Weekly Rankings has its own simpler render branch,
-            since it has no tiers/consensus/multi-creator-comparison concepts. */}
-        {activeFormat !== "Weekly Rankings" && (
+            filters, table) — Weekly Rankings and ROS each have their own
+            simpler render branch below, since neither has tiers/consensus/
+            multi-creator-comparison concepts the way this one does. */}
+        {activeFormat !== "Weekly Rankings" && activeFormat !== "ROS" && (
         <>
         {/* Creator tabs + toggle */}
         {(() => {
@@ -1170,9 +1193,86 @@ export default function Home() {
           </div>
         )}
 
+        {/* ROS Rankings — same idea as Weekly Rankings (per-position ranked
+            list per creator, with tiers) but no week to switch between —
+            just whatever each creator currently has ranked for the rest of
+            the season. */}
+        {activeFormat === "ROS" && (
+          <div>
+            <div className="flex items-center gap-2.5 mb-4">
+              <CreatorAvatar
+                logoUrl={weeklyCreatorProfiles[activeCreator]?.logo_url}
+                initials={CREATOR_MOBILE_BADGE[activeCreator]?.label || "?"}
+                colorClass="bg-blue-600"
+                size="sm"
+              />
+              <p className="font-bold text-ink text-sm">
+                {ACTIVE_CREATORS.find((c) => c.id === activeCreator)?.short} · ROS Rankings
+              </p>
+            </div>
+
+            <PillToggle
+              options={ACTIVE_CREATORS.map((c) => ({ id: c.id, label: c.short }))}
+              value={activeCreator}
+              onChange={handleWeeklyCreatorChange}
+              className="mb-4 !justify-start"
+            />
+
+            <PillToggle
+              options={ROS_POSITIONS}
+              value={rosPosition}
+              onChange={setRosPosition}
+              className="mb-5 !justify-start"
+            />
+
+            {rosNote && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-5">
+                <p className="text-xs text-amber-700 whitespace-pre-wrap">{rosNote}</p>
+              </div>
+            )}
+
+            {rosRows.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-12">
+                {rosPosition} Rankings coming soon.
+              </p>
+            ) : (
+              <div className="divide-y divide-gray-100 border border-gray-100 rounded-xl overflow-hidden">
+                {rosRows.map((row, i) => {
+                  const rank = i + 1;
+                  const tierNum = getTierNumber(rank, rosTiers.length > 0 ? rosTiers : [1]);
+                  const prevTierNum = i > 0 ? getTierNumber(rank - 1, rosTiers.length > 0 ? rosTiers : [1]) : tierNum;
+                  const showDivider = rosTiers.length > 0 && (i === 0 || tierNum !== prevTierNum);
+                  return (
+                  <Fragment key={row.player_id}>
+                    {showDivider && (
+                      <div className="w-full flex items-center gap-3 px-4 py-2 select-none">
+                        <div className="flex-1 h-px bg-blue-200" />
+                        <span className="text-xs font-semibold text-blue-600 tracking-wider uppercase">Tier {tierNum}</span>
+                        <div className="flex-1 h-px bg-blue-200" />
+                      </div>
+                    )}
+                    <button
+                      onClick={() => openPlayerModal(weeklyPoolById[row.player_id] || { id: row.player_id, ...row.players })}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left"
+                    >
+                      <span className="text-sm text-gray-400 font-mono w-6 shrink-0 text-right">{i + 1}</span>
+                      <PlayerHeadshot espnId={row.players?.espn_id} sleeperId={row.players?.sleeper_id} name={row.players?.name} size="sm" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-ink truncate">{row.players?.name}</p>
+                        <p className="text-xs text-gray-400">{row.players?.position} · {row.players?.team}</p>
+                      </div>
+                    </button>
+                  </Fragment>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         </div>
 
-        {activeFormat !== "Weekly Rankings" && (
+        {activeFormat !== "Weekly Rankings" && activeFormat !== "ROS" && (
         <aside className="w-full lg:w-72 lg:shrink-0 lg:sticky lg:top-6 order-2">
           <ConsensusMovementWidget format={effectiveFormat} />
         </aside>
@@ -1188,7 +1288,7 @@ export default function Home() {
           displayPosRanks={displayPosRanks}
           weeklyCurrentNflWeek={weeklyCurrentNflWeek}
           activeFormat={activeFormat}
-          FORMATS={FORMATS}
+          FORMATS={[]}
           ACTIVE_CREATORS={ACTIVE_CREATORS}
           playerPool={playerPool}
           rankingsCache={rankingsCache}

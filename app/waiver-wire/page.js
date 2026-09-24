@@ -13,11 +13,13 @@ import { getCurrentWeekFromGames } from "@/lib/currentWeek";
 import { getViewMode } from "@/lib/viewMode";
 import { isPromoActive } from "@/lib/promo";
 
-// Same format/creator lists PlayerCardModal expects — duplicated from
-// app/page.js (which owns the real tab-switching state these drive there);
-// here the modal is always shown in its read-only consensus view, so no
-// per-creator activeFormat/activeCreator state is needed to go with them.
-const FORMATS = ["Redraft 1QB", "Redraft SF", "Dynasty 1QB", "Dynasty SF"];
+// Same creator list PlayerCardModal expects — duplicated from app/page.js
+// (which owns the real tab-switching state it drives there); here the
+// modal is always shown in its read-only consensus view, so no per-creator
+// activeFormat/activeCreator state is needed to go with it. There used to
+// be a FORMATS list here too (for the modal's Rankings-by-Format table),
+// but Redraft/Dynasty are archived for the season — see app/page.js's
+// ARCHIVED_FORMATS — so this page now passes FORMATS={[]} below instead.
 const CREATORS = [
   { id: "rookierager", name: "RookieRager", short: "RookieRager" },
   { id: "ffhuddle", name: "FantasyFootballHuddle", short: "FFHuddle" },
@@ -384,8 +386,8 @@ export default function WaiverWirePage() {
           onClose={() => setPlayerModalOpen(false)}
           displayPosRanks={{}}
           weeklyCurrentNflWeek={week}
-          activeFormat={FORMATS[0]}
-          FORMATS={FORMATS}
+          activeFormat={null}
+          FORMATS={[]}
           ACTIVE_CREATORS={ACTIVE_CREATORS}
           playerPool={playerPool}
           rankingsCache={rankingsCache}

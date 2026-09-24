@@ -777,7 +777,10 @@ export default function PlayerCardModal({
           )}
         </div>
 
-        {/* Rankings table */}
+        {/* Rankings table — hidden while FORMATS is empty (Redraft/Dynasty
+            archived for the season, see app/page.js); reappears automatically
+            once that array is restored. */}
+        {FORMATS.length > 0 && (
         <div className="p-7 border-t border-white/10">
           <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3.5">Rankings by Format</h3>
           {playerRankingsLoading ? (
@@ -824,6 +827,7 @@ export default function PlayerCardModal({
             </div>
           )}
         </div>
+        )}
 
         </div>
       </div>
