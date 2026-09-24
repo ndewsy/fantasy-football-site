@@ -103,13 +103,13 @@ function abbreviateFormat(fmt) {
 export default function Home() {
   const promoActive = isPromoActive();
   // Weekly Rankings is the front-page default now — its own render branch
-  // sets activeCreator to "ffhuddle" on click (see handleFormatChange), so
-  // the initial state needs to match that for the risk-rating integration
+  // sets activeCreator to "rookierager" on click (see handleFormatChange),
+  // so the initial state needs to match that for the risk-rating integration
   // and page_view logging to be correct on a fresh, un-clicked page load too.
   const [activeFormat, setActiveFormat] = useState("Weekly Rankings");
   const [dstkSubTab, setDstkSubTab] = useState(DST_FORMAT);
   const effectiveFormat = activeFormat === "DST/K" ? dstkSubTab : activeFormat;
-  const [activeCreator, setActiveCreator] = useState("ffhuddle");
+  const [activeCreator, setActiveCreator] = useState("rookierager");
   const [rankingsCache, setRankingsCache] = useState({});
   const [rankingsLoading, setRankingsLoading] = useState(false);
   const [user, setUser] = useState(null);
@@ -366,10 +366,11 @@ export default function Home() {
 
   function handleFormatChange(format) {
     setActiveFormat(format);
-    // Weekly Rankings has no Consensus concept — default to ffhuddle so the
-    // existing per-creator risk-rating logic (canEditRisk, displayedRisk,
-    // etc.) works correctly with zero special-casing for weekly-ranked players.
-    setActiveCreator((format === "Weekly Rankings" || format === "ROS") ? "ffhuddle" : "consensus");
+    // Weekly Rankings/ROS have no Consensus concept — default to
+    // rookierager so the existing per-creator risk-rating logic
+    // (canEditRisk, displayedRisk, etc.) works correctly with zero
+    // special-casing for weekly/ROS-ranked players.
+    setActiveCreator((format === "Weekly Rankings" || format === "ROS") ? "rookierager" : "consensus");
     if (format === "DST/K") setDstkSubTab(DST_FORMAT);
     if (format === "Weekly Rankings") setWeeklyPosition("QB");
     if (format === "ROS") setRosPosition("QB");
