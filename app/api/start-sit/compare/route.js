@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { computeProjection, buildProjectionLines, computeConfidence, SCORING_FORMATS } from '@/lib/fantasyProjection';
 import { getAuthedUser } from '@/lib/getUser';
 import { getStartSitAccess } from '@/lib/startSitAccess';
+import { ensurePlayerPropsFresh } from '@/lib/ensurePlayerProps';
 
 let _supabase;
 const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY));
@@ -18,6 +19,18 @@ async function loadPlayer(playerId, scoring) {
     .maybeSingle();
   if (playerError) throw playerError;
   if (!player) return null;
+
+  // Fetches live from SGO/Odds API (scoped to just this player's next game)
+  // the first time anyone puts them in Start/Sit — see
+  // lib/ensurePlayerProps.js for why this replaced the old bulk cron.
+  // A fetch failure here shouldn't break the whole comparison; worst case
+  // this player just comes back with hasGame: false below, same as if the
+  // game genuinely hasn't been scheduled yet.
+  try {
+    await ensurePlayerPropsFresh(player);
+  } catch (err) {
+    console.error(`[/api/start-sit/compare] ensurePlayerPropsFresh failed for player ${playerId}:`, err.message);
+  }
 
   const { data: lines, error: linesError } = await supabase()
     .from('player_prop_lines')

@@ -14,10 +14,6 @@ const POSITIONS = [
   { id: "K", label: "K" },
 ];
 const WEEKS = Array.from({ length: 18 }, (_, i) => i + 1);
-const RECOMMENDED_LIMIT = 24;
-// Start/Sit projections only cover skill positions with prop markets —
-// DST/K have no player_prop_lines, so there's nothing to recommend there.
-const RECOMMENDED_POSITIONS = new Set(["QB", "RB", "WR", "TE"]);
 
 // tiers is a sorted array of rank thresholds where a new tier starts —
 // tiers[0] is always 1 (implicit, not user-removable), same model as the
@@ -45,10 +41,6 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
   const [token, setToken] = useState(null);
   const [seasonGames, setSeasonGames] = useState([]);
   const [matchupTiers, setMatchupTiers] = useState({});
-  const [recommended, setRecommended] = useState([]);
-  const [recommendedWeek, setRecommendedWeek] = useState(null);
-  const [recommendedLoading, setRecommendedLoading] = useState(false);
-  const [showRecommended, setShowRecommended] = useState(false);
   const dragIndex = useRef(null);
   const dragTierRank = useRef(null);
 
@@ -102,21 +94,6 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
       .finally(() => setLoading(false));
   }, [creatorId, week, position]);
 
-  // Projections only exist for skill positions (no prop markets for DST/K) —
-  // skip the fetch there and just show the empty state.
-  useEffect(() => {
-    if (!RECOMMENDED_POSITIONS.has(position)) {
-      setRecommended([]);
-      return;
-    }
-    setRecommendedLoading(true);
-    fetch(`/api/weekly-rankings/recommended?position=${position}&limit=${RECOMMENDED_LIMIT}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { setRecommended(d?.topStarts || []); setRecommendedWeek(d?.week ?? null); })
-      .catch(() => setRecommended([]))
-      .finally(() => setRecommendedLoading(false));
-  }, [position]);
-
   // Week-level, not per-position — reload only when creator/week changes so
   // switching position tabs doesn't clobber an unsaved disclaimer edit.
   useEffect(() => {
@@ -134,17 +111,6 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
   const matchups = Object.fromEntries(
     seasonGames
       .filter((g) => g.week === week)
-      .flatMap((g) => [
-        [g.home_team, { opponent: g.away_team, homeAway: "home" }],
-        [g.away_team, { opponent: g.home_team, homeAway: "away" }],
-      ])
-  );
-  // Recommended is always for whichever week Sleeper just projected (see
-  // /api/weekly-rankings/recommended), which can differ from the week
-  // selected above — keyed off recommendedWeek rather than reusing matchups.
-  const recommendedMatchups = Object.fromEntries(
-    seasonGames
-      .filter((g) => g.week === recommendedWeek)
       .flatMap((g) => [
         [g.home_team, { opponent: g.away_team, homeAway: "home" }],
         [g.away_team, { opponent: g.home_team, homeAway: "away" }],
@@ -361,48 +327,6 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
                     <span className="text-xs text-gray-400">{p.position} · {p.team}</span>
                   </button>
                 ))}
-              </div>
-            )}
-          </div>
-
-          <div className="mb-3">
-            <button
-              onClick={() => setShowRecommended((v) => !v)}
-              className="text-xs font-semibold text-blue-600 hover:text-blue-700"
-            >
-              {showRecommended ? "Hide" : "Show"} Top {RECOMMENDED_LIMIT} Recommended {position}s
-            </button>
-            {showRecommended && (
-              <div className="mt-2 max-h-64 overflow-y-auto divide-y divide-gray-100 border border-gray-100 rounded-lg">
-                {!RECOMMENDED_POSITIONS.has(position) && (
-                  <p className="text-xs text-gray-400 text-center py-4">No projections available for {position}.</p>
-                )}
-                {RECOMMENDED_POSITIONS.has(position) && recommendedLoading && (
-                  <p className="text-xs text-gray-400 text-center py-4">Loading...</p>
-                )}
-                {RECOMMENDED_POSITIONS.has(position) && !recommendedLoading && recommended.length === 0 && (
-                  <p className="text-xs text-gray-400 text-center py-4">No upcoming projections for {position}.</p>
-                )}
-                {recommended
-                  .filter((r) => !usedIds.has(r.player.id))
-                  .map((r, i) => {
-                    const matchup = recommendedMatchups[r.player.team];
-                    return (
-                      <button
-                        key={r.player.id}
-                        onClick={() => addPlayer(r.player.id)}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 text-left text-sm"
-                      >
-                        <span className="text-xs text-gray-400 font-mono w-5 shrink-0 text-right">{i + 1}</span>
-                        <span className="font-medium text-ink flex-1 truncate">{r.player.name}</span>
-                        <span className="text-xs text-gray-400 shrink-0">{r.player.team}</span>
-                        <span className={`text-xs shrink-0 w-20 text-right px-1.5 py-0.5 rounded ${matchup ? (MATCHUP_TIER_CLASSES[matchupTiers[matchup.opponent]?.[position]?.tier] || "text-gray-400") : "text-gray-400"}`}>
-                          {matchup ? `${matchup.homeAway === "home" ? "vs" : "@"} ${matchup.opponent} (${matchupTiers[matchup.opponent]?.[position]?.rank ?? "-"})` : "BYE"}
-                        </span>
-                        <span className="text-xs text-gray-400 shrink-0 w-14 text-right">{r.projectedPoints.toFixed(1)} pts</span>
-                      </button>
-                    );
-                  })}
               </div>
             )}
           </div>

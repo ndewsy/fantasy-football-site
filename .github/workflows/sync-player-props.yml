@@ -1,8 +1,13 @@
 name: Sync player props
 
+# No longer scheduled — betting lines are now fetched on demand, one
+# player's game at a time, the moment someone adds that player to Start/Sit
+# Compare (see lib/ensurePlayerProps.js). This bulk full-league sync is kept
+# as a manual escape hatch only (e.g. to warm the cache before a big slate),
+# not something that runs automatically and burns through SportsGameOdds'
+# monthly object quota fetching hundreds of players nobody was about to
+# look at.
 on:
-  schedule:
-    - cron: "0 */4 * * *"
   workflow_dispatch: {}
 
 jobs:
