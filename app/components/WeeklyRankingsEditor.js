@@ -43,6 +43,11 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
   const [matchupTiers, setMatchupTiers] = useState({});
   const dragIndex = useRef(null);
   const dragTierRank = useRef(null);
+  // True right after rows/tiers were just set from a fetch (not a user
+  // edit) — the autosave effect below checks this so loading a week/
+  // position doesn't immediately re-save the data it just received.
+  const skipNextAutosave = useRef(true);
+  const autosaveTimer = useRef(null);
 
   useEffect(() => {
     async function loadPoolAndWeek() {
@@ -82,6 +87,7 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
   useEffect(() => {
     if (!creatorId) return;
     setLoading(true);
+    skipNextAutosave.current = true;
     fetch(`/api/weekly-rankings?creator_id=${encodeURIComponent(creatorId)}&week=${week}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
@@ -93,6 +99,26 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
       })
       .finally(() => setLoading(false));
   }, [creatorId, week, position]);
+
+  // Autosaves whenever the ranked list or its tiers change as a result of a
+  // user action (add/remove/move a player, or drag a tier break) — debounced
+  // so a single drag gesture (which live-splices rows on every dragover)
+  // collapses into one request after the user stops moving things, rather
+  // than firing a save per pixel dragged. Skipped the first time rows/tiers
+  // change after a fetch, since that change is the load itself, not an edit.
+  useEffect(() => {
+    if (loading) return;
+    if (skipNextAutosave.current) {
+      skipNextAutosave.current = false;
+      return;
+    }
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(() => {
+      save();
+    }, 800);
+    return () => clearTimeout(autosaveTimer.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, tiers, loading]);
 
   // Week-level, not per-position — reload only when creator/week changes so
   // switching position tabs doesn't clobber an unsaved disclaimer edit.
@@ -409,14 +435,18 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
 
           <div className="flex items-center justify-between mt-4">
             <p className="text-xs text-gray-400">
-              {savedAt ? `Saved ${new Date(savedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : "Not saved yet"}
+              {saving
+                ? "Saving..."
+                : savedAt
+                ? `Changes save automatically — saved ${new Date(savedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`
+                : "Changes save automatically"}
             </p>
             <button
               onClick={save}
               disabled={saving}
               className="bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 disabled:opacity-50 text-white font-bold px-5 py-2 rounded-lg text-sm transition-all"
             >
-              {saving ? "Saving..." : "Save"}
+              {saving ? "Saving..." : "Save now"}
             </button>
           </div>
         </>
