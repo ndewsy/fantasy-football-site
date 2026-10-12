@@ -40,6 +40,13 @@ function getTierNumber(rank, tiers) {
   }
   return 1;
 }
+
+// "YYYY-MM" (how payouts.period and the Period dropdown values are stored)
+// -> "September 2026" for display.
+function periodLabel(yyyyMm) {
+  const [y, m] = yyyyMm.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+}
 const TAGS = ["Buy Now", "Sell Now", "Analysis", "Rankings"];
 const CREATOR_IDS = ["rookierager", "ffhuddle"];
 const MAX_POST_FILES = 10;
@@ -1462,7 +1469,15 @@ export default function DashboardPage() {
   // 20% of totalRevenue — that blanket formula would overcount the platform's cut on
   // no-code flat_access subs, which pay creators 100% with no platform share.
   const platformRevenue = totalRevenue - creatorPayoutTotal;
-  const currentPeriod = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const currentPeriod = (() => {
+    const now = new Date();
+    return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+  })();
+  // Snapshotted payouts for whichever past month is selected in the Period
+  // dropdown — the live breakdown above only ever covers "current".
+  const historicalPayoutsForPeriod = revenuePeriod !== "current" && revenuePeriod !== "ytd"
+    ? payouts.filter(p => p.period === revenuePeriod)
+    : [];
 
   const adminTabs = [["admin", "Admin Overview"], ["subscribers", "Subscribers"], ["payouts", "Revenue & Payouts"], ["feedback", "Feedback"], ["players", "Add Players"], ["playerdb", "Player Database"], ["admin-auction", "Auction Rankings"], ["waiver-wire-admin", "Waiver Wire"]];
   const creatorTabs = [
@@ -1933,9 +1948,14 @@ export default function DashboardPage() {
                       ? " (fees converted to USD at each charge's own settlement rate)"
                       : " (native CAD settlement amounts — exactly what Stripe pays out, no conversion)"}
                   </p>
-                  {revenuePeriod !== "current" && (
+                  {revenuePeriod === "ytd" && (
                     <p className="text-gray-400 text-xs mt-3 max-w-md">
-                      Platform/creator payout splits aren&apos;t available for past periods — checked both Stripe (no referral/creator data was ever attached to charges or subscriptions) and the app&apos;s own database (only tracks each subscriber&apos;s <em>current</em> plan, not historical), so an accurate split can&apos;t be reconstructed. The current month&apos;s live split is shown below.
+                      Per-creator payout splits aren&apos;t available for Year to Date — pick an individual month instead.
+                    </p>
+                  )}
+                  {revenuePeriod !== "current" && revenuePeriod !== "ytd" && historicalPayoutsForPeriod.length === 0 && (
+                    <p className="text-gray-400 text-xs mt-3 max-w-md">
+                      No per-creator payout snapshot was saved for this month — either it hasn&apos;t ended yet, or it&apos;s from before the monthly snapshot existed. Checked both Stripe (no referral/creator data was ever attached to charges) and the app&apos;s own database (only tracks each subscriber&apos;s <em>current</em> plan), so a past month without a saved snapshot can&apos;t be reconstructed exactly.
                     </p>
                   )}
                 </>
@@ -1957,7 +1977,7 @@ export default function DashboardPage() {
               ))}
             </div>
 
-            <h2 className="text-lg font-bold mb-3">Creator Payouts — {currentPeriod}</h2>
+            <h2 className="text-lg font-bold mb-3">Creator Payouts — {periodLabel(currentPeriod)}</h2>
             <div className="bg-card/60 backdrop-blur-md rounded-xl border border-card/70 shadow-lg overflow-hidden mb-8">
               <div className="overflow-x-auto">
               <table className="w-full max-sm:[&_th]:px-2 max-sm:[&_th]:py-1.5 max-sm:[&_th]:text-[10px] max-sm:[&_td]:px-2 max-sm:[&_td]:py-1.5 max-sm:[&_td]:text-xs">
@@ -2032,6 +2052,56 @@ export default function DashboardPage() {
               </>
             )}
 
+            {revenuePeriod !== "current" && historicalPayoutsForPeriod.length > 0 && (
+              <>
+                <h2 className="text-lg font-bold mb-3">Creator Payouts — {periodLabel(revenuePeriod)}</h2>
+                <div className="bg-card/60 backdrop-blur-md rounded-xl border border-card/70 shadow-lg overflow-hidden mb-8">
+                  <div className="overflow-x-auto">
+                  <table className="w-full max-sm:[&_th]:px-2 max-sm:[&_th]:py-1.5 max-sm:[&_th]:text-[10px] max-sm:[&_td]:px-2 max-sm:[&_td]:py-1.5 max-sm:[&_td]:text-xs">
+                    <thead className="bg-card/40 text-gray-500 text-sm">
+                      <tr>
+                        <th className="text-left px-4 py-3">Creator</th>
+                        <th className="text-left px-4 py-3">Amount owed</th>
+                        <th className="text-left px-4 py-3">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {historicalPayoutsForPeriod.map(p => {
+                        const isSaving = payoutSaving === p.creator_id;
+                        return (
+                          <tr key={p.id} className="border-b border-gray-100">
+                            <td className="px-4 py-4"><p className="font-medium">@{p.creator_id}</p></td>
+                            <td className="px-4 py-4">
+                              <span className="text-lg font-bold text-blue-600">${Number(p.amount).toFixed(2)}</span>
+                            </td>
+                            <td className="px-4 py-4">
+                              {p.paid ? (
+                                <div>
+                                  <span className="text-green-600 text-sm font-semibold">✅ Paid</span>
+                                  <p className="text-gray-400 text-xs mt-0.5">
+                                    {new Date(p.paid_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                  </p>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => markAsPaid(p.creator_id, p.amount, p.period)}
+                                  disabled={isSaving}
+                                  className="bg-card hover:bg-gray-50 border border-gray-200 text-ink text-sm font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                  {isSaving ? "Saving..." : "Mark as Paid"}
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  </div>
+                </div>
+              </>
+            )}
+
             <h2 className="text-lg font-bold mb-3">Payout History</h2>
             {payouts.length === 0 ? (
               <div className="bg-card/70 backdrop-blur-md rounded-xl p-8 border border-card/80 shadow-lg text-center">
@@ -2053,7 +2123,7 @@ export default function DashboardPage() {
                     {payouts.filter(p => p.paid).map(p => (
                       <tr key={p.id} className="border-b border-gray-100">
                         <td className="px-4 py-3 font-medium">@{p.creator_id}</td>
-                        <td className="px-4 py-3 text-gray-500">{p.period}</td>
+                        <td className="px-4 py-3 text-gray-500">{periodLabel(p.period)}</td>
                         <td className="px-4 py-3 text-blue-600 font-semibold">${p.amount}</td>
                         <td className="px-4 py-3 text-gray-400 text-sm">
                           {new Date(p.paid_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
@@ -3408,6 +3478,13 @@ export default function DashboardPage() {
             : 0;
           const monthlyTotal = (includedCount * 8 + addonCount * 4 + flatCodedCount * 8 + flatSplitShare * 10) * (1 - currentMonthFeeRate);
           const paidPayouts = creatorPayouts.filter(p => p.paid);
+          // The snapshotted amount for whichever past month is selected above —
+          // locked in automatically when that month rolled over (see
+          // app/api/cron/snapshot-payouts/route.js), since the live breakdown
+          // below only ever reflects "right now".
+          const historicalCreatorPayout = earningsPeriod !== "current" && earningsPeriod !== "ytd"
+            ? creatorPayouts.find(p => p.period === earningsPeriod)
+            : null;
 
           return (
             <div>
@@ -3467,12 +3544,30 @@ export default function DashboardPage() {
                     </p>
                     {earningsPeriod !== "current" && (
                       <p className="text-gray-400 text-xs mt-3 max-w-md">
-                        This is total revenue across the whole platform, not your personal cut — your earnings breakdown depends on which subscribers were tied to you at the time, which isn&apos;t tracked historically, so it&apos;s only available for the current month (shown below).
+                        This is total revenue across the whole platform, not your personal cut — your personal breakdown for this month is shown below if it was saved.
                       </p>
                     )}
                   </>
                 ) : null}
               </div>
+
+              {earningsPeriod !== "current" && earningsPeriod !== "ytd" && (
+                <div className="bg-card/70 backdrop-blur-md border border-card/80 shadow-lg rounded-xl p-5 mb-8">
+                  {historicalCreatorPayout ? (
+                    <>
+                      <p className="text-gray-500 text-xs font-medium mb-1">Your earnings — {periodLabel(earningsPeriod)}</p>
+                      <p className="text-2xl font-bold text-blue-600">${Number(historicalCreatorPayout.amount).toFixed(2)}</p>
+                      <p className="text-gray-400 text-xs mt-1">
+                        {historicalCreatorPayout.paid
+                          ? `Paid ${new Date(historicalCreatorPayout.paid_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+                          : "Not yet marked as paid"}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-gray-400 text-sm">No earnings snapshot was saved for this month.</p>
+                  )}
+                </div>
+              )}
 
               {earningsPeriod === "current" && (
               <>
@@ -3568,7 +3663,7 @@ export default function DashboardPage() {
                     <tbody>
                       {paidPayouts.map(p => (
                         <tr key={p.id} className="border-b border-gray-100">
-                          <td className="px-4 py-3 font-medium">{p.period}</td>
+                          <td className="px-4 py-3 font-medium">{periodLabel(p.period)}</td>
                           <td className="px-4 py-3 text-blue-600 font-semibold">${p.amount}</td>
                           <td className="px-4 py-3 text-gray-400 text-sm">
                             {new Date(p.paid_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
