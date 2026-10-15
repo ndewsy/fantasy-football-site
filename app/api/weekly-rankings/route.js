@@ -46,16 +46,35 @@ export async function GET(request) {
   }
 
   // No week — every week this creator has published, in one response, since
-  // the whole season is only a few hundred rows at most (public page uses
-  // this to build its week selector without a request per week).
-  const [{ data, error }, { data: tierRows, error: tierError }, { data: noteRows, error: noteError }] = await Promise.all([
-    supabase().from('weekly_rankings').select(selectCols).eq('creator_id', creator_id).order('week').order('rank'),
-    supabase().from('weekly_ranking_tiers').select('week, position, tiers').eq('creator_id', creator_id),
-    supabase().from('weekly_rankings_notes').select('week, note').eq('creator_id', creator_id),
-  ]);
-  if (error) return Response.json({ error: error.message }, { status: 500 });
-  if (tierError) return Response.json({ error: tierError.message }, { status: 500 });
-  if (noteError) return Response.json({ error: noteError.message }, { status: 500 });
+  // the public page uses this to build its week selector without a request
+  // per week. A full season across every position comfortably exceeds
+  // Supabase's default 1000-row cap on an unpaginated select (a creator
+  // ranking every eligible player at every position, every week, crossed it
+  // partway through week 5 — rows past the cap were silently dropped, which
+  // is why the most recent week went missing from the public page even
+  // though it was saved correctly), so this pages through in batches.
+  async function loadAll(buildQuery) {
+    const PAGE = 1000;
+    const rows = [];
+    for (let from = 0; ; from += PAGE) {
+      const { data: batch, error: batchError } = await buildQuery().range(from, from + PAGE - 1);
+      if (batchError) throw batchError;
+      rows.push(...(batch || []));
+      if (!batch || batch.length < PAGE) break;
+    }
+    return rows;
+  }
+
+  let data, tierRows, noteRows;
+  try {
+    [data, tierRows, noteRows] = await Promise.all([
+      loadAll(() => supabase().from('weekly_rankings').select(selectCols).eq('creator_id', creator_id).order('week').order('rank')),
+      loadAll(() => supabase().from('weekly_ranking_tiers').select('week, position, tiers').eq('creator_id', creator_id)),
+      loadAll(() => supabase().from('weekly_rankings_notes').select('week, note').eq('creator_id', creator_id)),
+    ]);
+  } catch (err) {
+    return Response.json({ error: err.message }, { status: 500 });
+  }
 
   const weeks = {};
   for (const row of data || []) {
