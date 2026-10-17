@@ -39,12 +39,14 @@ export async function GET() {
           .eq('season', CURRENT_SEASON)
           .eq('season_type', 'regular')
           .not('fantasy_points', 'is', null)
+          .order('id')
       ),
       loadAll(() =>
         supabase()
           .from('players')
           .select('id, name, position, team, espn_id, sleeper_id')
           .in('position', PROJECTABLE_POSITIONS)
+          .order('id')
       ),
     ]);
   } catch (err) {

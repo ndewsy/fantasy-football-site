@@ -69,8 +69,8 @@ export async function GET(request) {
   try {
     [data, tierRows, noteRows] = await Promise.all([
       loadAll(() => supabase().from('weekly_rankings').select(selectCols).eq('creator_id', creator_id).order('week').order('rank')),
-      loadAll(() => supabase().from('weekly_ranking_tiers').select('week, position, tiers').eq('creator_id', creator_id)),
-      loadAll(() => supabase().from('weekly_rankings_notes').select('week, note').eq('creator_id', creator_id)),
+      loadAll(() => supabase().from('weekly_ranking_tiers').select('week, position, tiers').eq('creator_id', creator_id).order('week')),
+      loadAll(() => supabase().from('weekly_rankings_notes').select('week, note').eq('creator_id', creator_id).order('week')),
     ]);
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
