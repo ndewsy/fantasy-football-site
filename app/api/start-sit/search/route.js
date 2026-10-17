@@ -4,8 +4,16 @@ import { getAuthedUser } from '@/lib/getUser';
 let _supabase;
 const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY));
 
-// Only surfaces players who currently have at least one upcoming prop line —
-// there's nothing to project for anyone else, so no point showing them in the picker.
+const PROJECTABLE_POSITIONS = ['QB', 'RB', 'WR', 'TE'];
+
+// Just finds the player by name — doesn't require an existing prop line.
+// Betting lines are fetched on demand the moment a player is actually added
+// to a comparison (see lib/ensurePlayerProps.js), so requiring one here
+// (as this used to, from the old bulk-sync era where every active player
+// already had lines cached) meant almost nobody could ever be found: a
+// player only gets a cached line *after* being added via search, so an
+// "already has a line" filter left the picker essentially empty once the
+// bulk cron was turned off.
 export async function GET(request) {
   const authed = await getAuthedUser(request);
   if (!authed) return Response.json({ error: 'Unauthorized' }, { status: 401 });
@@ -13,29 +21,17 @@ export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const q = (searchParams.get('q') || '').trim();
 
-  // Single query: name match + an inner join on player_prop_lines filtered
-  // to upcoming games, in one round trip. A player can have multiple prop
-  // lines for the same game (one row per stat), so dedupe by id after.
-  // With no query yet (just focused the box), skip the name filter so
-  // browsing shows the full available pool instead of an empty box.
   let query = supabase()
     .from('players')
-    .select('id, name, position, team, espn_id, sleeper_id, player_prop_lines!inner(game_starts_at)')
-    .gt('player_prop_lines.game_starts_at', new Date().toISOString())
+    .select('id, name, position, team, espn_id, sleeper_id')
+    .in('position', PROJECTABLE_POSITIONS)
+    .neq('team', 'FA')
     .order('name')
-    .limit(50);
+    .limit(15);
   if (q.length > 0) query = query.ilike('name', `%${q}%`);
 
   const { data, error } = await query;
   if (error) return Response.json({ error: error.message }, { status: 500 });
 
-  const seen = new Set();
-  const players = [];
-  for (const { player_prop_lines, ...p } of data || []) {
-    if (seen.has(p.id)) continue;
-    seen.add(p.id);
-    players.push(p);
-    if (players.length >= 15) break;
-  }
-  return Response.json({ players });
+  return Response.json({ players: data || [] });
 }
