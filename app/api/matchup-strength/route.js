@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { computeMatchupStats, tiersFromStats } from '@/lib/matchupStrength';
 import { getTuesdayResetWeek } from '@/lib/currentWeek';
+import { ensureFreshWeekStats } from '@/lib/syncWeekStats';
 
 let _supabase;
 const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY));
@@ -34,6 +35,12 @@ async function fetchAllRows(table, selectCols, applyFilters) {
 // same "active week", which only advances Tuesday morning rather than
 // the instant the last game of the week ends.
 export async function GET() {
+  try {
+    await ensureFreshWeekStats();
+  } catch (err) {
+    console.error('[/api/matchup-strength] on-demand sync failed:', err);
+  }
+
   try {
     const games = await fetchAllRows('season_games', 'week, status, kickoff_at, home_team, away_team');
     const week = getTuesdayResetWeek(games);

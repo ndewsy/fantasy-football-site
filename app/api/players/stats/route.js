@@ -1,11 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
+import { ensureFreshWeekStats, CURRENT_SEASON } from '@/lib/syncWeekStats';
 
 let _supabase;
 const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY));
 
-// The season currently in progress — matches the constant in
-// app/api/cron/sync-week-stats/route.js and app/api/player-stats/route.js.
-const CURRENT_SEASON = 2026;
 const PROJECTABLE_POSITIONS = ['QB', 'RB', 'WR', 'TE'];
 
 // Supabase caps an unpaginated select at 1000 rows — both queries below
@@ -29,6 +27,12 @@ async function loadAll(buildQuery) {
 // fantasyPointsFromRealStats), so this just sums/counts it per player
 // rather than recomputing from raw stats.
 export async function GET() {
+  try {
+    await ensureFreshWeekStats();
+  } catch (err) {
+    console.error('[/api/players/stats] on-demand sync failed:', err);
+  }
+
   let weekRows, players;
   try {
     [weekRows, players] = await Promise.all([
