@@ -78,11 +78,12 @@ export default function PlayersPage() {
           </div>
         ) : (
           <div className="bg-card/60 backdrop-blur-md rounded-xl border border-card/70 shadow-lg overflow-hidden">
-            <div className="grid grid-cols-[2.5rem_1fr_auto_auto_auto] items-center gap-3 px-4 py-2.5 border-b border-gray-100/80 bg-card/40">
+            <div className="grid grid-cols-[1.5rem_2.5rem_1fr_4.5rem_3rem_4.5rem] items-center gap-4 px-4 py-2.5 border-b border-gray-100/80 bg-card/40">
+              <span />
               <span />
               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Player</span>
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right">{mode === "avg" ? "Avg PPG" : "Total Pts"}</span>
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right">GP</span>
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider text-center">{mode === "avg" ? "Avg PPG" : "Total Pts"}</span>
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider text-center">GP</span>
               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right">Next</span>
             </div>
 
@@ -95,10 +96,11 @@ export default function PlayersPage() {
                 return (
                   <div
                     key={p.id}
-                    className={`grid grid-cols-[2.5rem_1fr_auto_auto_auto] items-center gap-3 px-4 py-2.5 ${
+                    className={`grid grid-cols-[1.5rem_2.5rem_1fr_4.5rem_3rem_4.5rem] items-center gap-4 px-4 py-2.5 ${
                       i % 2 === 0 ? "bg-card/20" : ""
                     }`}
                   >
+                    <span className="text-xs text-gray-400 font-mono text-right">{position === "All" ? i + 1 : ""}</span>
                     <PlayerHeadshot espnId={p.espn_id} sleeperId={p.sleeper_id} name={p.name} size="tableRow" />
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-ink truncate">{p.name}</p>
@@ -106,8 +108,8 @@ export default function PlayersPage() {
                         <span className="font-bold text-[#2563EB]">{p.position}{rank}</span> · {p.team}
                       </p>
                     </div>
-                    <span className="text-sm font-bold text-ink tabular-nums text-right">{points.toFixed(1)}</span>
-                    <span className="text-sm text-gray-400 tabular-nums text-right">{p.gamesPlayed}</span>
+                    <span className="text-sm font-bold text-ink tabular-nums text-center">{points.toFixed(1)}</span>
+                    <span className="text-sm text-gray-400 tabular-nums text-center">{p.gamesPlayed}</span>
                     <span
                       className={`text-xs shrink-0 px-1.5 py-0.5 rounded text-right ${
                         matchup ? (MATCHUP_TIER_CLASSES[tierInfo?.tier] || "text-gray-400") : "text-gray-400"
