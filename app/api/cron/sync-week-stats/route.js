@@ -60,6 +60,7 @@ export async function GET(request) {
       .from('players')
       .select('id, sleeper_id')
       .not('sleeper_id', 'is', null)
+      .order('id')
       .range(from, from + PAGE - 1);
     if (playersError) return Response.json({ error: playersError.message }, { status: 500 });
     players.push(...data);

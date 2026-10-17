@@ -79,5 +79,16 @@ export async function GET() {
     });
   }
 
+  // Positional rank within each of QB/RB/WR/TE, separately for total and
+  // average — e.g. "QB1" by total isn't necessarily "QB1" by average, so
+  // both get computed rather than deriving one from the other.
+  for (const pos of PROJECTABLE_POSITIONS) {
+    const group = rows.filter((r) => r.position === pos);
+    const byTotal = [...group].sort((a, b) => b.totalPoints - a.totalPoints);
+    byTotal.forEach((r, i) => { r.totalRank = i + 1; });
+    const byAvg = [...group].sort((a, b) => b.avgPoints - a.avgPoints);
+    byAvg.forEach((r, i) => { r.avgRank = i + 1; });
+  }
+
   return Response.json({ season: CURRENT_SEASON, players: rows });
 }

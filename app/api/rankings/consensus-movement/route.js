@@ -18,7 +18,7 @@ export async function GET(request) {
 
   const playersData = [];
   for (let from = 0; ; from += 1000) {
-    const { data: batch } = await supabase().from('players').select('id, name, position, team, espn_id, sleeper_id').range(from, from + 999);
+    const { data: batch } = await supabase().from('players').select('id, name, position, team, espn_id, sleeper_id').order('id').range(from, from + 999);
     playersData.push(...(batch || []));
     if (!batch || batch.length < 1000) break;
   }

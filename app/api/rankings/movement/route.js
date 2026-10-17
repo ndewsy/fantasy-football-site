@@ -28,7 +28,7 @@ export async function GET(request) {
   // Build id→name lookup for expanding integer arrays
   const playersData = [];
   for (let from = 0; ; from += 1000) {
-    const { data: batch } = await supabase().from('players').select('id, name').range(from, from + 999);
+    const { data: batch } = await supabase().from('players').select('id, name').order('id').range(from, from + 999);
     playersData.push(...(batch || []));
     if (!batch || batch.length < 1000) break;
   }

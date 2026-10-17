@@ -68,25 +68,38 @@ export async function GET(request) {
   // season-long positional finish, rather than a separate query for each.
   const weeklyRankRows = new Map(); // week -> [{player_id, points}]
   const seasonTotalsByPlayer = new Map(); // player_id -> points
+  const seasonGamesByPlayer = new Map(); // player_id -> games played, for the average-based finish
   // Every player-week row at this position, reshaped for
   // computeMatchupStats — reused below to grade each game-log week's
   // opponent the same way the Matchups tab does, just re-run per week so
   // week W's grade only ever reflects weeks 1..W-1 (see lib/matchupStrength.js).
   const positionWeekStatsForMatchup = [];
   if (position) {
-    const { data: positionRows, error: positionError } = await supabase()
-      .from('player_week_stats')
-      .select('player_id, week, stats, opponent')
-      .eq('season', season)
-      .eq('season_type', 'regular')
-      .eq('position', position);
-    if (positionError) return Response.json({ error: positionError.message }, { status: 500 });
+    // Past full seasons for RB/TE/WR already exceed Supabase's 1000-row cap
+    // on a plain select (WR alone is 2000+ rows some years) — paginate with
+    // a deterministic .order() so pages don't drop or double-count rows.
+    const positionRows = [];
+    const PAGE = 1000;
+    for (let from = 0; ; from += PAGE) {
+      const { data: batch, error: positionError } = await supabase()
+        .from('player_week_stats')
+        .select('player_id, week, stats, opponent')
+        .eq('season', season)
+        .eq('season_type', 'regular')
+        .eq('position', position)
+        .order('id')
+        .range(from, from + PAGE - 1);
+      if (positionError) return Response.json({ error: positionError.message }, { status: 500 });
+      positionRows.push(...(batch || []));
+      if (!batch || batch.length < PAGE) break;
+    }
 
-    for (const row of positionRows || []) {
+    for (const row of positionRows) {
       const points = statsFantasyPoints(row.stats || {});
       if (!weeklyRankRows.has(row.week)) weeklyRankRows.set(row.week, []);
       weeklyRankRows.get(row.week).push({ player_id: row.player_id, points });
       seasonTotalsByPlayer.set(row.player_id, (seasonTotalsByPlayer.get(row.player_id) || 0) + points);
+      seasonGamesByPlayer.set(row.player_id, (seasonGamesByPlayer.get(row.player_id) || 0) + 1);
       positionWeekStatsForMatchup.push({ position, opponent: row.opponent, week: row.week, fantasy_points: points });
     }
     for (const list of weeklyRankRows.values()) list.sort((a, b) => b.points - a.points);
@@ -152,6 +165,13 @@ export async function GET(request) {
     ) / 100;
     const sortedSeasonTotals = [...seasonTotalsByPlayer.entries()].sort((a, b) => b[1] - a[1]);
     const finishIdx = sortedSeasonTotals.findIndex(([pid]) => pid === numericPlayerId);
+    // Same idea, ranked by average instead of total — a player who's missed
+    // games isn't necessarily worse per-game, so this isn't just a reread of
+    // the total-based finish above.
+    const sortedSeasonAverages = [...seasonTotalsByPlayer.entries()]
+      .map(([pid, total]) => [pid, total / (seasonGamesByPlayer.get(pid) || 1)])
+      .sort((a, b) => b[1] - a[1]);
+    const finishAvgIdx = sortedSeasonAverages.findIndex(([pid]) => pid === numericPlayerId);
     seasonTotals = {
       season,
       position,
@@ -159,6 +179,7 @@ export async function GET(request) {
       stats: sums,
       fantasy_points,
       fantasy_finish: finishIdx >= 0 ? finishIdx + 1 : null,
+      fantasy_finish_avg: finishAvgIdx >= 0 ? finishAvgIdx + 1 : null,
     };
   }
 

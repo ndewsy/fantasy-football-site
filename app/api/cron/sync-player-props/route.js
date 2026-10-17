@@ -22,6 +22,7 @@ async function fetchAllPlayers() {
     const { data, error } = await supabase()
       .from('players')
       .select('id, name, position, team')
+      .order('id')
       .range(from, from + PAGE - 1);
     if (error) throw error;
     all.push(...data);

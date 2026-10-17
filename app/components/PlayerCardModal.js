@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import PlayerHeadshot from "@/app/components/PlayerHeadshot";
+import StatsModeSlider from "@/app/components/StatsModeSlider";
 import { anton } from "@/lib/fonts";
 import { riskColor } from "@/lib/riskColor";
 import { teamColors } from "@/lib/teamColors";
@@ -246,7 +247,7 @@ export default function PlayerCardModal({
   const [seasonStatsLoading, setSeasonStatsLoading] = useState(true);
   const [gameLog, setGameLog] = useState([]);
   const [showAllGames, setShowAllGames] = useState(false);
-  const [statsMode, setStatsMode] = useState("total"); // "total" | "perGame"
+  const [statsMode, setStatsMode] = useState("perGame"); // "total" | "perGame" — defaults to average
   const [logMode, setLogMode] = useState("weekly"); // "weekly" | "season"
   const [logSeason, setLogSeason] = useState(CURRENT_SEASON);
   const [waiverMentions, setWaiverMentions] = useState([]);
@@ -740,27 +741,23 @@ export default function PlayerCardModal({
                       ? Math.round((seasonTotals.fantasy_points / seasonTotals.games_played) * 10) / 10
                       : seasonTotals.fantasy_points} pts
                   </span>
-                  {seasonTotals.fantasy_finish && (
+                  {(statsMode === "perGame" ? seasonTotals.fantasy_finish_avg : seasonTotals.fantasy_finish) != null && (
                     <span className="text-[10px] font-bold uppercase bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
-                      {seasonTotals.position}{seasonTotals.fantasy_finish}
+                      {seasonTotals.position}{statsMode === "perGame" ? seasonTotals.fantasy_finish_avg : seasonTotals.fantasy_finish}
                     </span>
                   )}
                 </div>
               </div>
               <div className="flex items-center justify-end mb-2">
-                <div className="inline-flex items-center bg-white/5 border border-white/10 rounded-full p-0.5">
-                  {[{ id: "total", label: "Total" }, { id: "perGame", label: "Per Game" }].map((mode) => (
-                    <button
-                      key={mode.id}
-                      onClick={() => setStatsMode(mode.id)}
-                      className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wide transition-colors ${
-                        statsMode === mode.id ? "bg-blue-600 text-white" : "text-gray-400 hover:text-ink"
-                      }`}
-                    >
-                      {mode.label}
-                    </button>
-                  ))}
-                </div>
+                <StatsModeSlider
+                  active={statsMode}
+                  leftValue="perGame"
+                  rightValue="total"
+                  leftLabel="Avg PPG"
+                  rightLabel="Total"
+                  onChange={setStatsMode}
+                  variant="dark"
+                />
               </div>
               <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
                 {seasonStatLine(seasonTotals.position, seasonTotals.stats, statsMode === "perGame", seasonTotals.games_played).map((s) => (

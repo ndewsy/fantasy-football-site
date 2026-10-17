@@ -10,10 +10,14 @@ const CURRENT_SEASON = 2026;
 const SEASON_TYPE = 'regular';
 const PAGE = 1000;
 
+// .range()-based pagination needs a deterministic .order() — without one,
+// Postgres can return rows in a different order between page requests, so
+// the same row can land on two pages and get double-counted. player_week_stats
+// alone is already past the 1000-row page size this season.
 async function fetchAllRows(table, selectCols, applyFilters) {
   const all = [];
   for (let from = 0; ; from += PAGE) {
-    let query = supabase().from(table).select(selectCols).range(from, from + PAGE - 1);
+    let query = supabase().from(table).select(selectCols).order('id').range(from, from + PAGE - 1);
     if (applyFilters) query = applyFilters(query);
     const { data, error } = await query;
     if (error) throw error;
