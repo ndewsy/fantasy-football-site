@@ -76,6 +76,14 @@ function DashboardIcon(props) {
     </svg>
   );
 }
+function PlayerStatsIcon(props) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="2.5" y="3" width="15" height="14" rx="1.5" />
+      <path d="M2.5 8h15M7 8v9" />
+    </svg>
+  );
+}
 function AccountIcon(props) {
   return (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -161,6 +169,7 @@ export default function NavBar({ activePath = "/" }) {
     { href: "/start-sit", label: "Start/Sit", icon: StartSitIcon },
     { href: "/auction", label: "Auction Draft", icon: AuctionIcon },
     { href: "/posts", label: "Posts", icon: CreatorsIcon },
+    { href: "/players", label: "Player Stats", icon: PlayerStatsIcon },
     ...(user ? [{ href: "/matchups", label: "Matchups", icon: MatchupsIcon }] : []),
     { href: "/feedback", label: "Feedback", icon: FeedbackIcon },
     ...(isDashboardUser ? [{ href: "/waiver-wire", label: "Waiver Wire", icon: WaiverWireIcon }] : []),
