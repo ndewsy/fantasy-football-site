@@ -167,7 +167,6 @@ export default function NavBar({ activePath = "/" }) {
   const links = [
     { href: "/", label: "Rankings", icon: RankingsIcon },
     { href: "/start-sit", label: "Start/Sit", icon: StartSitIcon },
-    { href: "/auction", label: "Auction Draft", icon: AuctionIcon },
     { href: "/posts", label: "Posts", icon: CreatorsIcon },
     { href: "/players", label: "Player Stats", icon: PlayerStatsIcon },
     ...(user ? [{ href: "/matchups", label: "Matchups", icon: MatchupsIcon }] : []),
