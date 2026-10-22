@@ -40,6 +40,42 @@ export default function RosRankingsEditor({ creatorId, creatorLabel }) {
   const [token, setToken] = useState(null);
   const dragIndex = useRef(null);
   const dragTierRank = useRef(null);
+  // True right after rows/tiers were just set from a fetch (not a user
+  // edit) — the autosave effect below checks this so loading a position
+  // doesn't immediately re-save the data it just received.
+  const skipNextAutosave = useRef(true);
+  const autosaveTimer = useRef(null);
+  const pendingAutosave = useRef(null);
+
+  function postRankings(snapshot) {
+    return fetch("/api/ros-rankings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      // keepalive lets a save flushed on unmount finish after navigation.
+      keepalive: true,
+      body: JSON.stringify({
+        creator_id: creatorId,
+        position: snapshot.position,
+        entries: snapshot.rows.map((r) => ({ player_id: r.player_id })),
+        tiers: snapshot.tiers,
+      }),
+    });
+  }
+
+  // Autosave path — rankings only. The disclaimer keeps its own explicit
+  // Save button so a half-typed note never gets published mid-sentence.
+  async function saveRankings(snapshot) {
+    if (!token || !creatorId) return;
+    setSaving(true);
+    try {
+      const res = await postRankings(snapshot);
+      if (res.ok) setSavedAt(new Date().toISOString());
+    } catch {
+      // Unmounted / offline — nothing to update; the next edit retries.
+    } finally {
+      setSaving(false);
+    }
+  }
 
   useEffect(() => {
     async function loadPool() {
@@ -65,7 +101,16 @@ export default function RosRankingsEditor({ creatorId, creatorLabel }) {
 
   useEffect(() => {
     if (!creatorId) return;
+    // Flush an edit still waiting on its debounce before switching away, so
+    // a quick edit on the new position can't cancel the old one's save.
+    if (autosaveTimer.current) {
+      clearTimeout(autosaveTimer.current);
+      autosaveTimer.current = null;
+      pendingAutosave.current?.();
+      pendingAutosave.current = null;
+    }
     setLoading(true);
+    skipNextAutosave.current = true;
     fetch(`/api/ros-rankings?creator_id=${encodeURIComponent(creatorId)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
@@ -79,6 +124,36 @@ export default function RosRankingsEditor({ creatorId, creatorLabel }) {
       })
       .finally(() => setLoading(false));
   }, [creatorId, position]);
+
+  // Autosaves whenever the ranked list or its tiers change from a user action
+  // (add/remove/move/drag a player, or add/remove/drag a tier break) —
+  // debounced so a drag gesture (which live-splices rows on every dragover)
+  // collapses into one request once the user stops moving things. Unlike
+  // Weekly Rankings, the payload is snapshotted when scheduled and a position
+  // switch flushes it (see the fetch effect) rather than cancelling it, so an
+  // edit made right before clicking another tab saves to the position it was made on.
+  useEffect(() => {
+    if (loading) return;
+    if (skipNextAutosave.current) {
+      skipNextAutosave.current = false;
+      return;
+    }
+    const snapshot = { position, rows, tiers };
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    pendingAutosave.current = () => saveRankings(snapshot);
+    autosaveTimer.current = setTimeout(() => {
+      autosaveTimer.current = null;
+      pendingAutosave.current = null;
+      saveRankings(snapshot);
+    }, 800);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, tiers, loading]);
+
+  // Leaving the page mid-debounce flushes the pending save instead of dropping it.
+  useEffect(() => () => {
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    pendingAutosave.current?.();
+  }, []);
 
   const byId = Object.fromEntries(playerPool.map((p) => [p.id, p]));
   const usedIds = new Set(rows.map((r) => r.player_id));
@@ -135,8 +210,8 @@ export default function RosRankingsEditor({ creatorId, creatorLabel }) {
   }
 
   // Native HTML5 drag-and-drop, same pattern as WeeklyRankingsEditor —
-  // reorders rows live as you drag over them; the existing Save button
-  // below persists it, same as the ▲/▼ buttons.
+  // reorders rows live as you drag over them; the autosave effect above
+  // persists it, same as the ▲/▼ buttons.
   function handleDragStart(e, index) {
     dragIndex.current = index;
     dragTierRank.current = null;
@@ -182,19 +257,13 @@ export default function RosRankingsEditor({ creatorId, creatorLabel }) {
 
   async function save() {
     if (!token || !creatorId) return;
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = null;
+    pendingAutosave.current = null;
     setSaving(true);
     try {
       const [res] = await Promise.all([
-        fetch("/api/ros-rankings", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({
-            creator_id: creatorId,
-            position,
-            entries: rows.map((r) => ({ player_id: r.player_id })),
-            tiers,
-          }),
-        }),
+        postRankings({ position, rows, tiers }),
         fetch("/api/ros-rankings/note", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -358,14 +427,18 @@ export default function RosRankingsEditor({ creatorId, creatorLabel }) {
 
           <div className="flex items-center justify-between mt-4">
             <p className="text-xs text-gray-400">
-              {savedAt ? `Saved ${new Date(savedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : "Not saved yet"}
+              {saving
+                ? "Saving..."
+                : savedAt
+                ? `Changes save automatically — saved ${new Date(savedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`
+                : "Changes save automatically"}
             </p>
             <button
               onClick={save}
               disabled={saving}
               className="bg-gradient-to-br from-[#2563EB] to-[#1E40AF] hover:brightness-110 disabled:opacity-50 text-white font-bold px-5 py-2 rounded-lg text-sm transition-all"
             >
-              {saving ? "Saving..." : "Save"}
+              {saving ? "Saving..." : "Save now"}
             </button>
           </div>
         </>
