@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { computeMatchupStats, tiersFromStats } from '@/lib/matchupStrength';
+import { computeMatchupStats, computeMatchupHistory, tiersFromStats } from '@/lib/matchupStrength';
 import { getTuesdayResetWeek } from '@/lib/currentWeek';
 import { ensureFreshWeekStats } from '@/lib/syncWeekStats';
 
@@ -10,6 +10,7 @@ const supabase = () => (_supabase ??= createClient(process.env.NEXT_PUBLIC_SUPAB
 const CURRENT_SEASON = 2026;
 const SEASON_TYPE = 'regular';
 const PAGE = 1000;
+const HISTORY_POSITIONS = ['QB', 'RB', 'WR', 'TE'];
 
 // .range()-based pagination needs a deterministic .order() — without one,
 // Postgres can return rows in a different order between page requests, so
@@ -31,7 +32,7 @@ async function fetchAllRows(table, selectCols, applyFilters) {
 // Defense-vs-Position "strength of matchup" — see lib/matchupStrength.js.
 // Returns the compact team->position->tier map (for coloring a single
 // matchup badge), the full per-position breakdown (rank, avg/high/low
-// points allowed), and each team's actual next opponent — all for the
+// points allowed), who scored what against each defense, and each team's actual next opponent — all for the
 // same "active week", which only advances Tuesday morning rather than
 // the instant the last game of the week ends.
 export async function GET() {
@@ -47,11 +48,30 @@ export async function GET() {
 
     const weekStatsRows = await fetchAllRows(
       'player_week_stats',
-      'position, opponent, week, fantasy_points',
+      'player_id, position, opponent, week, fantasy_points',
       (q) => q.eq('season', CURRENT_SEASON).eq('season_type', SEASON_TYPE)
     );
 
     const stats = computeMatchupStats(weekStatsRows, week);
+
+    // Names for the per-team drill-down, chunked so the .in() list stays
+    // well under URL length limits.
+    const historyRows = weekStatsRows.filter((r) => HISTORY_POSITIONS.includes(r.position) && r.week < week);
+    const playerIds = [...new Set(historyRows.map((r) => r.player_id))];
+    const namesById = {};
+    for (let i = 0; i < playerIds.length; i += 300) {
+      const { data, error } = await supabase().from('players').select('id, name').in('id', playerIds.slice(i, i + 300));
+      if (error) throw error;
+      for (const p of data || []) namesById[p.id] = p.name;
+    }
+
+    const offenseByWeekTeam = {};
+    for (const g of games) {
+      if (!g.home_team || !g.away_team) continue;
+      offenseByWeekTeam[`${g.week}|${g.home_team}`] = g.away_team;
+      offenseByWeekTeam[`${g.week}|${g.away_team}`] = g.home_team;
+    }
+    const history = computeMatchupHistory(historyRows, week, namesById, offenseByWeekTeam);
 
     const nextMatchups = {};
     for (const g of games) {
@@ -60,7 +80,7 @@ export async function GET() {
       nextMatchups[g.away_team] = { opponent: g.home_team, homeAway: 'away' };
     }
 
-    return Response.json({ week, weeksUsed: week - 1, stats, tiers: tiersFromStats(stats), nextMatchups });
+    return Response.json({ week, weeksUsed: week - 1, stats, tiers: tiersFromStats(stats), nextMatchups, history });
   } catch (err) {
     console.error('[/api/matchup-strength] failed:', err);
     return Response.json({ error: err.message }, { status: 500 });

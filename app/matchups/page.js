@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import NavBar from "@/app/components/NavBar";
 import PageTitle from "@/app/components/PageTitle";
 import PillToggle from "@/app/components/PillToggle";
-import { MATCHUP_TIER_LABELS, MATCHUP_TIER_CLASSES } from "@/lib/matchupStrength";
+import { MATCHUP_TIER_LABELS, MATCHUP_TIER_CLASSES, NOTABLE_MIN_POINTS } from "@/lib/matchupStrength";
 
 const POSITIONS = ["QB", "RB", "WR", "TE"];
 
@@ -14,6 +14,8 @@ export default function MatchupsPage() {
   const [weeksUsed, setWeeksUsed] = useState(0);
   const [stats, setStats] = useState({});
   const [nextMatchups, setNextMatchups] = useState({});
+  const [history, setHistory] = useState({});
+  const [expandedTeam, setExpandedTeam] = useState(null);
 
   useEffect(() => {
     fetch("/api/matchup-strength")
@@ -23,6 +25,7 @@ export default function MatchupsPage() {
         setWeek(d?.week ?? null);
         setWeeksUsed(d?.weeksUsed ?? 0);
         setNextMatchups(d?.nextMatchups || {});
+        setHistory(d?.history || {});
       })
       .finally(() => setLoading(false));
   }, []);
@@ -55,7 +58,7 @@ export default function MatchupsPage() {
           </div>
         ) : (
           <>
-            <PillToggle options={POSITIONS} value={position} onChange={setPosition} className="mb-5" />
+            <PillToggle options={POSITIONS} value={position} onChange={(p) => { setPosition(p); setExpandedTeam(null); }} className="mb-5" />
 
             <div className="flex flex-wrap items-center gap-2 justify-center mb-5">
               {Object.entries(MATCHUP_TIER_LABELS).map(([tier, label]) => (
@@ -79,10 +82,15 @@ export default function MatchupsPage() {
               <div className="divide-y divide-gray-100/60">
                 {rows.map((row, i) => {
                   const next = nextMatchups[row.team];
+                  const expanded = expandedTeam === row.team;
+                  const weeks = history[position]?.[row.team] || [];
                   return (
-                    <div
-                      key={row.team}
-                      className={`grid grid-cols-[2.5rem_1fr_4rem_6rem_3.5rem_3.5rem_3.5rem] items-center gap-3 px-4 py-3 ${i % 2 === 0 ? "bg-card/20" : ""}`}
+                    <div key={row.team} className={i % 2 === 0 ? "bg-card/20" : ""}>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedTeam(expanded ? null : row.team)}
+                      aria-expanded={expanded}
+                      className="w-full text-left grid grid-cols-[2.5rem_1fr_4rem_6rem_3.5rem_3.5rem_3.5rem] items-center gap-3 px-4 py-3 cursor-pointer hover:bg-card/40 transition-colors"
                     >
                       <span className="text-sm text-gray-400 font-mono">{row.rank}</span>
                       <span className="text-sm font-semibold text-ink">{row.team}</span>
@@ -95,6 +103,39 @@ export default function MatchupsPage() {
                       <span className="text-sm font-bold text-ink tabular-nums text-right">{row.avgAllowed.toFixed(1)}</span>
                       <span className="text-sm text-gray-400 tabular-nums text-right">{row.high.toFixed(1)}</span>
                       <span className="text-sm text-gray-400 tabular-nums text-right">{row.low.toFixed(1)}</span>
+                    </button>
+                    {expanded && (
+                      <div className="px-4 pb-4 pt-1">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+                          {position === "QB" ? "QBs vs" : `Notable ${position}s vs`} {row.team}
+                        </p>
+                        {weeks.length === 0 ? (
+                          <p className="text-xs text-gray-400">No games yet.</p>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {weeks.map((w) => (
+                              <div key={w.week} className="grid grid-cols-[3rem_3rem_1fr] items-start gap-3 text-sm">
+                                <span className="text-xs text-gray-400 font-mono pt-0.5">WK {w.week}</span>
+                                <span className="text-xs font-semibold text-gray-500 pt-0.5">{w.offense || ""}</span>
+                                <div className="space-y-0.5">
+                                  {w.players.map((p, j) => (
+                                    <div key={j} className="flex items-center justify-between gap-3">
+                                      <span className="text-ink truncate">{p.name}</span>
+                                      <span className="font-bold text-ink tabular-nums">{p.points.toFixed(1)}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {position !== "QB" && (
+                          <p className="text-[10px] text-gray-400 mt-2">
+                            Shows {NOTABLE_MIN_POINTS}+ PPR games, plus each week&apos;s top scorer.
+                          </p>
+                        )}
+                      </div>
+                    )}
                     </div>
                   );
                 })}
@@ -102,7 +143,7 @@ export default function MatchupsPage() {
             </div>
 
             <p className="text-[11px] text-gray-400 mt-3 text-center">
-              Avg/High/Low are fantasy points (PPR) allowed to {position} per game this season, ranked highest-allowed (easiest) to lowest-allowed (hardest).
+              Avg/High/Low are fantasy points (PPR) allowed to {position} per game this season, ranked highest-allowed (easiest) to lowest-allowed (hardest). Tap a team to see who scored against them.
             </p>
           </>
         )}
