@@ -48,7 +48,7 @@ export async function GET() {
 
     const weekStatsRows = await fetchAllRows(
       'player_week_stats',
-      'player_id, position, opponent, week, fantasy_points',
+      'player_id, position, opponent, week, fantasy_points, pass_att:stats->pass_att',
       (q) => q.eq('season', CURRENT_SEASON).eq('season_type', SEASON_TYPE)
     );
 

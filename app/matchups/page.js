@@ -93,7 +93,12 @@ export default function MatchupsPage() {
                       className="w-full text-left grid grid-cols-[2.5rem_1fr_4rem_6rem_3.5rem_3.5rem_3.5rem] items-center gap-3 px-4 py-3 cursor-pointer hover:bg-card/40 transition-colors"
                     >
                       <span className="text-sm text-gray-400 font-mono">{row.rank}</span>
-                      <span className="text-sm font-semibold text-ink">{row.team}</span>
+                      <span className="flex items-center gap-1.5 text-sm font-semibold text-ink">
+                        <svg viewBox="0 0 20 20" fill="currentColor" className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-300 ${expanded ? "rotate-90" : ""}`} aria-hidden="true">
+                          <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.168 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z" clipRule="evenodd" />
+                        </svg>
+                        {row.team}
+                      </span>
                       <span className="text-xs text-gray-400">
                         {next ? `${next.homeAway === "home" ? "vs" : "@"} ${next.opponent}` : "BYE"}
                       </span>
@@ -104,10 +109,17 @@ export default function MatchupsPage() {
                       <span className="text-sm text-gray-400 tabular-nums text-right">{row.high.toFixed(1)}</span>
                       <span className="text-sm text-gray-400 tabular-nums text-right">{row.low.toFixed(1)}</span>
                     </button>
-                    {expanded && (
+                    {/* Always rendered so the open/close can animate — the
+                        0fr -> 1fr grid-row trick transitions to the content's
+                        natural height without measuring it. */}
+                    <div
+                      className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${expanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+                      aria-hidden={!expanded}
+                    >
+                    <div className="overflow-hidden">
                       <div className="px-4 pb-4 pt-1">
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
-                          {position === "QB" ? "QBs vs" : `Notable ${position}s vs`} {row.team}
+                          {position === "QB" ? "Starting QBs vs" : `Notable ${position}s vs`} {row.team}
                         </p>
                         {weeks.length === 0 ? (
                           <p className="text-xs text-gray-400">No games yet.</p>
@@ -121,7 +133,12 @@ export default function MatchupsPage() {
                                   {w.players.map((p, j) => (
                                     <div key={j} className="flex items-center justify-between gap-3">
                                       <span className="text-ink truncate">{p.name}</span>
-                                      <span className="font-bold text-ink tabular-nums">{p.points.toFixed(1)}</span>
+                                      <span className="flex items-center gap-2 shrink-0">
+                                        <span className="text-[10px] text-gray-400 font-mono">{position}{p.finish}</span>
+                                        <span className={`inline-flex justify-center w-12 text-xs font-bold tabular-nums px-1.5 py-0.5 rounded ${MATCHUP_TIER_CLASSES[p.tier]}`}>
+                                          {p.points.toFixed(1)}
+                                        </span>
+                                      </span>
                                     </div>
                                   ))}
                                 </div>
@@ -129,13 +146,13 @@ export default function MatchupsPage() {
                             ))}
                           </div>
                         )}
-                        {position !== "QB" && (
-                          <p className="text-[10px] text-gray-400 mt-2">
-                            Shows {NOTABLE_MIN_POINTS}+ PPR games, plus each week&apos;s top scorer.
-                          </p>
-                        )}
+                        <p className="text-[10px] text-gray-400 mt-2">
+                          {position !== "QB" && <>Shows {NOTABLE_MIN_POINTS}+ PPR games, plus each week&apos;s top scorer. </>}
+                          Colored by where the game finished among all {position}s that week.
+                        </p>
                       </div>
-                    )}
+                    </div>
+                    </div>
                     </div>
                   );
                 })}
