@@ -10,6 +10,9 @@ const SIZES = {
   "2xl": "w-20 h-20 sm:w-36 sm:h-36 text-xl sm:text-4xl",
   // Compact on mobile, matches "sm" on desktop — for dense table rows.
   tableRow: "w-6 h-6 lg:w-8 lg:h-8 text-[9px] lg:text-[10px]",
+  // Large list rows (public Weekly Rankings) — roomy on desktop, a notch
+  // smaller on mobile so the name and matchup still fit beside it.
+  listRow: "w-12 h-12 sm:w-14 sm:h-14 text-sm",
 };
 
 function initials(name) {

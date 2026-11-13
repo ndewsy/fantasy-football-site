@@ -1178,7 +1178,7 @@ export default function Home() {
                   </div>
                 )}
 
-                <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-5 lg:items-start">
+                <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_28rem] lg:gap-5 lg:items-start">
                 {weeklyRows.length === 0 ? (
                   <p className="text-sm text-gray-400 text-center py-12">
                     {weeklyPosition} Rankings coming soon.
@@ -1194,25 +1194,23 @@ export default function Home() {
                       return (
                       <Fragment key={row.player_id}>
                         {showDivider && (
-                          <div className="w-full flex items-center gap-3 px-4 py-0.5 select-none">
+                          <div className="w-full flex items-center gap-3 px-4 py-2.5 select-none">
                             <div className="flex-1 h-px bg-blue-200" />
-                            <span className="text-[10px] font-semibold text-blue-600 tracking-wider uppercase">Tier {tierNum}</span>
+                            <span className="text-xs font-bold text-blue-600 tracking-wider uppercase">Tier {tierNum}</span>
                             <div className="flex-1 h-px bg-blue-200" />
                           </div>
                         )}
                         <button
                           onClick={() => openPlayerModal(weeklyPoolById[row.player_id] || { id: row.player_id, ...row.players })}
-                          className="w-full flex items-center gap-3 px-4 py-1 hover:bg-gray-50 text-left"
+                          className="w-full flex items-center gap-4 px-4 sm:px-5 py-3.5 hover:bg-gray-50 text-left transition-colors"
                         >
-                          <span className="text-xs text-gray-400 font-mono w-6 shrink-0 text-right">{i + 1}</span>
-                          <PlayerHeadshot espnId={row.players?.espn_id} sleeperId={row.players?.sleeper_id} name={row.players?.name} size="xs" />
-                          {/* Name and team on one line — half the row height
-                              of the old stacked layout. */}
-                          <p className="min-w-0 flex-1 truncate text-sm">
-                            <span className="font-medium text-ink">{row.players?.name}</span>
-                            <span className="text-xs text-gray-400 ml-2">{row.players?.team}</span>
-                          </p>
-                          <span className={`text-xs shrink-0 px-1.5 py-0.5 rounded ${matchup ? (MATCHUP_TIER_CLASSES[weeklyMatchupTiers[matchup.opponent]?.[weeklyPosition]?.tier] || "text-gray-400") : "text-gray-400"}`}>
+                          <span className="text-lg font-bold text-gray-400 tabular-nums w-8 shrink-0 text-right">{i + 1}</span>
+                          <PlayerHeadshot espnId={row.players?.espn_id} sleeperId={row.players?.sleeper_id} name={row.players?.name} size="listRow" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-base sm:text-lg font-semibold text-ink truncate">{row.players?.name}</p>
+                            <p className="text-sm text-gray-400">{row.players?.position} · {row.players?.team}</p>
+                          </div>
+                          <span className={`text-sm font-semibold shrink-0 px-2.5 py-1 rounded ${matchup ? (MATCHUP_TIER_CLASSES[weeklyMatchupTiers[matchup.opponent]?.[weeklyPosition]?.tier] || "text-gray-400") : "text-gray-400"}`}>
                             {matchup ? `${matchup.homeAway === "home" ? "vs" : "@"} ${matchup.opponent} (${weeklyMatchupTiers[matchup.opponent]?.[weeklyPosition]?.rank ?? "-"})` : "BYE"}
                           </span>
                         </button>
@@ -1224,34 +1222,37 @@ export default function Home() {
 
                 {/* Site consensus best starts — every position at once, so
                     it stays useful whichever position tab is open. */}
-                <aside className="mt-6 lg:mt-0 lg:sticky lg:top-6 bg-card/60 backdrop-blur-md border border-gray-100 rounded-xl p-4">
-                  <h3 className="text-sm font-bold text-ink">Site Consensus · Top 5 Starts</h3>
-                  <p className="text-[11px] text-gray-400 mb-3">Average rank across every creator, Week {weeklyWeek}.</p>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                <aside className="mt-6 lg:mt-0 lg:sticky lg:top-6 bg-card/60 backdrop-blur-md border border-gray-100 rounded-xl p-5">
+                  <h3 className="text-base font-bold text-ink">Site Consensus · Top 5 Starts</h3>
+                  <p className="text-xs text-gray-400 mb-4">Average rank across every creator, Week {weeklyWeek}.</p>
+                  <div className="grid grid-cols-2 gap-x-5 gap-y-5">
                     {WEEKLY_POSITIONS.map(({ id: pos, label }) => {
                       const top = weeklyConsensusTop[pos] || [];
                       return (
                         <div key={pos} className="min-w-0">
                           <button
                             onClick={() => setWeeklyPosition(pos)}
-                            className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${pos === weeklyPosition ? "text-blue-600" : "text-gray-400 hover:text-gray-600"}`}
+                            className={`text-xs font-bold uppercase tracking-wider mb-1.5 ${pos === weeklyPosition ? "text-blue-600" : "text-gray-400 hover:text-gray-600"}`}
                           >
                             {label}
                           </button>
                           {top.length === 0 ? (
                             <p className="text-xs text-gray-400">Coming soon</p>
                           ) : (
-                            <ol className="space-y-0.5">
+                            <ol className="space-y-1">
                               {top.map(({ row, avgRank }, i) => (
                                 <li key={row.player_id}>
                                   <button
                                     onClick={() => openPlayerModal(weeklyPoolById[row.player_id] || { id: row.player_id, ...row.players })}
-                                    className="w-full flex items-center gap-1.5 text-left hover:bg-gray-50 rounded px-1 -mx-1"
+                                    className="w-full flex items-center gap-2 text-left hover:bg-gray-50 rounded px-1 py-0.5 -mx-1 transition-colors"
                                     title={`Average rank ${avgRank.toFixed(1)}`}
                                   >
-                                    <span className="text-[10px] text-gray-400 font-mono w-3 shrink-0">{i + 1}</span>
-                                    <span className="text-xs font-medium text-ink truncate flex-1">{row.players?.name}</span>
-                                    <span className="text-[10px] text-gray-400 shrink-0">{row.players?.team}</span>
+                                    <span className="text-xs font-bold text-gray-400 tabular-nums w-3 shrink-0">{i + 1}</span>
+                                    <PlayerHeadshot espnId={row.players?.espn_id} sleeperId={row.players?.sleeper_id} name={row.players?.name} size="sm" />
+                                    <span className="min-w-0 flex-1">
+                                      <span className="block text-sm font-semibold text-ink truncate">{row.players?.name}</span>
+                                      <span className="block text-[11px] text-gray-400">{row.players?.team}</span>
+                                    </span>
                                   </button>
                                 </li>
                               ))}
