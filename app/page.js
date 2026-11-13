@@ -422,6 +422,30 @@ export default function Home() {
   const weeklyRows = weeklyWeek ? (weeklyRankingsData[activeCreator]?.weeks?.[String(weeklyWeek)]?.[weeklyPosition] || []) : [];
   const weeklyTiers = weeklyWeek ? (weeklyRankingsData[activeCreator]?.tiers?.[String(weeklyWeek)]?.[weeklyPosition] || []) : [];
   const weeklyNote = weeklyWeek ? (weeklyRankingsData[activeCreator]?.notes?.[String(weeklyWeek)] || "") : "";
+  // Site consensus top 5 per position for the displayed week — average rank
+  // across every creator who's published that position. A player missing
+  // from a creator's list counts as one spot past the end of it, so being
+  // ranked by only one creator can't vault someone over a unanimous pick.
+  const weeklyConsensusTop = useMemo(() => {
+    const result = {};
+    if (!weeklyWeek) return result;
+    for (const { id: pos } of WEEKLY_POSITIONS) {
+      const lists = ACTIVE_CREATORS
+        .map((c) => weeklyRankingsData[c.id]?.weeks?.[String(weeklyWeek)]?.[pos] || [])
+        .filter((list) => list.length > 0);
+      const rowsById = new Map();
+      for (const list of lists) for (const row of list) if (!rowsById.has(row.player_id)) rowsById.set(row.player_id, row);
+      const rankMaps = lists.map((list) => new Map(list.map((row, i) => [row.player_id, i + 1])));
+      result[pos] = [...rowsById.values()]
+        .map((row) => {
+          const total = rankMaps.reduce((sum, ranks, i) => sum + (ranks.get(row.player_id) ?? lists[i].length + 1), 0);
+          return { row, avgRank: total / lists.length };
+        })
+        .sort((a, b) => a.avgRank - b.avgRank)
+        .slice(0, 5);
+    }
+    return result;
+  }, [weeklyRankingsData, weeklyWeek]);
   // ROS has no week to archive by — it's just whatever the creator has
   // currently ranked for this position.
   const rosRows = rosRankingsData[activeCreator]?.positions?.[rosPosition] || [];
@@ -1121,34 +1145,40 @@ export default function Home() {
               </div>
             </div>
 
-            <PillToggle
-              options={ACTIVE_CREATORS.map((c) => ({ id: c.id, label: c.short }))}
-              value={activeCreator}
-              onChange={handleWeeklyCreatorChange}
-              className="mb-4 !justify-start"
-            />
-
-            {weeklyWeeks.length > 0 && (
-              <>
+            {/* Creator and week share a row to keep the header compact. */}
+            <div className="flex items-center gap-2.5 flex-wrap mb-3">
+              <PillToggle
+                options={ACTIVE_CREATORS.map((c) => ({ id: c.id, label: c.short }))}
+                value={activeCreator}
+                onChange={handleWeeklyCreatorChange}
+                className="!justify-start"
+              />
+              {weeklyWeeks.length > 0 && (
                 <PillToggle
                   options={weeklyWeeks.map((w) => ({ id: String(w), label: `Week ${w}` }))}
                   value={String(weeklyWeek)}
                   onChange={(w) => setWeeklyWeek(Number(w))}
-                  className="mb-4 !justify-start"
+                  className="!justify-start"
                 />
+              )}
+            </div>
+
+            {weeklyWeeks.length > 0 && (
+              <>
                 <PillToggle
                   options={WEEKLY_POSITIONS}
                   value={weeklyPosition}
                   onChange={setWeeklyPosition}
-                  className="mb-5 !justify-start"
+                  className="mb-3 !justify-start"
                 />
 
                 {weeklyNote && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-5">
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 mb-3">
                     <p className="text-xs text-amber-700 whitespace-pre-wrap">{weeklyNote}</p>
                   </div>
                 )}
 
+                <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-5 lg:items-start">
                 {weeklyRows.length === 0 ? (
                   <p className="text-sm text-gray-400 text-center py-12">
                     {weeklyPosition} Rankings coming soon.
@@ -1164,22 +1194,24 @@ export default function Home() {
                       return (
                       <Fragment key={row.player_id}>
                         {showDivider && (
-                          <div className="w-full flex items-center gap-3 px-4 py-2 select-none">
+                          <div className="w-full flex items-center gap-3 px-4 py-0.5 select-none">
                             <div className="flex-1 h-px bg-blue-200" />
-                            <span className="text-xs font-semibold text-blue-600 tracking-wider uppercase">Tier {tierNum}</span>
+                            <span className="text-[10px] font-semibold text-blue-600 tracking-wider uppercase">Tier {tierNum}</span>
                             <div className="flex-1 h-px bg-blue-200" />
                           </div>
                         )}
                         <button
                           onClick={() => openPlayerModal(weeklyPoolById[row.player_id] || { id: row.player_id, ...row.players })}
-                          className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left"
+                          className="w-full flex items-center gap-3 px-4 py-1 hover:bg-gray-50 text-left"
                         >
-                          <span className="text-sm text-gray-400 font-mono w-6 shrink-0 text-right">{i + 1}</span>
-                          <PlayerHeadshot espnId={row.players?.espn_id} sleeperId={row.players?.sleeper_id} name={row.players?.name} size="sm" />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-ink truncate">{row.players?.name}</p>
-                            <p className="text-xs text-gray-400">{row.players?.position} · {row.players?.team}</p>
-                          </div>
+                          <span className="text-xs text-gray-400 font-mono w-6 shrink-0 text-right">{i + 1}</span>
+                          <PlayerHeadshot espnId={row.players?.espn_id} sleeperId={row.players?.sleeper_id} name={row.players?.name} size="xs" />
+                          {/* Name and team on one line — half the row height
+                              of the old stacked layout. */}
+                          <p className="min-w-0 flex-1 truncate text-sm">
+                            <span className="font-medium text-ink">{row.players?.name}</span>
+                            <span className="text-xs text-gray-400 ml-2">{row.players?.team}</span>
+                          </p>
                           <span className={`text-xs shrink-0 px-1.5 py-0.5 rounded ${matchup ? (MATCHUP_TIER_CLASSES[weeklyMatchupTiers[matchup.opponent]?.[weeklyPosition]?.tier] || "text-gray-400") : "text-gray-400"}`}>
                             {matchup ? `${matchup.homeAway === "home" ? "vs" : "@"} ${matchup.opponent} (${weeklyMatchupTiers[matchup.opponent]?.[weeklyPosition]?.rank ?? "-"})` : "BYE"}
                           </span>
@@ -1189,6 +1221,48 @@ export default function Home() {
                     })}
                   </div>
                 )}
+
+                {/* Site consensus best starts — every position at once, so
+                    it stays useful whichever position tab is open. */}
+                <aside className="mt-6 lg:mt-0 lg:sticky lg:top-6 bg-card/60 backdrop-blur-md border border-gray-100 rounded-xl p-4">
+                  <h3 className="text-sm font-bold text-ink">Site Consensus · Top 5 Starts</h3>
+                  <p className="text-[11px] text-gray-400 mb-3">Average rank across every creator, Week {weeklyWeek}.</p>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                    {WEEKLY_POSITIONS.map(({ id: pos, label }) => {
+                      const top = weeklyConsensusTop[pos] || [];
+                      return (
+                        <div key={pos} className="min-w-0">
+                          <button
+                            onClick={() => setWeeklyPosition(pos)}
+                            className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${pos === weeklyPosition ? "text-blue-600" : "text-gray-400 hover:text-gray-600"}`}
+                          >
+                            {label}
+                          </button>
+                          {top.length === 0 ? (
+                            <p className="text-xs text-gray-400">Coming soon</p>
+                          ) : (
+                            <ol className="space-y-0.5">
+                              {top.map(({ row, avgRank }, i) => (
+                                <li key={row.player_id}>
+                                  <button
+                                    onClick={() => openPlayerModal(weeklyPoolById[row.player_id] || { id: row.player_id, ...row.players })}
+                                    className="w-full flex items-center gap-1.5 text-left hover:bg-gray-50 rounded px-1 -mx-1"
+                                    title={`Average rank ${avgRank.toFixed(1)}`}
+                                  >
+                                    <span className="text-[10px] text-gray-400 font-mono w-3 shrink-0">{i + 1}</span>
+                                    <span className="text-xs font-medium text-ink truncate flex-1">{row.players?.name}</span>
+                                    <span className="text-[10px] text-gray-400 shrink-0">{row.players?.team}</span>
+                                  </button>
+                                </li>
+                              ))}
+                            </ol>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </aside>
+                </div>
               </>
             )}
           </div>
