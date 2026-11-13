@@ -129,6 +129,7 @@ export default function Home() {
   const [weeklySeasonGames, setWeeklySeasonGames] = useState([]);
   const [weeklyCurrentNflWeek, setWeeklyCurrentNflWeek] = useState(1);
   const [weeklyMatchupTiers, setWeeklyMatchupTiers] = useState({});
+  const [weeklyProjected, setWeeklyProjected] = useState({}); // player_id -> Sleeper PPR projection for weeklyWeek
   const [rosRankingsData, setRosRankingsData] = useState({}); // { [creatorId]: { positions, tiers, note } }
   const [rosPosition, setRosPosition] = useState("QB");
   const [showCreatorColumns, setShowCreatorColumns] = useState(true);
@@ -226,6 +227,16 @@ export default function Home() {
     }
     loadWeekly();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sleeper's PPR projections for the displayed week, shown on each
+  // Weekly Rankings row — same source as the creator editor's defaults.
+  useEffect(() => {
+    if (!weeklyWeek) return;
+    fetch(`/api/weekly-projections?week=${weeklyWeek}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setWeeklyProjected(d?.projected || {}))
+      .catch(() => setWeeklyProjected({}));
+  }, [weeklyWeek]);
 
   useEffect(() => {
     async function loadAuth() {
@@ -1206,12 +1217,22 @@ export default function Home() {
                         >
                           <span className="text-lg font-bold text-gray-400 tabular-nums w-8 shrink-0 text-right">{i + 1}</span>
                           <PlayerHeadshot espnId={row.players?.espn_id} sleeperId={row.players?.sleeper_id} name={row.players?.name} size="listRow" />
-                          <div className="min-w-0 flex-1">
+                          {/* Fixed-width name column so the matchup badges
+                              line up right beside it instead of drifting to
+                              the far edge of the row. */}
+                          <div className="min-w-0 w-32 sm:w-56 shrink-0">
                             <p className="text-base sm:text-lg font-semibold text-ink truncate">{row.players?.name}</p>
                             <p className="text-sm text-gray-400">{row.players?.position} · {row.players?.team}</p>
                           </div>
                           <span className={`text-sm font-semibold shrink-0 px-2.5 py-1 rounded ${matchup ? (MATCHUP_TIER_CLASSES[weeklyMatchupTiers[matchup.opponent]?.[weeklyPosition]?.tier] || "text-gray-400") : "text-gray-400"}`}>
                             {matchup ? `${matchup.homeAway === "home" ? "vs" : "@"} ${matchup.opponent} (${weeklyMatchupTiers[matchup.opponent]?.[weeklyPosition]?.rank ?? "-"})` : "BYE"}
+                          </span>
+                          <span className="flex-1" />
+                          <span className="shrink-0 text-right" title="Sleeper PPR projection">
+                            <span className="block text-base sm:text-lg font-bold text-ink tabular-nums">
+                              {weeklyProjected[row.player_id] != null ? weeklyProjected[row.player_id].toFixed(1) : "–"}
+                            </span>
+                            <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Proj</span>
                           </span>
                         </button>
                       </Fragment>

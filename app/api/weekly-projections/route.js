@@ -41,18 +41,23 @@ export async function GET(request) {
     const top = {};
     const sleeperIds = [];
     for (const [position, sleeperPosition] of Object.entries(SLEEPER_POSITION)) {
-      top[position] = (bySleeperPosition[sleeperPosition] || [])
-        .sort((a, b) => b.points - a.points)
-        .slice(0, DEPTH[position]);
-      sleeperIds.push(...top[position].map((p) => p.sleeperId));
+      const sorted = (bySleeperPosition[sleeperPosition] || []).sort((a, b) => b.points - a.points);
+      top[position] = sorted.slice(0, DEPTH[position]);
+      sleeperIds.push(...sorted.map((p) => p.sleeperId));
     }
 
-    const { data: players, error } = await supabase()
-      .from('players')
-      .select('id, sleeper_id')
-      .in('sleeper_id', sleeperIds);
-    if (error) throw error;
-    const idBySleeperId = Object.fromEntries((players || []).map((p) => [String(p.sleeper_id), p.id]));
+    // Every projected player gets looked up, not just the top of each list —
+    // the `projected` map below has to cover anyone a creator might rank.
+    // Chunked so the .in() list stays well under URL length limits.
+    const idBySleeperId = {};
+    for (let i = 0; i < sleeperIds.length; i += 300) {
+      const { data: players, error } = await supabase()
+        .from('players')
+        .select('id, sleeper_id')
+        .in('sleeper_id', sleeperIds.slice(i, i + 300));
+      if (error) throw error;
+      for (const p of players || []) idBySleeperId[String(p.sleeper_id)] = p.id;
+    }
 
     // Players Sleeper projects but who aren't in our players table yet (a
     // fresh call-up before the next player sync) are skipped, not errors.
@@ -63,7 +68,17 @@ export async function GET(request) {
         .map((p) => ({ player_id: idBySleeperId[p.sleeperId], projected: Math.round(p.points * 10) / 10 }));
     }
 
-    return Response.json({ week, positions });
+    // player_id -> PPR projection for every projected player, for showing
+    // projections beside rankings that go deeper than the default lists.
+    const projected = {};
+    for (const [sleeperPosition, list] of Object.entries(bySleeperPosition)) {
+      if (!Object.values(SLEEPER_POSITION).includes(sleeperPosition)) continue;
+      for (const p of list) {
+        if (idBySleeperId[p.sleeperId]) projected[idBySleeperId[p.sleeperId]] = Math.round(p.points * 10) / 10;
+      }
+    }
+
+    return Response.json({ week, positions, projected });
   } catch (err) {
     console.error('[/api/weekly-projections] failed:', err);
     return Response.json({ error: err.message }, { status: 500 });

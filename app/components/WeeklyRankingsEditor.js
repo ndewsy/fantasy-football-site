@@ -45,10 +45,11 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
   // week — the default list for any position not saved yet, plus the
   // projected points shown beside each player while reordering.
   const [projections, setProjections] = useState({});
+  const [projectedById, setProjectedById] = useState({}); // player_id -> PPR projection, every projected player
   // True when the list on screen is the untouched projections default
   // rather than this creator's saved rankings.
   const [fromProjections, setFromProjections] = useState(false);
-  const projectionsCache = useRef({}); // week -> positions, so tab switches don't refetch
+  const projectionsCache = useRef({}); // week -> { positions, projected }, so tab switches don't refetch
   const dragIndex = useRef(null);
   const dragTierRank = useRef(null);
   // True right after rows/tiers were just set from a fetch (not a user
@@ -101,16 +102,18 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
       : fetch(`/api/weekly-projections?week=${week}`)
           .then((r) => (r.ok ? r.json() : null))
           .then((d) => {
-            if (d?.positions) projectionsCache.current[week] = d.positions;
-            return d?.positions || {};
+            const result = { positions: d?.positions || {}, projected: d?.projected || {} };
+            if (d?.positions) projectionsCache.current[week] = result;
+            return result;
           })
-          .catch(() => ({}));
+          .catch(() => ({ positions: {}, projected: {} }));
     Promise.all([
       fetch(`/api/weekly-rankings?creator_id=${encodeURIComponent(creatorId)}&week=${week}`).then((r) => (r.ok ? r.json() : null)),
       projectionsRequest,
     ])
-      .then(([d, projected]) => {
+      .then(([d, { positions: projected, projected: projectedMap }]) => {
         setProjections(projected);
+        setProjectedById(projectedMap);
         const entries = (d?.positions?.[position] || []).map((e) => ({ player_id: e.player_id }));
         // Nothing saved for this position yet — start from Sleeper's
         // projected order instead of a blank list. It isn't saved until the
@@ -158,7 +161,6 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
   }, [creatorId, week]);
 
   const byId = Object.fromEntries(playerPool.map((p) => [p.id, p]));
-  const projectedById = Object.fromEntries((projections[position] || []).map((e) => [e.player_id, e.projected]));
   const usedIds = new Set(rows.map((r) => r.player_id));
   // team -> { opponent, homeAway } for the selected week — BYE if no game.
   const matchups = Object.fromEntries(
