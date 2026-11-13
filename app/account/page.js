@@ -221,10 +221,10 @@ export default function AccountPage() {
               disabled={themeSaving}
               role="switch"
               aria-checked={darkMode}
-              className={`relative shrink-0 w-12 h-7 rounded-full transition-colors disabled:opacity-60 ${darkMode ? "bg-blue-600" : "bg-gray-200"}`}
+              className={`relative shrink-0 w-12 h-7 rounded transition-colors disabled:opacity-60 ${darkMode ? "bg-blue-600" : "bg-gray-200"}`}
             >
               <span
-                className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow-md transition-transform ${darkMode ? "translate-x-5" : "translate-x-0"}`}
+                className={`absolute top-1 left-1 w-5 h-5 rounded bg-white shadow-md transition-transform ${darkMode ? "translate-x-5" : "translate-x-0"}`}
               />
             </button>
           </div>
@@ -237,7 +237,7 @@ export default function AccountPage() {
           {!subscription && isAdminOrCreator ? (
             <div className="flex items-center justify-between">
               <span className="text-gray-500 text-sm">Access</span>
-              <span className="text-xs font-semibold bg-blue-50 text-blue-600 border border-blue-200 px-2.5 py-1 rounded-full">
+              <span className="text-xs font-semibold bg-blue-50 text-blue-600 border border-blue-200 px-2.5 py-1 rounded">
                 Creator Account — Full Access
               </span>
             </div>
@@ -257,15 +257,15 @@ export default function AccountPage() {
               <div className="flex items-center justify-between">
                 <span className="text-gray-500 text-sm">Status</span>
                 {isFreeTrial ? (
-                  <span className="text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200 px-2.5 py-1 rounded-full">
+                  <span className="text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200 px-2.5 py-1 rounded">
                     Free Trial
                   </span>
                 ) : isPromo5mo ? (
-                  <span className="text-xs font-semibold bg-purple-50 text-purple-600 border border-purple-200 px-2.5 py-1 rounded-full">
+                  <span className="text-xs font-semibold bg-purple-50 text-purple-600 border border-purple-200 px-2.5 py-1 rounded">
                     Promo Active
                   </span>
                 ) : (
-                  <span className="text-xs font-semibold bg-green-50 text-green-600 border border-green-200 px-2.5 py-1 rounded-full">
+                  <span className="text-xs font-semibold bg-green-50 text-green-600 border border-green-200 px-2.5 py-1 rounded">
                     Active
                   </span>
                 )}

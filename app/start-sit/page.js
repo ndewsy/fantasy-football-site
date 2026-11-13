@@ -126,7 +126,7 @@ function PlayerSummaryCard({ result, isRecommended, hasRecommendation }) {
       </div>
       <p className="font-bold text-sm text-ink text-center max-w-[7rem] truncate">{player.name}</p>
       {label && (
-        <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${labelCls}`}>
+        <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded ${labelCls}`}>
           {label}
         </span>
       )}
@@ -149,7 +149,7 @@ function ConfidenceMeter({ confidence, showEstimateNote }) {
       <div className="w-full max-w-xs bg-card/70 backdrop-blur-md border border-card/80 shadow-lg rounded-2xl px-5 py-4">
         <div className="flex items-center justify-between mb-2.5">
           <span
-            className="text-[11px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full"
+            className="text-[11px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded"
             style={{ color: tier.color, backgroundColor: `${tier.color}1a` }}
           >
             {tier.label}
@@ -158,9 +158,9 @@ function ConfidenceMeter({ confidence, showEstimateNote }) {
             {confidence}%
           </span>
         </div>
-        <div className="h-2.5 rounded-full bg-gray-100 overflow-hidden">
+        <div className="h-2.5 rounded bg-gray-100 overflow-hidden">
           <div
-            className="h-full rounded-full transition-all duration-500"
+            className="h-full rounded transition-all duration-500"
             style={{ width: `${confidence}%`, backgroundColor: tier.color }}
           />
         </div>

@@ -17,7 +17,7 @@ export default function PillToggle({ options, value, onChange, className = "", a
           <button
             key={id}
             onClick={() => onChange(id)}
-            className={`px-4 py-1.5 rounded-full text-sm font-extrabold uppercase tracking-wide shadow-md transition-all ${
+            className={`px-4 py-1.5 rounded text-sm font-extrabold uppercase tracking-wide shadow-md transition-all ${
               active
                 ? activeClassFor?.(id) || "bg-[#2563EB] text-white shadow-blue-600/30"
                 : "bg-gray-200 text-gray-500 shadow-gray-400/10 hover:bg-gray-300"

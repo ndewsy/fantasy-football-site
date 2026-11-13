@@ -11,13 +11,13 @@ export default function CreatorAvatar({ logoUrl, initials, colorClass, size = "l
       <img
         src={logoUrl}
         alt={initials}
-        className={`${cls} rounded-full object-cover flex-shrink-0`}
+        className={`${cls} rounded object-cover flex-shrink-0`}
       />
     );
   }
 
   return (
-    <div className={`${colorClass} ${cls} rounded-full flex items-center justify-center text-white font-bold flex-shrink-0`}>
+    <div className={`${colorClass} ${cls} rounded flex items-center justify-center text-white font-bold flex-shrink-0`}>
       {initials}
     </div>
   );

@@ -532,8 +532,8 @@ export default function PicksPage() {
                         }`}
                       >
                         <span className="text-[11px] font-bold leading-none">W{w}</span>
-                        <div className="w-7 rounded-full overflow-hidden" style={{ height: 3, background: active ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.08)' }}>
-                          <div style={{ height: '100%', width: `${Math.round(pct * 100)}%`, background: active ? '#fff' : '#2563EB', borderRadius: 9999, transition: 'width 0.5s ease' }} />
+                        <div className="w-7 rounded overflow-hidden" style={{ height: 3, background: active ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.08)' }}>
+                          <div style={{ height: '100%', width: `${Math.round(pct * 100)}%`, background: active ? '#fff' : '#2563EB', borderRadius: 2, transition: 'width 0.5s ease' }} />
                         </div>
                       </button>
                     );
@@ -546,8 +546,8 @@ export default function PicksPage() {
                     <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">Week {activeWeek}</span>
                     <span className="text-[11px] text-gray-400 tabular-nums">{weekPicksMade} / {weekGames.length} picked</span>
                   </div>
-                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(0,0,0,0.07)' }}>
-                    <div className="h-full rounded-full transition-all duration-700"
+                  <div className="h-1.5 rounded overflow-hidden" style={{ background: 'rgba(0,0,0,0.07)' }}>
+                    <div className="h-full rounded transition-all duration-700"
                       style={{ width: weekGames.length > 0 ? `${(weekPicksMade / weekGames.length) * 100}%` : '0%', background: 'linear-gradient(to right, #2563EB, #1E40AF)' }} />
                   </div>
                 </div>

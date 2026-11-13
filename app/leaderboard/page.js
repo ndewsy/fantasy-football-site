@@ -13,7 +13,7 @@ function RankBadge({ rank }) {
   const s = styles[rank];
   return (
     <span
-      className="inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-black shrink-0"
+      className="inline-flex items-center justify-center w-7 h-7 rounded text-xs font-black shrink-0"
       style={s ? { background: s.bg, color: s.color } : { background: 'transparent', color: '#9CA3AF' }}
     >
       {rank}
@@ -95,9 +95,9 @@ export default function LeaderboardPage() {
                 <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">Season Progress</span>
                 <span className="text-[11px] text-gray-400 tabular-nums">{gamesGraded} / 272 graded</span>
               </div>
-              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(0,0,0,0.07)' }}>
+              <div className="h-1.5 rounded overflow-hidden" style={{ background: 'rgba(0,0,0,0.07)' }}>
                 <div
-                  className="h-full rounded-full transition-all duration-700"
+                  className="h-full rounded transition-all duration-700"
                   style={{ width: `${(gamesGraded / 272) * 100}%`, background: 'linear-gradient(to right, #2563EB, #1E40AF)' }}
                 />
               </div>

@@ -32,7 +32,7 @@ function contrastText(hex) {
 // Either can still 404 for an individual player, hence the initials fallback.
 export default function PlayerHeadshot({ espnId, sleeperId, name, size = "sm", shape = "circle", teamColor = null, label = null }) {
   const cls = SIZES[size] ?? SIZES.sm;
-  const shapeCls = shape === "square" ? (size === "xl" ? "rounded-xl" : "rounded-md") : "rounded-full";
+  const shapeCls = shape === "square" ? (size === "xl" ? "rounded-xl" : "rounded-md") : "rounded";
   const sources = [];
   if (espnId) sources.push(`https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`);
   if (sleeperId) sources.push(`https://sleepercdn.com/content/nfl/players/thumb/${sleeperId}.jpg`);

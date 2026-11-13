@@ -641,7 +641,7 @@ export default function Home() {
           {/* Hero */}
           <div className="text-center py-24 px-6">
             <div className="max-w-3xl mx-auto">
-              <span className="inline-block bg-blue-50 text-blue-700 text-sm font-semibold px-4 py-1.5 rounded-full mb-6 border border-blue-100">
+              <span className="inline-block bg-blue-50 text-blue-700 text-sm font-semibold px-4 py-1.5 rounded mb-6 border border-blue-100">
                 Rankings updated weekly all season
               </span>
               <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold mb-6 text-ink leading-tight">
@@ -1309,7 +1309,7 @@ export default function Home() {
       {showScrollTop && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="fixed bottom-20 sm:bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-card/80 backdrop-blur-md border border-card/80 shadow-lg text-gray-500 hover:text-gray-900 hover:bg-card transition-all text-sm font-medium"
+          className="fixed bottom-20 sm:bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded bg-card/80 backdrop-blur-md border border-card/80 shadow-lg text-gray-500 hover:text-gray-900 hover:bg-card transition-all text-sm font-medium"
           aria-label="Scroll to top"
         >
           <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

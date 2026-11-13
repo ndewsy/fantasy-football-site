@@ -1511,7 +1511,7 @@ export default function DashboardPage() {
               <p className="text-gray-500 mt-1 inline-flex items-center gap-2 flex-wrap">
                 {profile.role === "admin" && (
                   <span className="inline-flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-red-500 inline-block"></span>Admin
+                    <span className="w-2 h-2 rounded bg-red-500 inline-block"></span>Admin
                   </span>
                 )}
                 {profile.role === "admin" && profile.is_creator && <span className="text-gray-300">·</span>}
@@ -1669,11 +1669,11 @@ export default function DashboardPage() {
                         <button
                           disabled={roleUpdating === p.id}
                           onClick={() => updateIsCreator(p.id, !p.is_creator)}
-                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors disabled:opacity-50 ${
+                          className={`relative inline-flex h-5 w-9 items-center rounded transition-colors disabled:opacity-50 ${
                             p.is_creator ? "bg-blue-600" : "bg-gray-200"
                           }`}
                         >
-                          <span className={`inline-block h-3.5 w-3.5 rounded-full bg-card transition-transform ${
+                          <span className={`inline-block h-3.5 w-3.5 rounded bg-card transition-transform ${
                             p.is_creator ? "translate-x-4" : "translate-x-1"
                           }`} />
                         </button>
@@ -2156,7 +2156,7 @@ export default function DashboardPage() {
                     }`}
                   >
                     {label}
-                    <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full font-semibold ${
+                    <span className={`ml-2 text-xs px-1.5 py-0.5 rounded font-semibold ${
                       feedbackSubTab === key ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-400"
                     }`}>
                       {count}
@@ -2215,7 +2215,7 @@ export default function DashboardPage() {
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex flex-col gap-1.5 items-start">
-                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusBadge(f.status)}`}>
+                              <span className={`text-xs font-semibold px-2 py-0.5 rounded ${statusBadge(f.status)}`}>
                                 {statusLabel(f.status)}
                               </span>
                               <select
@@ -2256,7 +2256,7 @@ export default function DashboardPage() {
                   onClick={() => setShowAdminAddPlayer(true)}
                   className="flex items-center gap-2 text-blue-600 font-medium text-sm hover:text-blue-700 transition-colors"
                 >
-                  <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">+</span>
+                  <span className="w-5 h-5 rounded bg-blue-600 text-white flex items-center justify-center text-xs font-bold">+</span>
                   Add New Player
                 </button>
               ) : (
@@ -2700,7 +2700,7 @@ export default function DashboardPage() {
                   onClick={() => setShowAddPlayer(true)}
                   className="flex items-center gap-2 text-blue-600 font-medium text-sm hover:text-blue-700 transition-colors"
                 >
-                  <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">+</span>
+                  <span className="w-5 h-5 rounded bg-blue-600 text-white flex items-center justify-center text-xs font-bold">+</span>
                   Add Player
                 </button>
               ) : (
@@ -2884,7 +2884,7 @@ export default function DashboardPage() {
                                 type="button"
                                 onClick={(e) => { e.stopPropagation(); setConfirmRemovePlayer(player.name); }}
                                 onMouseDown={(e) => e.stopPropagation()}
-                                className="opacity-0 group-hover:opacity-100 w-5 h-5 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center text-xs transition-all"
+                                className="opacity-0 group-hover:opacity-100 w-5 h-5 rounded bg-red-500 hover:bg-red-600 text-white flex items-center justify-center text-xs transition-all"
                                 title="Remove player"
                               >×</button>
                             </div>
@@ -2947,7 +2947,7 @@ export default function DashboardPage() {
                     </div>
                     <button
                       onClick={() => { setShowImport(false); setImportRows([]); setImportError(""); setImportSkipped([]); }}
-                      className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors text-lg leading-none"
+                      className="w-8 h-8 rounded hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors text-lg leading-none"
                     >×</button>
                   </div>
 
@@ -3003,7 +3003,7 @@ export default function DashboardPage() {
                           <div className="flex items-center justify-between mb-3">
                             <p className="text-sm font-semibold text-ink">{importRows.length} players parsed</p>
                             {unmatched.length > 0 && (
-                              <span className="text-xs bg-amber-50 border border-amber-200 text-amber-700 px-2 py-1 rounded-full font-medium">
+                              <span className="text-xs bg-amber-50 border border-amber-200 text-amber-700 px-2 py-1 rounded font-medium">
                                 {unmatched.length} not in player pool — will be skipped
                               </span>
                             )}
@@ -3181,7 +3181,7 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => setShowFloatingSearch(prev => !prev)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-full backdrop-blur-md border shadow-lg transition-all text-sm font-medium ${showFloatingSearch ? "bg-blue-600 border-blue-600 text-white hover:bg-blue-700" : "bg-card/80 border-card/80 text-gray-500 hover:text-gray-900 hover:bg-card"}`}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded backdrop-blur-md border shadow-lg transition-all text-sm font-medium ${showFloatingSearch ? "bg-blue-600 border-blue-600 text-white hover:bg-blue-700" : "bg-card/80 border-card/80 text-gray-500 hover:text-gray-900 hover:bg-card"}`}
                   aria-label="Find player"
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -3191,7 +3191,7 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-card/80 backdrop-blur-md border border-card/80 shadow-lg text-gray-500 hover:text-gray-900 hover:bg-card transition-all text-sm font-medium"
+                    className="flex items-center gap-2 px-4 py-2.5 rounded bg-card/80 backdrop-blur-md border border-card/80 shadow-lg text-gray-500 hover:text-gray-900 hover:bg-card transition-all text-sm font-medium"
                     aria-label="Scroll to top"
                   >
                     <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 12 9 6 15 12"/></svg>

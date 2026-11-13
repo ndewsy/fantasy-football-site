@@ -12,11 +12,11 @@ export default function StatsModeSlider({ active, leftValue, rightValue, leftLab
     <button
       type="button"
       onClick={() => onChange(isRight ? leftValue : rightValue)}
-      className={`relative inline-flex items-center h-7 w-32 rounded-full border shrink-0 ${track}`}
+      className={`relative inline-flex items-center h-7 w-32 rounded border shrink-0 ${track}`}
       aria-label="Toggle stats mode"
     >
       <span
-        className={`absolute top-0.5 left-0.5 h-6 w-[calc(50%-2px)] rounded-full bg-[#2563EB] shadow transition-transform duration-200 ${
+        className={`absolute top-0.5 left-0.5 h-6 w-[calc(50%-2px)] rounded bg-[#2563EB] shadow transition-transform duration-200 ${
           isRight ? "translate-x-full" : ""
         }`}
       />

@@ -41,6 +41,14 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
   const [token, setToken] = useState(null);
   const [seasonGames, setSeasonGames] = useState([]);
   const [matchupTiers, setMatchupTiers] = useState({});
+  // position -> [{ player_id, projected }] from Sleeper for the selected
+  // week — the default list for any position not saved yet, plus the
+  // projected points shown beside each player while reordering.
+  const [projections, setProjections] = useState({});
+  // True when the list on screen is the untouched projections default
+  // rather than this creator's saved rankings.
+  const [fromProjections, setFromProjections] = useState(false);
+  const projectionsCache = useRef({}); // week -> positions, so tab switches don't refetch
   const dragIndex = useRef(null);
   const dragTierRank = useRef(null);
   // True right after rows/tiers were just set from a fetch (not a user
@@ -88,11 +96,28 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
     if (!creatorId) return;
     setLoading(true);
     skipNextAutosave.current = true;
-    fetch(`/api/weekly-rankings?creator_id=${encodeURIComponent(creatorId)}&week=${week}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
+    const projectionsRequest = projectionsCache.current[week]
+      ? Promise.resolve(projectionsCache.current[week])
+      : fetch(`/api/weekly-projections?week=${week}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d) => {
+            if (d?.positions) projectionsCache.current[week] = d.positions;
+            return d?.positions || {};
+          })
+          .catch(() => ({}));
+    Promise.all([
+      fetch(`/api/weekly-rankings?creator_id=${encodeURIComponent(creatorId)}&week=${week}`).then((r) => (r.ok ? r.json() : null)),
+      projectionsRequest,
+    ])
+      .then(([d, projected]) => {
+        setProjections(projected);
         const entries = (d?.positions?.[position] || []).map((e) => ({ player_id: e.player_id }));
-        setRows(entries);
+        // Nothing saved for this position yet — start from Sleeper's
+        // projected order instead of a blank list. It isn't saved until the
+        // creator actually changes something (the autosave skip below).
+        const seeded = entries.length === 0 && (projected[position] || []).length > 0;
+        setFromProjections(seeded);
+        setRows(seeded ? projected[position].map((e) => ({ player_id: e.player_id })) : entries);
         const savedTiers = d?.tiers?.[position];
         setTiers(savedTiers && savedTiers.length > 0 ? savedTiers : [1]);
         setSavedAt(null);
@@ -112,6 +137,7 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
       skipNextAutosave.current = false;
       return;
     }
+    setFromProjections(false);
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     autosaveTimer.current = setTimeout(() => {
       save();
@@ -132,6 +158,7 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
   }, [creatorId, week]);
 
   const byId = Object.fromEntries(playerPool.map((p) => [p.id, p]));
+  const projectedById = Object.fromEntries((projections[position] || []).map((e) => [e.player_id, e.projected]));
   const usedIds = new Set(rows.map((r) => r.player_id));
   // team -> { opponent, homeAway } for the selected week — BYE if no game.
   const matchups = Object.fromEntries(
@@ -156,6 +183,15 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
 
   function removePlayer(index) {
     setRows(rows.filter((_, i) => i !== index));
+  }
+
+  // Replaces this position's list with Sleeper's projected order. Goes
+  // through setRows like any edit, so it autosaves over the old list.
+  function resetToProjections() {
+    const projected = projections[position] || [];
+    if (projected.length === 0) return;
+    if (rows.length > 0 && !window.confirm(`Replace your Week ${week} ${position} rankings with Sleeper's projected order?`)) return;
+    setRows(projected.map((e) => ({ player_id: e.player_id })));
   }
 
   function addPlayer(playerId) {
@@ -357,6 +393,22 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
             )}
           </div>
 
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <p className="text-xs text-gray-400">
+              {fromProjections
+                ? `Starting from Sleeper's Week ${week} PPR projections — reorder, add, or remove players and it saves as your rankings.`
+                : "Proj is Sleeper's PPR projection for the week."}
+            </p>
+            {!fromProjections && (projections[position] || []).length > 0 && (
+              <button
+                onClick={resetToProjections}
+                className="shrink-0 bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold px-3 py-1.5 rounded-lg text-xs transition-colors"
+              >
+                Reset to projections
+              </button>
+            )}
+          </div>
+
           <p className="text-xs text-gray-400 mb-2">
             Tiers group players visually on the public page. Hover between players to add a break, or drag a tier's ⠿ handle to move it.
           </p>
@@ -421,6 +473,9 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
                   </div>
                   <span className={`text-xs shrink-0 px-1.5 py-0.5 rounded ${matchup ? (MATCHUP_TIER_CLASSES[matchupTiers[matchup.opponent]?.[position]?.tier] || "text-gray-400") : "text-gray-400"}`}>
                     {matchup ? `${matchup.homeAway === "home" ? "vs" : "@"} ${matchup.opponent} (${matchupTiers[matchup.opponent]?.[position]?.rank ?? "-"})` : "BYE"}
+                  </span>
+                  <span className="text-xs text-gray-500 tabular-nums w-12 shrink-0 text-right" title="Sleeper PPR projection">
+                    {projectedById[row.player_id] != null ? projectedById[row.player_id].toFixed(1) : "–"}
                   </span>
                   <div className="flex flex-col shrink-0">
                     <button onClick={() => movePlayer(i, -1)} disabled={i === 0} className="text-gray-400 hover:text-gray-700 disabled:opacity-30 text-xs leading-none px-1">▲</button>

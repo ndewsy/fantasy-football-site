@@ -373,7 +373,7 @@ export default function PlayerCardModal({
         {/* Close — stays outside the scrollable body below so it's always reachable */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-black/20 backdrop-blur-sm text-white/80 hover:text-white hover:bg-black/30 transition-colors text-lg leading-none font-medium"
+          className="absolute top-5 right-5 z-10 w-8 h-8 flex items-center justify-center rounded bg-black/20 backdrop-blur-sm text-white/80 hover:text-white hover:bg-black/30 transition-colors text-lg leading-none font-medium"
         >
           ✕
         </button>
@@ -400,7 +400,7 @@ export default function PlayerCardModal({
           <div className="relative pb-0.5 min-w-0 pr-8 sm:pr-0">
             <h2 className={`${anton.className} text-2xl sm:text-4xl text-white uppercase tracking-tight leading-none mb-2 truncate`}>{player.name}</h2>
             {(player.age || player.height_inches || player.weight_lbs) && (
-              <p className="inline-flex items-center gap-1 bg-black/25 backdrop-blur-sm text-white text-xs font-semibold px-2.5 py-1 rounded-full mb-2.5">
+              <p className="inline-flex items-center gap-1 bg-black/25 backdrop-blur-sm text-white text-xs font-semibold px-2.5 py-1 rounded mb-2.5">
                 {[
                   player.age ? `${player.age} YRS` : null,
                   player.height_inches ? `${Math.floor(player.height_inches / 12)}'${player.height_inches % 12}"` : null,
@@ -518,11 +518,11 @@ export default function PlayerCardModal({
           ) : displayedRisk != null ? (
             <>
               <div
-                className="relative h-2 rounded-full"
+                className="relative h-2 rounded"
                 style={{ background: `linear-gradient(to right, ${riskColor(1)}, ${riskColor(10)})` }}
               >
                 <div
-                  className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-card border-2 shadow"
+                  className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded bg-card border-2 shadow"
                   style={{
                     left: `calc(${((displayedRisk - 1) / 9) * 100}% - 7px)`,
                     borderColor: riskColor(displayedRisk),
@@ -539,7 +539,7 @@ export default function PlayerCardModal({
             </>
           ) : (
             <>
-              <div className="h-2 rounded-full bg-gray-100" />
+              <div className="h-2 rounded bg-gray-100" />
               <p className="text-xs text-gray-400 italic mt-1.5">
                 {isConsensusTab ? "No creators have rated this player yet" : "Risk not set"}
               </p>
@@ -593,12 +593,12 @@ export default function PlayerCardModal({
         <div className="px-7 pt-6 border-t border-white/10">
           <div className="flex items-center justify-between mb-2.5 flex-wrap gap-2">
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Fantasy Log</h3>
-            <div className="inline-flex items-center bg-white/5 border border-white/10 rounded-full p-0.5">
+            <div className="inline-flex items-center bg-white/5 border border-white/10 rounded p-0.5">
               {[{ id: "weekly", label: "Weekly" }, { id: "season", label: "Season" }].map((mode) => (
                 <button
                   key={mode.id}
                   onClick={() => setLogMode(mode.id)}
-                  className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wide transition-colors ${
+                  className={`px-2.5 py-1 rounded text-[10px] font-semibold uppercase tracking-wide transition-colors ${
                     logMode === mode.id ? "bg-blue-600 text-white" : "text-gray-400 hover:text-ink"
                   }`}
                 >
@@ -787,7 +787,7 @@ export default function PlayerCardModal({
               {/* Active-format indicator dot — sits in the gutter outside the
                   glowing row, aligned to the active row's fixed position (it's
                   always sorted to the first data row, right below the header). */}
-              <span className="absolute left-0 top-[66px] -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(37,99,235,0.9)]" />
+              <span className="absolute left-0 top-[66px] -translate-y-1/2 w-2.5 h-2.5 rounded bg-blue-500 shadow-[0_0_8px_rgba(37,99,235,0.9)]" />
               <div className="rounded-xl overflow-hidden border border-white/10">
                 <table className="w-full text-sm">
                   <thead className="bg-white/5 text-gray-500">

@@ -229,7 +229,7 @@ function PostDetailModal({ post, creatorName, creatorLogoUrl, onClose }) {
       >
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-black/20 backdrop-blur-sm text-white/80 hover:text-white hover:bg-black/30 transition-colors text-lg leading-none font-medium"
+          className="absolute top-5 right-5 z-10 w-8 h-8 flex items-center justify-center rounded bg-black/20 backdrop-blur-sm text-white/80 hover:text-white hover:bg-black/30 transition-colors text-lg leading-none font-medium"
         >
           ✕
         </button>

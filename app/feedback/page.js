@@ -96,7 +96,7 @@ export default function FeedbackPage() {
         <div className="bg-card/70 backdrop-blur-md rounded-xl border border-card/80 shadow-lg p-6">
           {submitted ? (
             <div className="py-8 text-center">
-              <div className="w-14 h-14 rounded-full bg-green-50 border border-green-200 flex items-center justify-center mx-auto mb-4">
+              <div className="w-14 h-14 rounded bg-green-50 border border-green-200 flex items-center justify-center mx-auto mb-4">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>

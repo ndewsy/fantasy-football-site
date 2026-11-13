@@ -53,7 +53,7 @@ export default function WRTargetsPage() {
 
       <div className="max-w-5xl mx-auto px-6 py-12">
         <div className="flex items-center gap-6 mb-12">
-          <div className="w-20 h-20 rounded-full bg-gray-400 flex items-center justify-center text-white font-bold text-2xl">?</div>
+          <div className="w-20 h-20 rounded bg-gray-400 flex items-center justify-center text-white font-bold text-2xl">?</div>
           <div>
             <h1 className="text-3xl font-bold">Coming Soon</h1>
             <p className="text-gray-500">@tba</p>
