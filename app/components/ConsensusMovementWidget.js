@@ -13,7 +13,7 @@ function MovementRow({ m, direction }) {
   const p = m.player;
   return (
     <div className="flex items-center gap-2.5 py-2">
-      <PlayerHeadshot espnId={p.espn_id} sleeperId={p.sleeper_id} name={p.name} size="sm" />
+      <PlayerHeadshot espnId={p.espn_id} sleeperId={p.sleeper_id} name={p.name} position={p.position ?? p.pos} team={p.team} size="sm" />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-ink truncate">{p.name}</p>
         <div className="flex items-center gap-1.5 mt-0.5">

@@ -1216,7 +1216,7 @@ export default function Home() {
                           className="w-full flex items-center gap-4 px-4 sm:px-5 py-3.5 hover:bg-gray-50 text-left transition-colors"
                         >
                           <span className="text-lg font-bold text-gray-400 tabular-nums w-8 shrink-0 text-right">{i + 1}</span>
-                          <PlayerHeadshot espnId={row.players?.espn_id} sleeperId={row.players?.sleeper_id} name={row.players?.name} size="listRow" />
+                          <PlayerHeadshot espnId={row.players?.espn_id} sleeperId={row.players?.sleeper_id} name={row.players?.name} position={row.players?.position ?? row.players?.pos} team={row.players?.team} size="listRow" />
                           {/* Fixed-width name column so the matchup badges
                               line up right beside it instead of drifting to
                               the far edge of the row. */}
@@ -1269,7 +1269,7 @@ export default function Home() {
                                     title={`Average rank ${avgRank.toFixed(1)}`}
                                   >
                                     <span className="text-xs font-bold text-gray-400 tabular-nums w-3 shrink-0">{i + 1}</span>
-                                    <PlayerHeadshot espnId={row.players?.espn_id} sleeperId={row.players?.sleeper_id} name={row.players?.name} size="sm" />
+                                    <PlayerHeadshot espnId={row.players?.espn_id} sleeperId={row.players?.sleeper_id} name={row.players?.name} position={row.players?.position ?? row.players?.pos} team={row.players?.team} size="sm" />
                                     <span className="min-w-0 flex-1">
                                       <span className="block text-sm font-semibold text-ink truncate">{row.players?.name}</span>
                                       <span className="block text-[11px] text-gray-400">{row.players?.team}</span>
@@ -1353,7 +1353,7 @@ export default function Home() {
                       className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left"
                     >
                       <span className="text-sm text-gray-400 font-mono w-6 shrink-0 text-right">{i + 1}</span>
-                      <PlayerHeadshot espnId={row.players?.espn_id} sleeperId={row.players?.sleeper_id} name={row.players?.name} size="sm" />
+                      <PlayerHeadshot espnId={row.players?.espn_id} sleeperId={row.players?.sleeper_id} name={row.players?.name} position={row.players?.position ?? row.players?.pos} team={row.players?.team} size="sm" />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-ink truncate">{row.players?.name}</p>
                         <p className="text-xs text-gray-400">{row.players?.position} · {row.players?.team}</p>

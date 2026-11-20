@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import TeamHelmet, { isTeamCode } from "./TeamHelmet";
 
 const SIZES = {
   xs: "w-6 h-6 text-[9px]",
@@ -33,14 +34,21 @@ function contrastText(hex) {
 // empty for anyone with under ~6 years of NFL experience. Sleeper's own CDN (keyed
 // by sleeper_id, which every synced player has) fills that gap, so it's tried second.
 // Either can still 404 for an individual player, hence the initials fallback.
-export default function PlayerHeadshot({ espnId, sleeperId, name, size = "sm", shape = "circle", teamColor = null, label = null }) {
+export default function PlayerHeadshot({ espnId, sleeperId, name, size = "sm", shape = "circle", teamColor = null, label = null, position = null, team = null }) {
   const cls = SIZES[size] ?? SIZES.sm;
+  // DST rows get a team helmet instead of a headshot or letters. Callers
+  // flag them either by passing the team code as `label` or via position/team.
+  const helmetTeam = isTeamCode(label) ? label : position === "DST" && isTeamCode(team) ? team : null;
   const shapeCls = shape === "square" ? (size === "xl" ? "rounded-xl" : "rounded-md") : "rounded";
   const sources = [];
   if (espnId) sources.push(`https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`);
   if (sleeperId) sources.push(`https://sleepercdn.com/content/nfl/players/thumb/${sleeperId}.jpg`);
 
   const [srcIndex, setSrcIndex] = useState(0);
+
+  if (helmetTeam) {
+    return <TeamHelmet team={helmetTeam} className={cls} showDecal={size !== "xs"} />;
+  }
 
   if (sources.length === 0 || srcIndex >= sources.length) {
     return (

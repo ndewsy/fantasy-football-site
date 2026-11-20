@@ -80,7 +80,7 @@ function WaiverRow({ entry, index, onOpenPlayer }) {
       className="flex items-center gap-2.5 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-lg cursor-pointer transition-colors"
     >
       <span className="text-xs text-gray-400 font-mono w-5 shrink-0 text-right">{index + 1}</span>
-      <PlayerHeadshot espnId={p?.espn_id} sleeperId={p?.sleeper_id} name={p?.name} size="sm" />
+      <PlayerHeadshot espnId={p?.espn_id} sleeperId={p?.sleeper_id} name={p?.name} position={p?.position ?? p?.pos} team={p?.team} size="sm" />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-ink truncate">{p?.name || `#${entry.player_id}`}</p>
         <div className="flex items-center gap-1.5 mt-0.5">

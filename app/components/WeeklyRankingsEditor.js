@@ -468,7 +468,7 @@ export default function WeeklyRankingsEditor({ creatorId, creatorLabel }) {
                 >
                   <span className="text-gray-300 shrink-0 select-none" title="Drag to reorder">⠿</span>
                   <span className="text-xs text-gray-400 font-mono w-7 shrink-0 text-right">{i + 1}</span>
-                  <PlayerHeadshot espnId={p?.espn_id} sleeperId={p?.sleeper_id} name={p?.name} size="sm" />
+                  <PlayerHeadshot espnId={p?.espn_id} sleeperId={p?.sleeper_id} name={p?.name} position={p?.position ?? p?.pos} team={p?.team} size="sm" />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-ink truncate">{p?.name || `#${row.player_id}`}</p>
                     <p className="text-xs text-gray-400">{p?.position} · {p?.team}</p>
