@@ -24,7 +24,10 @@ import PlayerCardModal from "@/app/components/PlayerCardModal";
 // linked from FORMAT_TABS or shown in PlayerCardModal's format comparison,
 // so bringing them back later is just re-adding them to both.
 const ARCHIVED_FORMATS = ["Redraft 1QB", "Redraft SF", "Dynasty 1QB", "Dynasty SF"];
-const FORMAT_TABS = ["Weekly Rankings", "ROS", "DST/K"];
+// The standalone "DST/K" tab is archived the same way — its render branch,
+// data and creator editor are untouched (DST/K stay ranked inside Weekly
+// Rankings), so bringing it back is just re-adding "DST/K" here.
+const FORMAT_TABS = ["Weekly Rankings", "ROS"];
 const WEEKLY_POSITIONS = [
   { id: "QB", label: "QB" },
   { id: "RB", label: "RB" },
